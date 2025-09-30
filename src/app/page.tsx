@@ -93,7 +93,7 @@ export default function Home() {
           text: data.error || 'Failed to send tweet URL'
         });
       }
-    } catch (error) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Network error. Please check your connection and try again.'
@@ -361,7 +361,7 @@ export default function Home() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-500 font-bold">3.</span>
-                <span>Click "Analyze Tweet" to process the URL</span>
+                <span>Click &quot;Analyze Tweet&quot; to process the URL</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-500 font-bold">4.</span>
