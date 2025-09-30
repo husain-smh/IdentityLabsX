@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Twitter Quote Tweet Analyzer",
-  description: "Analyze Twitter/X tweet URLs for quote tweet views and engagement metrics",
+  title: "Quote Tweet Analytics | Identity Labs",
+  description: "Reverse-engineer viral content performance. Advanced quote tweet analytics with precision-grade metrics that reveal true social impact.",
 };
 
 export default function RootLayout({
