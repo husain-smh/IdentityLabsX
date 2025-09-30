@@ -1,0 +1,151 @@
+{
+    "name": "Views from quotetwt",
+    "nodes": [
+      {
+        "parameters": {
+          "jsCode": "/**\n * N8N Twitter User Filter - WITH TOTAL VIEWS FROM QUOTE TWEETS\n * Copy and paste this ENTIRE code into your N8N \"Code\" node\n * \n * Features:\n * - Processes tweets[].author structure\n * - CONSISTENT verification logic: checks isBlueVerified first, then verified\n * - REMOVES DUPLICATE USERS completely (by userId)\n * - Keeps only the FIRST occurrence of each unique user\n * - Adds user bio from author.profile_bio.description (if available)\n * - Adds user location from author.location or user.location (if available)\n * - ✨ NEW: Calculates totalViewsFromQuoteTweets per user (sum of viewCount from all their quote tweets)\n */\n\nconsole.log('🚀 N8N: Starting Twitter user data filtering with quote tweet views...');\nconst startTime = Date.now();\n\ntry {\n    // Get ALL input items from N8N\n    const allInputs = $input.all();\n    console.log(`📊 N8N detected ${allInputs.length} input items`);\n    \n    // Initialize results\n    let filteredUsers = [];\n    let totalPages = 0;\n    let totalTweetsProcessed = 0;\n    let totalUsersExtracted = 0;\n    let uniqueUsersMap = new Map();\n    let duplicatesFound = 0;\n    let errors = [];\n    let totalViewsAcrossAll = 0;\n    \n    // Process each input item\n    for (let inputIndex = 0; inputIndex < allInputs.length; inputIndex++) {\n        const currentInput = allInputs[inputIndex].json;\n        \n        let pagesToProcess = [];\n        \n        if (Array.isArray(currentInput)) {\n            pagesToProcess = currentInput;\n        } else if (currentInput.tweets && Array.isArray(currentInput.tweets)) {\n            pagesToProcess = [currentInput];\n        } else if (currentInput.users && Array.isArray(currentInput.users)) {\n            pagesToProcess = [currentInput];\n        } else {\n            errors.push(`Input ${inputIndex + 1}: No tweets or users array found`);\n            continue;\n        }\n        \n        // Process each page\n        for (let pageIndex = 0; pageIndex < pagesToProcess.length; pageIndex++) {\n            const page = pagesToProcess[pageIndex];\n            totalPages++;\n            \n            let tweetsToProcess = [];\n            \n            if (page.tweets && Array.isArray(page.tweets)) {\n                tweetsToProcess = page.tweets;\n                console.log(`📄 Input ${inputIndex + 1}, Page ${pageIndex + 1}: Found ${tweetsToProcess.length} tweets`);\n            } else if (page.users && Array.isArray(page.users)) {\n                const users = page.users;\n                totalTweetsProcessed += users.length;\n                \n                for (const user of users) {\n                    try {\n                        if (!user || !user.id) continue;\n                        totalUsersExtracted++;\n                        \n                        if (uniqueUsersMap.has(user.id)) {\n                            duplicatesFound++;\n                            console.log(`🔄 Duplicate user found (old structure): ${user.userName || user.id} - skipping`);\n                            continue;\n                        }\n                        \n                        const isVerified = user.isBlueVerified !== undefined ? \n                            Boolean(user.isBlueVerified) : \n                            Boolean(user.verified);\n                        \n                        const filteredUser = {\n                            userId: user.id,\n                            username: user.userName || null,\n                            name: user.name || null,\n                            verified: isVerified,\n                            followers: parseInt(user.followers) || 0,\n                            bio: user.profile_bio?.description || null,\n                            location: user.location || null,\n                            totalViewsFromQuoteTweets: 0 // No tweet context in users[] structure\n                        };\n                        \n                        uniqueUsersMap.set(user.id, filteredUser);\n                        \n                    } catch (userError) {\n                        errors.push(`Error processing user: ${userError.message}`);\n                    }\n                }\n                continue;\n            } else {\n                errors.push(`Input ${inputIndex + 1}, Page ${pageIndex + 1}: No tweets or users array found`);\n                continue;\n            }\n            \n            totalTweetsProcessed += tweetsToProcess.length;\n            \n            for (const tweet of tweetsToProcess) {\n                try {\n                    const author = tweet.author;\n                    if (!author || !author.id) continue;\n                    \n                    totalUsersExtracted++;\n                    \n                    // ✨ Extract viewCount from this quote tweet\n                    const tweetViews = parseInt(tweet.viewCount) || 0;\n                    totalViewsAcrossAll += tweetViews;\n                    \n                    if (uniqueUsersMap.has(author.id)) {\n                        duplicatesFound++;\n                        \n                        // ✨ User already exists - ADD views to their total\n                        const existingUser = uniqueUsersMap.get(author.id);\n                        existingUser.totalViewsFromQuoteTweets += tweetViews;\n                        \n                        console.log(`🔄 Duplicate user found: ${author.userName || author.id} - adding ${tweetViews} views (total: ${existingUser.totalViewsFromQuoteTweets})`);\n                        continue;\n                    }\n                    \n                    const isVerified = author.isBlueVerified !== undefined ? \n                        Boolean(author.isBlueVerified) : \n                        Boolean(author.verified);\n                    \n                    // ✨ NEW: Initialize totalViewsFromQuoteTweets with this tweet's views\n                    const filteredUser = {\n                        userId: author.id,\n                        username: author.userName || author.screen_name || null,\n                        name: author.name || null,\n                        verified: isVerified,\n                        followers: parseInt(author.followers) || parseInt(author.followers_count) || 0,\n                        bio: author.profile_bio?.description || null,\n                        location: author.location || null,\n                        totalViewsFromQuoteTweets: tweetViews // ✨ Start with this tweet's views\n                    };\n                    \n                    uniqueUsersMap.set(author.id, filteredUser);\n                    \n                } catch (tweetError) {\n                    errors.push(`Error processing tweet author: ${tweetError.message}`);\n                }\n            }\n            \n            console.log(`✅ Input ${inputIndex + 1}, Page ${pageIndex + 1}: Processed ${tweetsToProcess.length} tweets`);\n        }\n    }\n    \n    // Convert Map values to array\n    filteredUsers = Array.from(uniqueUsersMap.values());\n    \n    const processingTime = Date.now() - startTime;\n    const processingSeconds = Math.round(processingTime / 1000 * 100) / 100;\n    \n    const statistics = {\n        totalInputItems: allInputs.length,\n        totalPages: totalPages,\n        totalTweetsProcessed: totalTweetsProcessed,\n        totalUsersExtracted: totalUsersExtracted,\n        totalUsersFiltered: filteredUsers.length,\n        uniqueUsersKept: filteredUsers.length,\n        duplicatesRemoved: duplicatesFound,\n        deduplicationRate: totalUsersExtracted > 0 ? Math.round((duplicatesFound / totalUsersExtracted) * 100) : 0,\n        totalViewsAcrossAllQuoteTweets: totalViewsAcrossAll,\n        processingTimeMs: processingTime,\n        processingTimeSeconds: processingSeconds,\n        errorCount: errors.length\n    };\n    \n    console.log('\\n📈 FILTERING COMPLETE WITH QUOTE TWEET VIEWS');\n    console.log(`📥 Input items: ${statistics.totalInputItems}`);\n    console.log(`🐦 Tweets processed: ${statistics.totalTweetsProcessed}`);\n    console.log(`👤 Users extracted: ${statistics.totalUsersExtracted}`);\n    console.log(`✨ Unique users kept: ${statistics.uniqueUsersKept}`);\n    console.log(`🗑️  Duplicates removed: ${statistics.duplicatesRemoved}`);\n    console.log(`📊 Deduplication rate: ${statistics.deduplicationRate}%`);\n    console.log(`👁️  Total views from all quote tweets: ${totalViewsAcrossAll.toLocaleString()}`);\n    console.log(`📑 Pages processed: ${statistics.totalPages}`);\n    console.log(`⏱️  Time: ${processingSeconds}s`);\n    \n    if (errors.length > 0) {\n        console.log(`⚠️  Errors: ${errors.length}`);\n        errors.slice(0, 5).forEach(error => console.log(`   • ${error}`));\n    }\n    \n    return {\n        success: true,\n        filteredUsers: filteredUsers,\n        statistics: statistics,\n        errors: errors.length > 0 ? errors.slice(0, 10) : []\n    };\n    \n} catch (error) {\n    console.error('❌ Critical error:', error.message);\n    console.error('❌ Error stack:', error.stack);\n    \n    const errorTime = Date.now() - startTime;\n    \n    return {\n        success: false,\n        error: error.message,\n        filteredUsers: [],\n        statistics: {\n            totalInputItems: 0,\n            totalPages: 0,\n            totalTweetsProcessed: 0,\n            totalUsersExtracted: 0,\n            totalUsersFiltered: 0,\n            totalViewsAcrossAllQuoteTweets: 0,\n            processingTimeMs: errorTime,\n            processingTimeSeconds: Math.round(errorTime / 1000 * 100) / 100,\n            errorCount: 1\n        }\n    };\n}"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          736,
+          160
+        ],
+        "id": "a84bf8b1-7fb7-4f59-b3c8-1c10967221a7",
+        "name": "filter quotetweets accounts"
+      },
+      {
+        "parameters": {
+          "url": "=https://api.twitterapi.io/twitter/tweet/quotes",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "tweetId",
+                "value": "={{ $json.tweetId }}"
+              }
+            ]
+          },
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "X-API-Key",
+                "value": "=cd5d27b64b014d47b268522b22c23c54"
+              }
+            ]
+          },
+          "options": {
+            "pagination": {
+              "pagination": {
+                "parameters": {
+                  "parameters": [
+                    {
+                      "name": "cursor",
+                      "value": "={{ $response.body.next_cursor }}"
+                    }
+                  ]
+                },
+                "paginationCompleteWhen": "other",
+                "completeExpression": "={{ ($response.body.tweets.length) === 0 || ($response.body.has_next_page) === false }}",
+                "limitPagesFetched": true,
+                "maxRequests": 60,
+                "requestInterval": 500
+              }
+            }
+          }
+        },
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          576,
+          160
+        ],
+        "id": "e8545655-751e-4c5c-b31d-5dc5b12f0e29",
+        "name": "get tweetquotes"
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "totalQuoteTwtViews",
+          "responseMode": "lastNode",
+          "responseData": "allEntries",
+          "options": {}
+        },
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2.1,
+        "position": [
+          112,
+          160
+        ],
+        "id": "d808e030-e80c-472e-a021-a574562fe4d6",
+        "name": "Webhook",
+        "webhookId": "a17b4ea5-9ad1-4b0f-8713-aec612c15412"
+      },
+      {
+        "parameters": {
+          "jsCode": "// Extract Tweet ID from URL\n\nconst tweetUrl = $input.first().json.body.body.tweetUrl\n\nif (!tweetUrl) {\n    throw new Error('No tweet URL provided');\n}\n\n// Extract tweet ID from various URL formats\n// Supports: twitter.com/user/status/ID, x.com/user/status/ID, or just the ID\nlet tweetId;\n\nconst urlMatch = tweetUrl.match(/status\\/(\\d+)/);\nif (urlMatch) {\n    tweetId = urlMatch[1];\n} else if (/^\\d+$/.test(tweetUrl.trim())) {\n    tweetId = tweetUrl.trim();\n} else {\n    throw new Error('Invalid tweet URL format');\n}\n\nreturn {\n    tweetId: tweetId,\n    originalUrl: tweetUrl\n};"
+        },
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          320,
+          160
+        ],
+        "id": "7615fe95-172c-4221-910f-93f6074da9b7",
+        "name": "Code in JavaScript"
+      }
+    ],
+    "pinData": {},
+    "connections": {
+      "get tweetquotes": {
+        "main": [
+          [
+            {
+              "node": "filter quotetweets accounts",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Webhook": {
+        "main": [
+          [
+            {
+              "node": "Code in JavaScript",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "filter quotetweets accounts": {
+        "main": [
+          []
+        ]
+      },
+      "Code in JavaScript": {
+        "main": [
+          [
+            {
+              "node": "get tweetquotes",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": false,
+    "settings": {
+      "executionOrder": "v1"
+    },
+    "versionId": "d2782741-2729-4b16-a918-3d8f3471a9df",
+    "meta": {
+      "templateCredsSetupCompleted": true,
+      "instanceId": "5b1b4144ebcdf42247e9ab5b90ba939842fe9d32f2dda62814c2b26a711fa9fb"
+    },
+    "id": "Vu2oH1C3jVFE4hkI",
+    "tags": []
+  }
