@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 interface EngagementData {
   author_name: string;
@@ -48,10 +49,42 @@ export default function TwitterEngagement() {
 
       const data = await response.json();
 
+      // Frontend logging for debugging
+      console.log('=== FRONTEND DEBUG INFO ===');
+      console.log('API Response Status:', response.status);
+      console.log('API Response Data:', JSON.stringify(data, null, 2));
+      console.log('Data Type:', typeof data);
+      console.log('Data Keys:', Object.keys(data));
+      if (data.data) {
+        console.log('data.data:', JSON.stringify(data.data, null, 2));
+        console.log('data.data Type:', typeof data.data);
+        console.log('data.data Is Array:', Array.isArray(data.data));
+      }
+      console.log('=== END FRONTEND DEBUG ===');
+
       if (response.ok) {
         // Extract sheetdata from the response
-        if (data.data && data.data[0] && data.data[0].sheetdata) {
-          setEngagementData(data.data[0].sheetdata);
+        // Handle different response formats from the API
+        let sheetData = null;
+        
+        if (data.data && data.data.sheetdata) {
+          // Format: { data: { sheetdata: [...] } } - This is what we're getting
+          sheetData = data.data.sheetdata;
+        } else if (data.data && Array.isArray(data.data) && data.data[0] && data.data[0].sheetdata) {
+          // Format: { data: [{ sheetdata: [...] }] }
+          sheetData = data.data[0].sheetdata;
+        } else if (Array.isArray(data) && data[0] && data[0].sheetdata) {
+          // Format: [{ sheetdata: [...] }]
+          sheetData = data[0].sheetdata;
+        } else if (data.sheetdata) {
+          // Format: { sheetdata: [...] }
+          sheetData = data.sheetdata;
+        }
+        
+        console.log('Extracted sheetData:', sheetData);
+
+        if (sheetData && Array.isArray(sheetData) && sheetData.length > 0) {
+          setEngagementData(sheetData);
           setMessage({
             type: 'success',
             text: 'Engagement analysis complete! Here are your results:'
@@ -59,7 +92,7 @@ export default function TwitterEngagement() {
         } else {
           setMessage({
             type: 'success',
-            text: 'Analysis completed, but no engagement data was found.'
+            text: 'Analysis completed, but no engagement data was found. This tweet may not have sufficient engagement activity to analyze.'
           });
         }
         setTweetUrl(''); // Clear the input
@@ -83,6 +116,18 @@ export default function TwitterEngagement() {
     <div className="min-h-screen bg-black">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      
+      {/* Navigation Button */}
+      <div className="absolute top-6 right-6 z-20">
+        <Link href="/">
+          <button className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-white font-medium rounded-lg hover:bg-zinc-800 hover:border-zinc-600 transition-all">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Quote Tweet Analytics
+          </button>
+        </Link>
+      </div>
       
       <div className="relative z-10">
         {/* Header Section */}

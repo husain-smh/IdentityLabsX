@@ -42,6 +42,25 @@ export async function POST(request: NextRequest) {
 
     const webhookData = await webhookResponse.json();
 
+    // Enhanced logging for debugging
+    console.log('=== WEBHOOK DEBUG INFO ===');
+    console.log('Webhook URL:', webhookUrl);
+    console.log('Webhook Status:', webhookResponse.status);
+    console.log('Webhook Headers:', Object.fromEntries(webhookResponse.headers.entries()));
+    console.log('Raw Webhook Response:', JSON.stringify(webhookData, null, 2));
+    console.log('Response Type:', typeof webhookData);
+    console.log('Is Array:', Array.isArray(webhookData));
+    
+    if (Array.isArray(webhookData) && webhookData[0]) {
+      console.log('First item keys:', Object.keys(webhookData[0]));
+      console.log('First item sheetdata:', webhookData[0].sheetdata);
+    }
+    
+    if (webhookData.sheetdata) {
+      console.log('Direct sheetdata:', webhookData.sheetdata);
+    }
+    console.log('=== END WEBHOOK DEBUG ===');
+
     return NextResponse.json({
       success: true,
       message: 'Tweet engagement analysis completed successfully',
