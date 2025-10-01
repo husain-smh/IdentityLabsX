@@ -22,9 +22,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send to your N8N webhook
-    const webhookUrl = 'https://yuvaanjoshua.app.n8n.cloud/webhook/totalQuoteTwtViews';
-    // const webhookUrl = 'https://yuvaanjoshua.app.n8n.cloud/webhook-test/analyzeTwtEngagement';
+    // Send to your N8N webhook for engagement analysis
+    const webhookUrl = 'https://yuvaanjoshua.app.n8n.cloud/webhook-test/analyzeTwtEngagement';
     
     const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
@@ -43,31 +42,18 @@ export async function POST(request: NextRequest) {
 
     const webhookData = await webhookResponse.json();
 
-    // Extract the data from the new N8N response structure
-    const responseData = {
-      totalQuoteTwtViews: webhookData.statistics?.totalViewsAcrossAllQuoteTweets?.toString() || '0',
-      totalUniqueUsers: webhookData.statistics?.uniqueUsersKept?.toString() || '0',
-      // Include rich analytics data
-      fullAnalytics: {
-        success: webhookData.success,
-        statistics: webhookData.statistics,
-        filteredUsers: webhookData.filteredUsers || [],
-        errors: webhookData.errors || []
-      }
-    };
-
     return NextResponse.json({
       success: true,
-      message: 'Tweet URL sent successfully',
-      data: responseData,
+      message: 'Tweet engagement analysis completed successfully',
+      data: webhookData,
     });
 
   } catch (error) {
-    console.error('Error sending tweet to webhook:', error);
+    console.error('Error analyzing tweet engagement:', error);
     
     return NextResponse.json(
       { 
-        error: 'Failed to process tweet URL',
+        error: 'Failed to analyze tweet engagement',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
