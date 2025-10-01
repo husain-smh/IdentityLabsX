@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send to your N8N webhook for engagement analysis
-    const webhookUrl = 'https://yuvaanjoshua.app.n8n.cloud/webhook-test/analyzeTwtEngagement';
+    const webhookUrl = 'https://yuvaanjoshua.app.n8n.cloud/webhook/analyzeTwtEngagement';
     
     const webhookResponse = await fetch(webhookUrl, {
       method: 'POST',
