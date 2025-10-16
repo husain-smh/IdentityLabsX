@@ -180,7 +180,7 @@ export default function TwitterEngagement() {
             </div>
             <ul className="list-disc list-inside space-y-2 text-zinc-300 text-sm">
               <li>
-                Ensure the account's sheet exists in your Google Spreadsheet (
+                Ensure the account&apos;s sheet exists in your Google Spreadsheet (
                 <a
                   href="https://docs.google.com/spreadsheets/d/1Ejt2mOL-uwZ5iu-fGhDten4Du0Hy8t3BFQMJSJA-h2s/edit?gid=0#gid=0"
                   target="_blank"
@@ -193,10 +193,10 @@ export default function TwitterEngagement() {
                 row (first row) from an existing sheet into it.
               </li>
               <li>
-                The workflow takes time to process. You'll see a loading state — please be patient.
+                The workflow takes time to process. You&apos;ll see a loading state — please be patient.
               </li>
               <li>
-                After completion, you'll receive a Google Spreadsheet link that you can open to view the
+                After completion, you&apos;ll receive a Google Spreadsheet link that you can open to view the
                 results.
               </li>
               <li>
