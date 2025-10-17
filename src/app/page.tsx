@@ -347,14 +347,14 @@ export default function Home() {
                       Top Influencers
                     </h3>
                     <span className="text-xs bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/20">
-                      Top {Math.min(10, analyticsData.fullAnalytics.filteredUsers.length)}
+                      Top {Math.min(25, analyticsData.fullAnalytics.filteredUsers.length)}
                     </span>
                   </div>
                   
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                  <div className="space-y-4 max-h-[800px] overflow-y-auto">
                     {analyticsData.fullAnalytics.filteredUsers
                       .sort((a, b) => b.totalViewsFromQuoteTweets - a.totalViewsFromQuoteTweets)
-                      .slice(0, 10)
+                      .slice(0, 25)
                       .map((user, index) => (
                         <div key={user.userId} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
                           <div className="flex-shrink-0">
