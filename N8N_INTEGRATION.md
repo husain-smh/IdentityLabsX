@@ -29,40 +29,109 @@ Production: https://your-domain.com
 ### 1.1 Add Important Person
 **Endpoint:** `POST /api/ranker/admin/important-person`
 
-**Purpose:** Add a new person to the important people list
+**Purpose:** Add one or more people to the important people list (supports comma-separated usernames)
 
-**Request Body:**
+**Request Body (Single User):**
 ```json
 {
   "username": "elonmusk"
 }
 ```
 
+**Request Body (Multiple Users - Comma-separated):**
+```json
+{
+  "username": "elonmusk, naval, sama"
+}
+```
+
 **Note:** Only username is required. N8N will provide user_id and name during the first following sync.
 
-**Response (Success):**
+**Response (Success - Single User):**
 ```json
 {
   "success": true,
-  "message": "Important person added successfully. N8N will sync their details on first following sync.",
-  "data": {
-    "username": "elonmusk",
-    "following_count": 0,
-    "is_active": true,
-    "last_synced": null,
-    "created_at": "2025-11-05T10:30:00.000Z",
-    "updated_at": "2025-11-05T10:30:00.000Z"
-  }
+  "message": "Processed 1 username(s): 1 added, 0 failed",
+  "summary": {
+    "total": 1,
+    "added": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "username": "elonmusk",
+      "success": true,
+      "message": "@elonmusk added successfully"
+    }
+  ]
 }
 ```
 
-**Response (Error - Duplicate):**
+**Response (Success - Multiple Users):**
 ```json
 {
-  "error": "This person already exists in the system",
-  "details": "E11000 duplicate key error collection..."
+  "success": true,
+  "message": "Processed 3 username(s): 3 added, 0 failed",
+  "summary": {
+    "total": 3,
+    "added": 3,
+    "failed": 0
+  },
+  "results": [
+    {
+      "username": "elonmusk",
+      "success": true,
+      "message": "@elonmusk added successfully"
+    },
+    {
+      "username": "naval",
+      "success": true,
+      "message": "@naval added successfully"
+    },
+    {
+      "username": "sama",
+      "success": true,
+      "message": "@sama added successfully"
+    }
+  ]
 }
 ```
+
+**Response (Partial Success - Some Duplicates):**
+```json
+{
+  "success": true,
+  "message": "Processed 3 username(s): 2 added, 1 failed",
+  "summary": {
+    "total": 3,
+    "added": 2,
+    "failed": 1
+  },
+  "results": [
+    {
+      "username": "elonmusk",
+      "success": true,
+      "message": "@elonmusk added successfully"
+    },
+    {
+      "username": "naval",
+      "success": false,
+      "message": "@naval already exists",
+      "error": "Duplicate entry"
+    },
+    {
+      "username": "sama",
+      "success": true,
+      "message": "@sama added successfully"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+- `200`: All users added successfully
+- `207`: Partial success (some failed, some succeeded)
+- `500`: All failed
 
 ---
 
@@ -155,6 +224,127 @@ Production: https://your-domain.com
   }
 }
 ```
+
+---
+
+### 1.5 Sync Person (Trigger N8N Sync)
+**Endpoint:** `POST /api/ranker/admin/sync-person`
+
+**Purpose:** Manually trigger sync for one or more important people (calls N8N webhook, supports comma-separated usernames)
+
+**Request Body (Single User):**
+```json
+{
+  "username": "elonmusk"
+}
+```
+
+**Request Body (Multiple Users - Comma-separated):**
+```json
+{
+  "username": "elonmusk, naval, sama"
+}
+```
+
+**Response (Success - Single User):**
+```json
+{
+  "success": true,
+  "message": "Processed 1 username(s): 1 succeeded, 0 failed",
+  "summary": {
+    "total": 1,
+    "succeeded": 1,
+    "failed": 0
+  },
+  "results": [
+    {
+      "username": "elonmusk",
+      "success": true,
+      "message": "Successfully synced @elonmusk",
+      "following_count": 523,
+      "synced_at": "2025-11-09T12:30:00.000Z"
+    }
+  ]
+}
+```
+
+**Response (Success - Multiple Users):**
+```json
+{
+  "success": true,
+  "message": "Processed 3 username(s): 3 succeeded, 0 failed",
+  "summary": {
+    "total": 3,
+    "succeeded": 3,
+    "failed": 0
+  },
+  "results": [
+    {
+      "username": "elonmusk",
+      "success": true,
+      "message": "Successfully synced @elonmusk",
+      "following_count": 523,
+      "synced_at": "2025-11-09T12:30:00.000Z"
+    },
+    {
+      "username": "naval",
+      "success": true,
+      "message": "Successfully synced @naval",
+      "following_count": 156,
+      "synced_at": "2025-11-09T12:30:15.000Z"
+    },
+    {
+      "username": "sama",
+      "success": true,
+      "message": "Successfully synced @sama",
+      "following_count": 289,
+      "synced_at": "2025-11-09T12:30:30.000Z"
+    }
+  ]
+}
+```
+
+**Response (Partial Success):**
+```json
+{
+  "success": true,
+  "message": "Processed 3 username(s): 2 succeeded, 1 failed",
+  "summary": {
+    "total": 3,
+    "succeeded": 2,
+    "failed": 1
+  },
+  "results": [
+    {
+      "username": "elonmusk",
+      "success": true,
+      "message": "Successfully synced @elonmusk",
+      "following_count": 523,
+      "synced_at": "2025-11-09T12:30:00.000Z"
+    },
+    {
+      "username": "unknown_user",
+      "success": false,
+      "message": "Person not found in important people list",
+      "error": "Not found in database"
+    },
+    {
+      "username": "sama",
+      "success": true,
+      "message": "Successfully synced @sama",
+      "following_count": 289,
+      "synced_at": "2025-11-09T12:30:30.000Z"
+    }
+  ]
+}
+```
+
+**Status Codes:**
+- `200`: All syncs succeeded
+- `207`: Partial success (some failed, some succeeded)
+- `500`: All failed
+
+**Note:** This endpoint calls the N8N webhook at `https://mdhusainil.app.n8n.cloud/webhook/getFollowing` for each username and updates the following index.
 
 ---
 

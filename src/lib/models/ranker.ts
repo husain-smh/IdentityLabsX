@@ -162,43 +162,41 @@ export async function updateFollowingIndex(
     }
   );
   
-  // Step 2: Recalculate importance scores for users that no longer have this person
-  await followingIndexCollection.updateMany(
-    {},
-    [
-      {
-        $set: {
-          importance_score: { $size: '$followed_by' },
-        },
-      },
-    ]
-  );
-  
-  // Step 3: Add/update entries for new following list
-  for (const followedUser of followingList) {
-    await followingIndexCollection.updateOne(
-      {
-        followed_user_id: followedUser.user_id,
-      },
-      {
-        $addToSet: {
-          followed_by: {
-            username: importantPerson.username,
-            user_id: importantPerson.user_id,
-            name: importantPerson.name,
+  // Step 3: Add/update entries for new following list (using bulk operations for performance)
+  console.log(`Building bulk operations for ${followingList.length} following accounts...`);
+  if (followingList.length > 0) {
+    const bulkOps = followingList.map(followedUser => ({
+      updateOne: {
+        filter: { followed_user_id: followedUser.user_id },
+        update: {
+          $addToSet: {
+            followed_by: {
+              username: importantPerson.username,
+              user_id: importantPerson.user_id,
+              name: importantPerson.name,
+            },
+          },
+          $set: {
+            followed_username: followedUser.username,
+            followed_user_id: followedUser.user_id,
+            updated_at: new Date(),
           },
         },
-        $set: {
-          followed_username: followedUser.username,
-          followed_user_id: followedUser.user_id,
-          updated_at: new Date(),
-        },
+        upsert: true,
       },
-      { upsert: true }
-    );
+    }));
+
+    // Execute all updates in batches of 1000 for optimal performance
+    const batchSize = 1000;
+    for (let i = 0; i < bulkOps.length; i += batchSize) {
+      const batch = bulkOps.slice(i, i + batchSize);
+      await followingIndexCollection.bulkWrite(batch, { ordered: false });
+      console.log(`Processed batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(bulkOps.length / batchSize)} (${batch.length} operations)`);
+    }
   }
   
-  // Step 4: Recalculate importance scores for all affected users
+  // Step 4: Recalculate importance scores for all users (single operation at the end)
+  console.log('Recalculating importance scores...');
   await followingIndexCollection.updateMany(
     {},
     [
@@ -209,6 +207,7 @@ export async function updateFollowingIndex(
       },
     ]
   );
+  console.log('✅ Importance scores updated');
   
   // Step 5: Update last_synced for the important person
   await importantPeopleCollection.updateOne(
@@ -284,7 +283,7 @@ export async function createIndexes(): Promise<void> {
   
   // Important people indexes
   await importantPeopleCollection.createIndex({ username: 1 }, { unique: true });
-  await importantPeopleCollection.createIndex({ user_id: 1 }, { unique: true });
+  await importantPeopleCollection.createIndex({ user_id: 1 }); // Non-unique, just for lookups
   await importantPeopleCollection.createIndex({ is_active: 1 });
   
   // Following index indexes (critical for performance)

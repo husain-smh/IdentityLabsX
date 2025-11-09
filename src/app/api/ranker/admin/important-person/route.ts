@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addImportantPerson, removeImportantPerson } from '@/lib/models/ranker';
 
-// POST - Add a new important person
+// Type for add result
+interface AddResult {
+  username: string;
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
+// POST - Add one or more important people (supports comma-separated usernames)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -10,33 +18,84 @@ export async function POST(request: NextRequest) {
     // Validation
     if (!username || typeof username !== 'string') {
       return NextResponse.json(
-        { error: 'username is required and must be a string' },
+        { error: 'username is required and must be a string (supports comma-separated values)' },
         { status: 400 }
       );
     }
 
-    // Add the important person (just username - N8N will enrich with user_id/name later)
-    const newPerson = await addImportantPerson(username);
+    // Split by comma and clean up whitespace
+    const usernames = username
+      .split(',')
+      .map(u => u.trim())
+      .filter(u => u.length > 0); // Remove empty strings
+
+    if (usernames.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one valid username is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log(`Adding ${usernames.length} username(s): ${usernames.join(', ')}`);
+
+    // Process each username
+    const results: AddResult[] = [];
+    for (const user of usernames) {
+      try {
+        const newPerson = await addImportantPerson(user);
+        results.push({
+          username: user,
+          success: true,
+          message: `@${user} added successfully`,
+        });
+      } catch (error) {
+        // Handle duplicate key error
+        if (error instanceof Error && error.message.includes('duplicate key')) {
+          results.push({
+            username: user,
+            success: false,
+            message: `@${user} already exists`,
+            error: 'Duplicate entry',
+          });
+        } else {
+          results.push({
+            username: user,
+            success: false,
+            message: `Failed to add @${user}`,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
+      }
+    }
+
+    // Count successes and failures
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    // Determine response status
+    // If all failed, return 500
+    // If some succeeded, return 207 (Multi-Status)
+    // If all succeeded, return 200
+    let status = 200;
+    if (failureCount === results.length) {
+      status = 500;
+    } else if (failureCount > 0) {
+      status = 207; // Multi-Status: partial success
+    }
 
     return NextResponse.json({
-      success: true,
-      message: 'Important person added successfully. N8N will sync their details on first following sync.',
-      data: newPerson,
-    });
+      success: successCount > 0,
+      message: `Processed ${usernames.length} username(s): ${successCount} added, ${failureCount} failed`,
+      summary: {
+        total: usernames.length,
+        added: successCount,
+        failed: failureCount,
+      },
+      results,
+    }, { status });
 
   } catch (error) {
     console.error('Error adding important person:', error);
-    
-    // Handle duplicate key error
-    if (error instanceof Error && error.message.includes('duplicate key')) {
-      return NextResponse.json(
-        { 
-          error: 'This person already exists in the system',
-          details: error.message
-        },
-        { status: 409 }
-      );
-    }
     
     return NextResponse.json(
       { 

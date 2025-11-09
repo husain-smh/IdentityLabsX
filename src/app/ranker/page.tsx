@@ -25,6 +25,7 @@ export default function RankerAdmin() {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [syncingUsername, setSyncingUsername] = useState<string | null>(null);
   const [message, setMessage] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -40,6 +41,17 @@ export default function RankerAdmin() {
     };
     people: SyncStatus[];
   } | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalPeople, setTotalPeople] = useState(0);
+  const [limit] = useState(20);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allPeople, setAllPeople] = useState<ImportantPerson[]>([]); // Store all people for search
+  const [isSearching, setIsSearching] = useState(false);
 
   // Fetch important people on mount
   useEffect(() => {
@@ -47,14 +59,62 @@ export default function RankerAdmin() {
     fetchSyncStatus();
   }, []);
 
-  const fetchImportantPeople = async () => {
+  // Fetch all people for search functionality
+  const fetchAllPeople = async () => {
+    setIsSearching(true);
+    try {
+      // Fetch with a high limit to get all people
+      const response = await fetch(`/api/ranker/admin/important-people?page=1&limit=1000`);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setAllPeople(data.data.people);
+      }
+    } catch (error) {
+      console.error('Error fetching all people:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Trigger search when query changes (with debounce)
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      // Only fetch if we don't have all people cached yet
+      if (allPeople.length === 0) {
+        const timeoutId = setTimeout(() => {
+          fetchAllPeople();
+        }, 300); // 300ms debounce
+        return () => clearTimeout(timeoutId);
+      }
+    } else {
+      // Clear cached data when search is cleared
+      setAllPeople([]);
+    }
+  }, [searchQuery]);
+
+  // Filter people based on search query
+  const filteredPeople = searchQuery.trim()
+    ? allPeople.filter((person) => {
+        const query = searchQuery.toLowerCase();
+        return (
+          person.username.toLowerCase().includes(query) ||
+          person.name?.toLowerCase().includes(query)
+        );
+      })
+    : importantPeople;
+
+  const fetchImportantPeople = async (page: number = currentPage) => {
     setIsFetching(true);
     try {
-      const response = await fetch('/api/ranker/admin/important-people');
+      const response = await fetch(`/api/ranker/admin/important-people?page=${page}&limit=${limit}`);
       const data = await response.json();
       
       if (response.ok && data.success) {
         setImportantPeople(data.data.people);
+        setTotalPages(data.data.pagination.total_pages);
+        setTotalPeople(data.data.pagination.total);
+        setCurrentPage(page);
       }
     } catch (error) {
       console.error('Error fetching important people:', error);
@@ -87,6 +147,20 @@ export default function RankerAdmin() {
       return;
     }
 
+    // Client-side duplicate check
+    const usernameToAdd = username.trim().toLowerCase();
+    const existingPerson = importantPeople.find(
+      (person) => person.username.toLowerCase() === usernameToAdd
+    );
+    
+    if (existingPerson) {
+      setMessage({
+        type: 'error',
+        text: `@${username.trim()} is already in your important people list!`,
+      });
+      return;
+    }
+
     setIsLoading(true);
     setMessage(null);
 
@@ -104,12 +178,22 @@ export default function RankerAdmin() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setMessage({
-          type: 'success',
-          text: data.message || 'Important person added successfully',
-        });
+        // Handle multiple username additions
+        const summary = data.summary;
+        if (summary && summary.total > 1) {
+          setMessage({
+            type: 'success',
+            text: `${summary.added} of ${summary.total} people added successfully${summary.failed > 0 ? ` (${summary.failed} duplicates found)` : ''}`,
+          });
+        } else {
+          setMessage({
+            type: 'success',
+            text: data.message || 'Important person added successfully! You can now sync their following data.',
+          });
+        }
         setUsername('');
-        fetchImportantPeople();
+        setAllPeople([]); // Clear search cache to include new person
+        fetchImportantPeople(1); // Reset to page 1 after adding
         fetchSyncStatus();
       } else {
         setMessage({
@@ -145,6 +229,7 @@ export default function RankerAdmin() {
           type: 'success',
           text: `@${username} removed successfully`,
         });
+        setAllPeople([]); // Clear search cache after removal
         fetchImportantPeople();
         fetchSyncStatus();
       } else {
@@ -159,6 +244,80 @@ export default function RankerAdmin() {
         type: 'error',
         text: 'Network error. Please try again.',
       });
+    }
+  };
+
+  const handleSyncPerson = async (username: string) => {
+    // Prevent multiple syncs at once
+    if (syncingUsername) {
+      setMessage({
+        type: 'error',
+        text: `Please wait for @${syncingUsername} to finish syncing first.`,
+      });
+      return;
+    }
+
+    setSyncingUsername(username);
+    setMessage({
+      type: 'success',
+      text: `Syncing @${username}... This may take a minute.`,
+    });
+
+    try {
+      // Create an AbortController with a longer timeout (5 minutes for sync operations)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+
+      const response = await fetch('/api/ranker/admin/sync-person', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Handle multiple usernames response
+        const summary = data.summary;
+        if (summary && summary.total > 1) {
+          setMessage({
+            type: 'success',
+            text: `${summary.succeeded} of ${summary.total} synced successfully!`,
+          });
+        } else {
+          setMessage({
+            type: 'success',
+            text: `@${username} synced successfully! Following: ${data.results?.[0]?.following_count || 0}`,
+          });
+        }
+        setAllPeople([]); // Clear search cache after sync (data might have changed)
+        fetchImportantPeople();
+        fetchSyncStatus();
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to sync person',
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      if ((error as Error).name === 'AbortError') {
+        setMessage({
+          type: 'error',
+          text: 'Sync operation timed out. The person may have too many followers. Please try again.',
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: 'Network error. Please try again.',
+        });
+      }
+    } finally {
+      setSyncingUsername(null);
     }
   };
 
@@ -332,6 +491,7 @@ export default function RankerAdmin() {
               <h2 className="text-2xl font-bold text-white">Important People</h2>
               <button
                 onClick={() => {
+                  setAllPeople([]); // Clear search cache on refresh
                   fetchImportantPeople();
                   fetchSyncStatus();
                 }}
@@ -355,6 +515,61 @@ export default function RankerAdmin() {
               </button>
             </div>
 
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative">
+                <svg
+                  className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 ${isSearching ? 'animate-pulse' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search across all important people..."
+                  className="w-full pl-12 pr-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                  disabled={isSearching}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {searchQuery && !isSearching && (
+                <p className="mt-2 text-sm text-zinc-400">
+                  Found {filteredPeople.length} result{filteredPeople.length !== 1 ? 's' : ''} for "{searchQuery}" across all {totalPeople} people
+                </p>
+              )}
+              {isSearching && (
+                <p className="mt-2 text-sm text-zinc-400">
+                  <span className="inline-flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-zinc-400 border-t-transparent"></div>
+                    Searching across all people...
+                  </span>
+                </p>
+              )}
+            </div>
+
             {importantPeople.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -370,6 +585,21 @@ export default function RankerAdmin() {
                 <p className="text-zinc-400">No important people added yet</p>
                 <p className="text-sm text-zinc-500 mt-2">Add someone using the form above to get started</p>
               </div>
+            ) : filteredPeople.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <p className="text-zinc-400">No results found for "{searchQuery}"</p>
+                <p className="text-sm text-zinc-500 mt-2">Try a different search term</p>
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -384,8 +614,8 @@ export default function RankerAdmin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {importantPeople.map((person) => (
-                      <tr key={person.user_id} className="border-b border-zinc-800/50 hover:bg-zinc-900/30 transition-colors">
+                    {filteredPeople.map((person) => (
+                      <tr key={person.username} className="border-b border-zinc-800/50 hover:bg-zinc-900/30 transition-colors">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-indigo-500/20 rounded-full flex items-center justify-center">
@@ -422,25 +652,102 @@ export default function RankerAdmin() {
                           )}
                         </td>
                         <td className="py-4 px-4 text-right">
-                          <button
-                            onClick={() => handleRemovePerson(person.username)}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm rounded-lg transition-all"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              />
-                            </svg>
-                            Remove
-                          </button>
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              onClick={() => handleSyncPerson(person.username)}
+                              disabled={syncingUsername !== null}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 text-sm rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              title={syncingUsername ? `Wait for @${syncingUsername} to finish syncing` : 'Sync following data from Twitter'}
+                            >
+                              <svg className={`w-4 h-4 ${syncingUsername === person.username ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                              </svg>
+                              {syncingUsername === person.username ? 'Syncing...' : 'Sync'}
+                            </button>
+                            <button
+                              onClick={() => handleRemovePerson(person.username)}
+                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm rounded-lg transition-all"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
+                              Remove
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {!searchQuery && totalPages > 1 && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-zinc-800">
+                <div className="text-sm text-zinc-400">
+                  Showing page {currentPage} of {totalPages} ({totalPeople} total people)
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => fetchImportantPeople(currentPage - 1)}
+                    disabled={currentPage === 1 || isFetching}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Previous
+                  </button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => fetchImportantPeople(pageNum)}
+                          disabled={isFetching}
+                          className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                            currentPage === pageNum
+                              ? 'bg-indigo-500 text-white'
+                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => fetchImportantPeople(currentPage + 1)}
+                    disabled={currentPage === totalPages || isFetching}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             )}
           </div>
