@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       let unwrappedBody = body;
       if (body.length > 0 && body[0] && typeof body[0] === 'object' && 'json' in body[0]) {
         console.log('🔓 Unwrapping n8n $input.all() format...');
-        unwrappedBody = body.map((item: any) => item.json);
+        unwrappedBody = body.map((item: Record<string, unknown>) => item.json as Record<string, unknown>);
       }
       
       // Find the sheetdata item (first item with tweet_url)
