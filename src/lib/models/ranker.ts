@@ -42,6 +42,7 @@ export interface RankedEngager {
   userId: string;
   name: string;
   bio?: string;
+  location?: string;
   followers?: number;
   verified?: boolean;
   replied?: boolean;
@@ -62,6 +63,7 @@ export interface EngagerInput {
   userId: string;
   name: string;
   bio?: string;
+  location?: string;
   followers?: number;
   verified?: boolean;
   replied?: boolean;
@@ -246,6 +248,7 @@ export async function rankEngagers(engagers: EngagerInput[]): Promise<RankedEnga
       userId: engager.userId,
       name: engager.name,
       bio: engager.bio,
+      location: engager.location,
       followers: engager.followers,
       verified: engager.verified,
       replied: engager.replied,
@@ -256,7 +259,7 @@ export async function rankEngagers(engagers: EngagerInput[]): Promise<RankedEnga
     };
   });
   
-  // Sort by importance score descending
+  // Sort by importance score descending (most important first)
   rankedEngagers.sort((a, b) => b.importance_score - a.importance_score);
   
   return rankedEngagers;
