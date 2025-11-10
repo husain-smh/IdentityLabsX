@@ -56,16 +56,19 @@ export async function POST(request: NextRequest) {
     // Prepare the important person object
     const importantPersonObj = {
       username: importantPerson.username,
-      user_id: importantPerson.user_id,
-      name: importantPerson.name,
+      user_id: importantPerson.user_id!,
+      name: importantPerson.name || importantPerson.username,
     };
 
     // Process the following list
-    const followingListObj = following_list.map((user: any) => ({
-      username: user.username.trim(),
-      user_id: user.user_id.trim(),
-      name: user.name ? user.name.trim() : user.username.trim(),
-    }));
+    const followingListObj = following_list.map((user: unknown) => {
+      const u = user as Record<string, unknown>;
+      return {
+        username: (u.username as string).trim(),
+        user_id: (u.user_id as string).trim(),
+        name: u.name ? (u.name as string).trim() : (u.username as string).trim(),
+      };
+    });
 
     // Update the inverse index
     console.log(`Starting sync for ${username}: ${followingListObj.length} following`);

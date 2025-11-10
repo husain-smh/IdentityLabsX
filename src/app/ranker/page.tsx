@@ -57,6 +57,7 @@ export default function RankerAdmin() {
   useEffect(() => {
     fetchImportantPeople();
     fetchSyncStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch all people for search functionality
@@ -91,6 +92,7 @@ export default function RankerAdmin() {
       // Clear cached data when search is cleared
       setAllPeople([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
   // Filter people based on search query
@@ -557,7 +559,7 @@ export default function RankerAdmin() {
               </div>
               {searchQuery && !isSearching && (
                 <p className="mt-2 text-sm text-zinc-400">
-                  Found {filteredPeople.length} result{filteredPeople.length !== 1 ? 's' : ''} for "{searchQuery}" across all {totalPeople} people
+                  Found {filteredPeople.length} result{filteredPeople.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot; across all {totalPeople} people
                 </p>
               )}
               {isSearching && (
@@ -597,7 +599,7 @@ export default function RankerAdmin() {
                     />
                   </svg>
                 </div>
-                <p className="text-zinc-400">No results found for "{searchQuery}"</p>
+                <p className="text-zinc-400">No results found for &quot;{searchQuery}&quot;</p>
                 <p className="text-sm text-zinc-500 mt-2">Try a different search term</p>
               </div>
             ) : (

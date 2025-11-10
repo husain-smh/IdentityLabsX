@@ -10,14 +10,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     let tweet_id: string;
-    let engagers: any[];
+    let engagers: unknown[];
 
     // Check if body is an array (N8N format) or object (direct API format)
     if (Array.isArray(body)) {
       console.log('📦 Received N8N array format with', body.length, 'items');
       
       // Find the sheetdata item (first item with tweet_url)
-      const sheetDataItem = body.find((item: any) => item.sheetdata);
+      const sheetDataItem = body.find((item: unknown) => {
+        const i = item as Record<string, unknown>;
+        return i.sheetdata;
+      });
       
       if (!sheetDataItem || !sheetDataItem.sheetdata || !sheetDataItem.sheetdata[0]?.tweet_url) {
         return NextResponse.json(
@@ -40,7 +43,10 @@ export async function POST(request: NextRequest) {
       tweet_id = tweetIdMatch[1];
       
       // Filter out sheetdata item and get remaining engagers
-      engagers = body.filter((item: any) => !item.sheetdata);
+      engagers = body.filter((item: unknown) => {
+        const i = item as Record<string, unknown>;
+        return !i.sheetdata;
+      });
       
       console.log(`✅ Extracted tweet_id: ${tweet_id} from URL: ${tweetUrl}`);
       console.log(`✅ Found ${engagers.length} engagers`);
@@ -70,7 +76,8 @@ export async function POST(request: NextRequest) {
 
     // Validate engagers array
     for (const engager of engagers) {
-      if (!engager.username || !engager.userId) {
+      const e = engager as Record<string, unknown>;
+      if (!e.username || !e.userId) {
         return NextResponse.json(
           { error: 'Each engager must have username and userId' },
           { status: 400 }
@@ -79,18 +86,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare engagers list (preserving all metadata)
-    const engagersObj: EngagerInput[] = engagers.map((engager: any) => ({
-      username: engager.username.trim(),
-      userId: engager.userId.trim(),
-      name: engager.name ? engager.name.trim() : engager.username.trim(),
-      bio: engager.bio,
-      location: engager.location,
-      followers: engager.followers,
-      verified: engager.verified,
-      replied: engager.replied,
-      retweeted: engager.retweeted,
-      quoted: engager.quoted,
-    }));
+    const engagersObj: EngagerInput[] = engagers.map((engager: unknown) => {
+      const e = engager as Record<string, unknown>;
+      return {
+        username: (e.username as string).trim(),
+        userId: (e.userId as string).trim(),
+        name: e.name ? (e.name as string).trim() : (e.username as string).trim(),
+        bio: e.bio as string | undefined,
+        location: e.location as string | undefined,
+        followers: e.followers as number | undefined,
+        verified: e.verified as boolean | undefined,
+        replied: e.replied as boolean | undefined,
+        retweeted: e.retweeted as boolean | undefined,
+        quoted: e.quoted as boolean | undefined,
+      };
+    });
 
     console.log(`Ranking ${engagersObj.length} engagers for tweet ${tweet_id}`);
     

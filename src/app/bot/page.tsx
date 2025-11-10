@@ -19,6 +19,7 @@ interface ApiResponse {
   message: string;
   inserted: number;
   data: ExtractedTask[];
+  error?: string;
 }
 
 export default function BotPage() {

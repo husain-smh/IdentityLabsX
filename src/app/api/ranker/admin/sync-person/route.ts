@@ -60,8 +60,8 @@ async function syncSinglePerson(username: string): Promise<SyncResult> {
     });
 
     // Parse N8N response - it might return different formats
-    let followingList: any[] = [];
-    let userData: any = null;
+    let followingList: unknown[] = [];
+    let userData: Record<string, unknown> | null = null;
 
     // Handle different response formats
     if (Array.isArray(n8nData)) {
@@ -90,17 +90,20 @@ async function syncSinglePerson(username: string): Promise<SyncResult> {
     }
 
     // Transform following list to our format
-    const formattedFollowing = followingList.map((user: any) => ({
-      username: user.username || user.userName || user.screenName,
-      user_id: user.userId || user.user_id || user.id,
-      name: user.name || user.displayName || user.username,
-    }));
+    const formattedFollowing = followingList.map((user: unknown) => {
+      const u = user as Record<string, unknown>;
+      return {
+        username: (u.username || u.userName || u.screenName) as string,
+        user_id: (u.userId || u.user_id || u.id) as string,
+        name: (u.name || u.displayName || u.username) as string,
+      };
+    });
 
     // Prepare important person object
     const importantPersonObj = {
       username: trimmedUsername,
-      user_id: userData?.userId || userData?.user_id || userData?.id || person.user_id || trimmedUsername,
-      name: userData?.name || userData?.displayName || person.name || trimmedUsername,
+      user_id: (userData?.userId || userData?.user_id || userData?.id || person.user_id || trimmedUsername) as string,
+      name: (userData?.name || userData?.displayName || person.name || trimmedUsername) as string,
     };
 
     // Update the inverse index

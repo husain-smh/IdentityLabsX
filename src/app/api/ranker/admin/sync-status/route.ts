@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getImportantPeopleCollection } from '@/lib/models/ranker';
 
 // GET - Get sync status for all important people
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const collection = await getImportantPeopleCollection();
     

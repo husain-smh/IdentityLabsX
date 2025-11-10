@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const results: AddResult[] = [];
     for (const user of usernames) {
       try {
-        const newPerson = await addImportantPerson(user);
+        await addImportantPerson(user);
         results.push({
           username: user,
           success: true,
