@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rankEngagers, saveEngagementRanking, EngagerInput } from '@/lib/models/ranker';
 
 // POST - Rank a list of engagers by importance score
-// Supports two input formats:
+// Supports three input formats:
 // 1. Object format: { tweet_id: "123", engagers: [...] }
 // 2. N8N array format: [{ sheetdata: [{ tweet_url: "..." }] }, { username: "...", userId: "..." }, ...]
+// 3. N8N $input.all() format: [{ json: { sheetdata: [...] } }, { json: { username: "..." } }, ...]
+//    The API automatically unwraps the "json" property from each item
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -16,8 +18,15 @@ export async function POST(request: NextRequest) {
     if (Array.isArray(body)) {
       console.log('📦 Received N8N array format with', body.length, 'items');
       
+      // Unwrap n8n $input.all() format if items have "json" property
+      let unwrappedBody = body;
+      if (body.length > 0 && body[0] && typeof body[0] === 'object' && 'json' in body[0]) {
+        console.log('🔓 Unwrapping n8n $input.all() format...');
+        unwrappedBody = body.map((item: any) => item.json);
+      }
+      
       // Find the sheetdata item (first item with tweet_url)
-      const sheetDataItem = body.find((item: unknown) => {
+      const sheetDataItem = unwrappedBody.find((item: unknown) => {
         const i = item as Record<string, unknown>;
         return i.sheetdata;
       });
@@ -43,7 +52,7 @@ export async function POST(request: NextRequest) {
       tweet_id = tweetIdMatch[1];
       
       // Filter out sheetdata item and get remaining engagers
-      engagers = body.filter((item: unknown) => {
+      engagers = unwrappedBody.filter((item: unknown) => {
         const i = item as Record<string, unknown>;
         return !i.sheetdata;
       });

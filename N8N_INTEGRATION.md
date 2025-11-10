@@ -430,7 +430,9 @@ Production: https://your-domain.com
 
 **Purpose:** Rank a list of tweet engagers by their importance score
 
-**Request Body:**
+**Supported Request Formats:**
+
+#### Format 1: Object Format (Direct API Calls)
 ```json
 {
   "tweet_id": "1234567890123456789",
@@ -460,6 +462,49 @@ Production: https://your-domain.com
   ]
 }
 ```
+
+#### Format 2: N8N Array Format (Recommended for n8n)
+Use `{{ $input.all() }}` in your HTTP Request node to send all items at once:
+
+```json
+[
+  {
+    "sheetdata": [{
+      "tweet_url": "https://x.com/username/status/1234567890123456789",
+      "author_name": "John Doe",
+      "spreadsheetId": "..."
+    }]
+  },
+  {
+    "username": "Legacy_Compass",
+    "userId": "1429826188990627849",
+    "name": "Masculine Revival",
+    "bio": "Reviving The Warrior Spirit In Men.",
+    "followers": 33819,
+    "verified": false,
+    "replied": true,
+    "retweeted": true,
+    "quoted": false
+  },
+  {
+    "username": "user2",
+    "userId": "222222",
+    "name": "User Two",
+    "bio": "Tech enthusiast",
+    "followers": 1200,
+    "verified": true,
+    "replied": false,
+    "retweeted": true,
+    "quoted": false
+  }
+]
+```
+
+**N8N Setup:**
+- First item must contain `sheetdata` with `tweet_url`
+- Tweet ID is automatically extracted from the URL
+- Remaining items are the engager objects
+- In your HTTP Request node JSON field, use: `{{ $input.all() }}`
 
 **Field Descriptions:**
 - `username` (required): Twitter username
