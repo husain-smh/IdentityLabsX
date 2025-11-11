@@ -7,6 +7,45 @@ import { rankEngagers, saveEngagementRanking, EngagerInput } from '@/lib/models/
 // 2. N8N array format: [{ sheetdata: [{ tweet_url: "..." }] }, { username: "...", userId: "..." }, ...]
 // 3. N8N $input.all() format: [{ json: { sheetdata: [...] } }, { json: { username: "..." } }, ...]
 //    The API automatically unwraps the "json" property from each item
+
+// Retry helper for MongoDB operations
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 1000
+): Promise<T> {
+  let lastError: Error | undefined;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check if it's a MongoDB SSL/TLS error
+      const isSSLError = errorMessage.includes('SSL') || 
+                        errorMessage.includes('TLS') || 
+                        errorMessage.includes('ECONNRESET') ||
+                        errorMessage.includes('connection') ||
+                        errorMessage.includes('MongoServerError');
+      
+      if (isSSLError && attempt < maxRetries) {
+        const waitTime = delayMs * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`⚠️ Attempt ${attempt}/${maxRetries} failed with SSL/connection error. Retrying in ${waitTime}ms...`);
+        console.log(`   Error: ${errorMessage}`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // If not an SSL error or last attempt, throw
+      throw error;
+    }
+  }
+  
+  throw lastError || new Error('Operation failed after retries');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -113,11 +152,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`Ranking ${engagersObj.length} engagers for tweet ${tweet_id}`);
     
-    // Rank the engagers
-    const rankedEngagers = await rankEngagers(engagersObj);
+    // Rank the engagers with retry logic
+    const rankedEngagers = await withRetry(async () => {
+      return await rankEngagers(engagersObj);
+    });
     
-    // Save the ranking result
-    await saveEngagementRanking(tweet_id, rankedEngagers);
+    // Save the ranking result with retry logic
+    await withRetry(async () => {
+      await saveEngagementRanking(tweet_id, rankedEngagers);
+    });
     
     console.log(`Ranking complete. Top engagers:`);
     rankedEngagers.slice(0, 5).forEach((e, i) => {

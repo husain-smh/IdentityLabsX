@@ -1,5 +1,5 @@
 import { Collection } from 'mongodb';
-import rankerDbPromise from '../mongodb-ranker';
+import { getDb } from '../mongodb-ranker';
 
 // ===== TypeScript Interfaces =====
 
@@ -74,17 +74,17 @@ export interface EngagerInput {
 // ===== Helper Functions =====
 
 export async function getImportantPeopleCollection(): Promise<Collection<ImportantPerson>> {
-  const db = await rankerDbPromise;
+  const db = await getDb();
   return db.collection<ImportantPerson>('important_people');
 }
 
 export async function getFollowingIndexCollection(): Promise<Collection<FollowingIndexEntry>> {
-  const db = await rankerDbPromise;
+  const db = await getDb();
   return db.collection<FollowingIndexEntry>('following_index');
 }
 
 export async function getEngagementRankingsCollection(): Promise<Collection<EngagementRanking>> {
-  const db = await rankerDbPromise;
+  const db = await getDb();
   return db.collection<EngagementRanking>('engagement_rankings');
 }
 
