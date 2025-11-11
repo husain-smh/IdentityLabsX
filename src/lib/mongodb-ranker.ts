@@ -20,7 +20,7 @@ const options = {
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
-let rankerDbPromise: Promise<Db>;
+let rankerDbPromise: Promise<Db> | undefined;
 let connectionTimestamp = 0;
 const CONNECTION_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
@@ -72,16 +72,16 @@ export async function getDb(): Promise<Db> {
   }
   
   try {
-    return await rankerDbPromise;
+    return await rankerDbPromise!;
   } catch (error) {
     console.error('❌ MongoDB connection failed, retrying...', error);
     // Recreate connection on failure
     createConnection();
-    return await rankerDbPromise;
+    return await rankerDbPromise!;
   }
 }
 
 // Export both client and database promises
 export { clientPromise };
-export default rankerDbPromise;
+export default rankerDbPromise!;
 

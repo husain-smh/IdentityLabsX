@@ -4,10 +4,10 @@ import { getTweet, getEngagers, getEngagersStats, GetEngagersOptions } from '@/l
 // GET - Get tweet details and optionally engagers
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tweetId: string } }
+  { params }: { params: Promise<{ tweetId: string }> }
 ) {
   try {
-    const { tweetId } = params;
+    const { tweetId } = await params;
     const { searchParams } = new URL(request.url);
     
     // Check if requesting engagers list

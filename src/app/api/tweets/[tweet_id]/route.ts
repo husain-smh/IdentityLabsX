@@ -4,10 +4,10 @@ import { getTweetById, getEngagers, getEngagerCount } from '@/lib/models/tweet-a
 // GET - Get tweet details with engagers
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tweet_id: string } }
+  { params }: { params: Promise<{ tweet_id: string }> }
 ) {
   try {
-    const { tweet_id } = params;
+    const { tweet_id } = await params;
     
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
