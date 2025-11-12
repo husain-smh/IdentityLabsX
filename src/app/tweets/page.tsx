@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 interface Tweet {
   tweet_id: string;
@@ -52,14 +53,14 @@ export default function TweetsPage() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      pending: 'bg-gray-200 text-gray-700',
-      analyzing: 'bg-blue-200 text-blue-700',
-      completed: 'bg-green-200 text-green-700',
-      failed: 'bg-red-200 text-red-700',
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      analyzing: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      failed: 'bg-red-500/20 text-red-400 border-red-500/30',
     };
     
     return (
-      <span className={`px-2 py-1 rounded text-xs font-medium ${styles[status as keyof typeof styles] || styles.pending}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[status as keyof typeof styles] || styles.pending}`}>
         {status}
       </span>
     );
@@ -67,10 +68,14 @@ export default function TweetsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading tweets...</p>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent mx-auto"></div>
+            <p className="mt-4 text-zinc-400">Loading tweets...</p>
+          </div>
         </div>
       </div>
     );
@@ -78,124 +83,151 @@ export default function TweetsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-lg">{error}</p>
-          <button
-            onClick={fetchTweets}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Retry
-          </button>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-400 text-lg">{error}</p>
+            <button
+              onClick={fetchTweets}
+              className="mt-4 px-4 py-2 gradient-primary text-white rounded-lg hover:opacity-90 transition-all"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Tweet Analytics</h1>
-          <p className="mt-2 text-gray-600">
-            View and analyze Twitter engagement data
-          </p>
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      
+      <div className="relative z-10">
+        {/* Header Section */}
+        <div className="pt-24 pb-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-zinc-400 text-sm font-medium">Identity Labs Analytics</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              <span className="gradient-text">Tweets Analyzed</span>
+            </h1>
+            <p className="text-xl text-zinc-400 max-w-2xl mx-auto">
+              View and analyze Twitter engagement data
+            </p>
+          </div>
         </div>
 
-        {tweets.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-500 text-lg">No tweets analyzed yet.</p>
-            <p className="text-gray-400 mt-2">
-              Start by triggering the n8n workflow with a tweet URL.
-            </p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tweet
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Author
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Engagers
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tweets.map((tweet) => (
-                  <tr key={tweet.tweet_id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <a
-                        href={tweet.tweet_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
-                      >
-                        {tweet.tweet_id}
-                      </a>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {tweet.author_name}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(tweet.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {tweet.total_engagers} total
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {tweet.engagers_above_10k} &gt;10k | {tweet.engagers_below_10k} &lt;10k
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(tweet.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {tweet.status === 'completed' ? (
-                        <Link
-                          href={`/tweets/${tweet.tweet_id}`}
-                          className="text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          View Details →
-                        </Link>
-                      ) : tweet.status === 'analyzing' ? (
-                        <span className="text-gray-400">Analyzing...</span>
-                      ) : tweet.status === 'failed' ? (
-                        <span className="text-red-600">Failed</span>
-                      ) : (
-                        <span className="text-gray-400">Pending...</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        
-        <div className="mt-4 text-center text-sm text-gray-500">
-          {tweets.some(t => t.status === 'analyzing' || t.status === 'pending') && (
-            <p className="flex items-center justify-center gap-2">
-              <span className="animate-pulse">●</span>
-              Auto-refreshing every 10 seconds for analyzing tweets
-            </p>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+          {tweets.length === 0 ? (
+            <div className="glass rounded-2xl p-12 text-center">
+              <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <p className="text-zinc-300 text-lg font-medium">No tweets analyzed yet.</p>
+              <p className="text-zinc-500 mt-2">
+                Start by triggering the n8n workflow with a tweet URL.
+              </p>
+            </div>
+          ) : (
+            <div className="glass rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-zinc-800">
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Tweet
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Author
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Engagers
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-800">
+                    {tweets.map((tweet) => (
+                      <tr key={tweet.tweet_id} className="hover:bg-zinc-900/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <a
+                            href={tweet.tweet_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300 hover:underline text-sm font-medium"
+                          >
+                            {tweet.tweet_id}
+                          </a>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-white">
+                            {tweet.author_name}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(tweet.status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white font-medium">
+                            {tweet.total_engagers} total
+                          </div>
+                          <div className="text-xs text-zinc-400">
+                            {tweet.engagers_above_10k} &gt;10k | {tweet.engagers_below_10k} &lt;10k
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-zinc-400">
+                          {new Date(tweet.created_at).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {tweet.status === 'completed' ? (
+                            <Link
+                              href={`/tweets/${tweet.tweet_id}`}
+                              className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+                            >
+                              View Details →
+                            </Link>
+                          ) : tweet.status === 'analyzing' ? (
+                            <span className="text-zinc-400">Analyzing...</span>
+                          ) : tweet.status === 'failed' ? (
+                            <span className="text-red-400">Failed</span>
+                          ) : (
+                            <span className="text-zinc-400">Pending...</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
+          
+          <div className="mt-6 text-center text-sm text-zinc-500">
+            {tweets.some(t => t.status === 'analyzing' || t.status === 'pending') && (
+              <p className="flex items-center justify-center gap-2">
+                <span className="animate-pulse w-2 h-2 bg-indigo-400 rounded-full"></span>
+                Auto-refreshing every 10 seconds for analyzing tweets
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

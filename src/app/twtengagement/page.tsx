@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 
 interface EngagementData {
   author_name: string;
@@ -180,6 +181,7 @@ export default function TwitterEngagement() {
 
   return (
     <div className="min-h-screen bg-black">
+      <Navbar />
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
       
@@ -268,21 +270,9 @@ export default function TwitterEngagement() {
         </div>
       )}
       
-      {/* Navigation Button */}
-      <div className="absolute top-6 right-6 z-20">
-        <Link href="/">
-          <button className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900/80 backdrop-blur-sm border border-zinc-700 text-white font-medium rounded-lg hover:bg-zinc-800 hover:border-zinc-600 transition-all">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Quote Tweet Analytics
-          </button>
-        </Link>
-      </div>
-      
       <div className="relative z-10">
         {/* Header Section */}
-        <div className="pt-20 pb-16">
+        <div className="pt-24 pb-16">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

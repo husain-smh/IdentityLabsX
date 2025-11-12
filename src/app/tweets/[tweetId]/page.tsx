@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 interface Engager {
   userId: string;
@@ -88,10 +89,14 @@ export default function TweetDetailPage() {
 
   if (loading && !tweet) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading tweet data...</p>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent mx-auto"></div>
+            <p className="mt-4 text-zinc-400">Loading tweet data...</p>
+          </div>
         </div>
       </div>
     );
@@ -99,12 +104,16 @@ export default function TweetDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-lg">{error}</p>
-          <Link href="/tweets" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-            Back to Tweets
-          </Link>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-400 text-lg">{error}</p>
+            <Link href="/tweets" className="mt-4 inline-block px-4 py-2 gradient-primary text-white rounded-lg hover:opacity-90 transition-all">
+              Back to Tweets
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -113,246 +122,262 @@ export default function TweetDetailPage() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6">
-          <Link href="/tweets" className="text-blue-600 hover:text-blue-800 text-sm">
-            ← Back to all tweets
-          </Link>
-        </div>
-
-        {/* Tweet Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {tweet?.author_name}
-              </h1>
-              <a
-                href={tweet?.tweet_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm"
-              >
-                View on Twitter →
-              </a>
-              <p className="text-sm text-gray-500 mt-2">
-                Analyzed: {tweet?.created_at && new Date(tweet.created_at).toLocaleString()}
-              </p>
-            </div>
-            <div className={`px-4 py-2 rounded-lg font-semibold ${
-              tweet?.status === 'completed' ? 'bg-green-100 text-green-800' :
-              tweet?.status === 'analyzing' ? 'bg-blue-100 text-blue-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {tweet?.status}
-            </div>
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      
+      <div className="relative z-10">
+        {/* Header Section */}
+        <div className="pt-24 pb-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Link href="/tweets" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm mb-6 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to all tweets
+            </Link>
           </div>
         </div>
 
-        {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-500">Total Engagers</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-500">&gt;10k Followers</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.above_10k}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-500">&lt;10k Followers</p>
-              <p className="text-2xl font-bold text-gray-600">{stats.below_10k}</p>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <p className="text-sm text-gray-500">Max Score</p>
-              <p className="text-2xl font-bold text-green-600">{stats.max_importance_score}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <h3 className="text-lg font-semibold mb-4">Filters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Min Followers
-              </label>
-              <input
-                type="number"
-                value={minFollowers}
-                onChange={(e) => {
-                  setMinFollowers(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="e.g. 10000"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sort By
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="importance_score">Importance Score</option>
-                <option value="followers">Followers</option>
-                <option value="username">Username</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Engagement Type
-              </label>
-              <select
-                value={engagementFilter}
-                onChange={(e) => {
-                  setEngagementFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-              >
-                <option value="">All</option>
-                <option value="replied">Replied</option>
-                <option value="retweeted">Retweeted</option>
-                <option value="quoted">Quoted</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Verified Only
-              </label>
-              <label className="flex items-center mt-2">
-                <input
-                  type="checkbox"
-                  checked={verifiedOnly}
-                  onChange={(e) => {
-                    setVerifiedOnly(e.target.checked);
-                    setPage(1);
-                  }}
-                  className="rounded border-gray-300"
-                />
-                <span className="ml-2 text-sm text-gray-700">Show only verified</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Engagers Table */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Score
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Followers
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Engagement
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Followed By
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {engagers.map((engager) => (
-                  <tr key={engager.userId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-lg font-bold text-green-600">
-                        {engager.importance_score || 0}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 flex items-center gap-1">
-                            {engager.name}
-                            {engager.verified && <span className="text-blue-500">✓</span>}
-                          </div>
-                          <div className="text-sm text-gray-500">@{engager.username}</div>
-                          {engager.bio && (
-                            <div className="text-xs text-gray-400 mt-1 max-w-xs truncate">
-                              {engager.bio}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {engager.followers.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {getEngagementBadges(engager).map((badge, idx) => (
-                          <span
-                            key={idx}
-                            className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded"
-                          >
-                            {badge}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {engager.followed_by && engager.followed_by.length > 0 ? (
-                        <div className="max-w-xs">
-                          {engager.followed_by.slice(0, 3).join(', ')}
-                          {engager.followed_by.length > 3 && ` +${engager.followed_by.length - 3} more`}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="bg-gray-50 px-6 py-4 flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Showing <span className="font-medium">{(page - 1) * limit + 1}</span> to{' '}
-                <span className="font-medium">{Math.min(page * limit, total)}</span> of{' '}
-                <span className="font-medium">{total}</span> results
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+          {/* Tweet Header */}
+          <div className="glass rounded-2xl p-6 mb-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-white mb-2">
+                  {tweet?.author_name}
+                </h1>
+                <a
+                  href={tweet?.tweet_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-400 hover:text-indigo-300 hover:underline text-sm transition-colors"
+                >
+                  View on Twitter →
+                </a>
+                <p className="text-sm text-zinc-400 mt-2">
+                  Analyzed: {tweet?.created_at && new Date(tweet.created_at).toLocaleString()}
+                </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-4 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="px-4 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
-                >
-                  Next
-                </button>
+              <div className={`px-4 py-2 rounded-full font-semibold text-sm border ${
+                tweet?.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                tweet?.status === 'analyzing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+              }`}>
+                {tweet?.status}
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          {stats && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-zinc-400">Total Engagers</p>
+                <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
+              </div>
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-zinc-400">&gt;10k Followers</p>
+                <p className="text-2xl font-bold text-indigo-400 mt-1">{stats.above_10k}</p>
+              </div>
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-zinc-400">&lt;10k Followers</p>
+                <p className="text-2xl font-bold text-zinc-300 mt-1">{stats.below_10k}</p>
+              </div>
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm text-zinc-400">Max Score</p>
+                <p className="text-2xl font-bold text-emerald-400 mt-1">{stats.max_importance_score}</p>
               </div>
             </div>
           )}
+
+          {/* Filters */}
+          <div className="glass rounded-2xl p-6 mb-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Filters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                  Min Followers
+                </label>
+                <input
+                  type="number"
+                  value={minFollowers}
+                  onChange={(e) => {
+                    setMinFollowers(e.target.value);
+                    setPage(1);
+                  }}
+                  placeholder="e.g. 10000"
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                >
+                  <option value="importance_score">Importance Score</option>
+                  <option value="followers">Followers</option>
+                  <option value="username">Username</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                  Engagement Type
+                </label>
+                <select
+                  value={engagementFilter}
+                  onChange={(e) => {
+                    setEngagementFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                >
+                  <option value="">All</option>
+                  <option value="replied">Replied</option>
+                  <option value="retweeted">Retweeted</option>
+                  <option value="quoted">Quoted</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                  Verified Only
+                </label>
+                <label className="flex items-center mt-2">
+                  <input
+                    type="checkbox"
+                    checked={verifiedOnly}
+                    onChange={(e) => {
+                      setVerifiedOnly(e.target.checked);
+                      setPage(1);
+                    }}
+                    className="rounded border-zinc-700 bg-zinc-900 text-indigo-500 focus:ring-indigo-500 focus:ring-2"
+                  />
+                  <span className="ml-2 text-sm text-zinc-300">Show only verified</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Engagers Table */}
+          <div className="glass rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b border-zinc-800">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      Score
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      User
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      Followers
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      Engagement
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                      Followed By
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800">
+                  {engagers.map((engager) => (
+                    <tr key={engager.userId} className="hover:bg-zinc-900/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-lg font-bold text-emerald-400">
+                          {engager.importance_score || 0}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div>
+                            <div className="text-sm font-medium text-white flex items-center gap-1">
+                              {engager.name}
+                              {engager.verified && (
+                                <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="text-sm text-zinc-400">@{engager.username}</div>
+                            {engager.bio && (
+                              <div className="text-xs text-zinc-500 mt-1 max-w-xs truncate">
+                                {engager.bio}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
+                        {engager.followers.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {getEngagementBadges(engager).map((badge, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-1 rounded-full"
+                            >
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-zinc-400">
+                        {engager.followed_by && engager.followed_by.length > 0 ? (
+                          <div className="max-w-xs">
+                            {engager.followed_by.slice(0, 3).join(', ')}
+                            {engager.followed_by.length > 3 && ` +${engager.followed_by.length - 3} more`}
+                          </div>
+                        ) : (
+                          <span className="text-zinc-500">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="bg-zinc-900/50 border-t border-zinc-800 px-6 py-4 flex items-center justify-between">
+                <div className="text-sm text-zinc-400">
+                  Showing <span className="font-medium text-white">{(page - 1) * limit + 1}</span> to{' '}
+                  <span className="font-medium text-white">{Math.min(page * limit, total)}</span> of{' '}
+                  <span className="font-medium text-white">{total}</span> results
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
