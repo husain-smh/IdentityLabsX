@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTweet } from '@/lib/models/tweets';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { tweetUrl } = body;
+    const { tweetUrl, reanalyze = false } = body;
 
     // Validate tweet URL
     if (!tweetUrl || typeof tweetUrl !== 'string') {
@@ -20,6 +21,48 @@ export async function POST(request: NextRequest) {
         { error: 'Please provide a valid Twitter/X tweet URL' },
         { status: 400 }
       );
+    }
+
+    // Extract tweet ID from URL
+    const tweetIdMatch = tweetUrl.match(/status\/(\d+)/);
+    if (!tweetIdMatch) {
+      return NextResponse.json(
+        { error: 'Could not extract tweet ID from URL' },
+        { status: 400 }
+      );
+    }
+    const tweetId = tweetIdMatch[1];
+
+    // Check if tweet has already been analyzed (unless reanalyze flag is set)
+    if (!reanalyze) {
+      try {
+        const existingTweet = await getTweet(tweetId);
+        
+        if (existingTweet) {
+          // Tweet already exists in database
+          return NextResponse.json({
+            already_exists: true,
+            tweet_id: tweetId,
+            status: existingTweet.status,
+            author_name: existingTweet.author_name,
+            total_engagers: existingTweet.total_engagers,
+            engagers_above_10k: existingTweet.engagers_above_10k,
+            engagers_below_10k: existingTweet.engagers_below_10k,
+            analyzed_at: existingTweet.analyzed_at,
+            created_at: existingTweet.created_at,
+            message: existingTweet.status === 'completed' 
+              ? 'This tweet has already been analyzed' 
+              : existingTweet.status === 'analyzing'
+              ? 'This tweet is currently being analyzed'
+              : existingTweet.status === 'pending'
+              ? 'This tweet analysis is queued'
+              : 'Previous analysis failed',
+          });
+        }
+      } catch (dbError) {
+        // If DB check fails, log it but continue with analysis
+        console.warn('⚠️ Could not check existing tweet, proceeding with analysis:', dbError);
+      }
     }
 
     // Send to your N8N webhook for engagement analysis

@@ -201,6 +201,15 @@ export async function updateEngagersWithRanking(
 }
 
 /**
+ * Delete all engagers for a tweet (used for re-analysis)
+ */
+export async function deleteEngagersByTweetId(tweetId: string): Promise<number> {
+  const collection = await getEngagersCollection();
+  const result = await collection.deleteMany({ tweet_id: tweetId });
+  return result.deletedCount;
+}
+
+/**
  * Get tweet by ID
  */
 export async function getTweet(tweetId: string): Promise<Tweet | null> {

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   createTweet,
+  getTweet,
   storeEngagers,
   updateTweetStatus,
   updateEngagersWithRanking,
+  deleteEngagersByTweetId,
   EngagerInput,
 } from '@/lib/models/tweets';
 import { rankEngagers } from '@/lib/models/ranker';
@@ -14,7 +16,7 @@ import { rankEngagers } from '@/lib/models/ranker';
 // 2. Direct object format: { tweet_id, tweet_url, author_name, engagers: [...] }
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body = await request.json();
     
     console.log('📥 Received analysis request from n8n');
     
@@ -27,6 +29,13 @@ export async function POST(request: NextRequest) {
     // Check if body is an array (N8N format)
     if (Array.isArray(body)) {
       console.log('📦 Detected N8N array format');
+      
+      // Handle n8n wrapper format: [{"json": {...}, "pairedItem": {...}}]
+      // Strip the wrapper if present
+      if (body.length > 0 && body[0].json !== undefined) {
+        console.log('🔄 Unwrapping n8n item structure');
+        body = body.map((item: any) => item.json);
+      }
       
       // First item should have sheetdata
       const sheetDataItem = body.find((item: any) => item.sheetdata);
@@ -86,8 +95,21 @@ export async function POST(request: NextRequest) {
     
     console.log(`✅ Tweet ${tweet_id}: ${engagers.length} engagers received`);
     
-    // Step 1: Create tweet entry
-    await createTweet(tweet_id, tweet_url, author_name, author_username);
+    // Step 1: Check if tweet exists (for re-analysis)
+    const existingTweet = await getTweet(tweet_id);
+    
+    if (existingTweet) {
+      // This is a re-analysis - clean up old engagers
+      console.log(`🔄 Re-analyzing tweet ${tweet_id}, deleting old engagers...`);
+      const deletedCount = await deleteEngagersByTweetId(tweet_id);
+      console.log(`✅ Deleted ${deletedCount} old engagers`);
+      
+      // Reset tweet status to pending
+      await updateTweetStatus(tweet_id, 'pending');
+    } else {
+      // New tweet - create entry
+      await createTweet(tweet_id, tweet_url, author_name, author_username);
+    }
     
     // Step 2: Store all engagers
     const engagerInputs: EngagerInput[] = engagers.map((e: any) => ({

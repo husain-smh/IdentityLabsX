@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface EngagementData {
   author_name: string;
@@ -9,7 +10,20 @@ interface EngagementData {
   spreadsheetId: string;
 }
 
+interface ExistingTweet {
+  tweet_id: string;
+  status: string;
+  author_name: string;
+  total_engagers: number;
+  engagers_above_10k: number;
+  engagers_below_10k: number;
+  analyzed_at?: string;
+  created_at: string;
+  message: string;
+}
+
 export default function TwitterEngagement() {
+  const router = useRouter();
   const [tweetUrl, setTweetUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
@@ -17,10 +31,53 @@ export default function TwitterEngagement() {
     text: string;
   } | null>(null);
   const [engagementData, setEngagementData] = useState<EngagementData[] | null>(null);
+  const [existingTweet, setExistingTweet] = useState<ExistingTweet | null>(null);
+  const [showExistingModal, setShowExistingModal] = useState(false);
 
   // Function to construct Google Sheets URL from spreadsheetId
   const constructSheetsUrl = (spreadsheetId: string) => {
     return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+  };
+
+  const handleReanalyze = async () => {
+    if (!tweetUrl.trim()) return;
+    
+    setShowExistingModal(false);
+    setIsLoading(true);
+    setMessage(null);
+    setEngagementData(null);
+
+    try {
+      const response = await fetch('/api/twtengagement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tweetUrl: tweetUrl.trim(), reanalyze: true }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({
+          type: 'success',
+          text: 'Re-analysis started! The tweet is being analyzed again with fresh data.'
+        });
+        setTweetUrl('');
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to re-analyze tweet'
+        });
+      }
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Network error. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,6 +94,7 @@ export default function TwitterEngagement() {
     setIsLoading(true);
     setMessage(null);
     setEngagementData(null);
+    setShowExistingModal(false);
 
     try {
       const response = await fetch('/api/twtengagement', {
@@ -48,6 +106,14 @@ export default function TwitterEngagement() {
       });
 
       const data = await response.json();
+
+      // Check if tweet already exists
+      if (data.already_exists) {
+        setExistingTweet(data);
+        setShowExistingModal(true);
+        setIsLoading(false);
+        return;
+      }
 
       // Frontend logging for debugging
       console.log('=== FRONTEND DEBUG INFO ===');
@@ -116,6 +182,91 @@ export default function TwitterEngagement() {
     <div className="min-h-screen bg-black">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      
+      {/* Existing Tweet Modal */}
+      {showExistingModal && existingTweet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="glass rounded-2xl p-8 max-w-lg w-full border border-zinc-700 shadow-2xl">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 bg-indigo-500/20 border border-indigo-500/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-bold text-xl mb-2">Tweet Already Analyzed</h3>
+                <p className="text-zinc-400 text-sm">{existingTweet.message}</p>
+              </div>
+              <button
+                onClick={() => setShowExistingModal(false)}
+                className="text-zinc-500 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="bg-zinc-900/50 rounded-xl p-4 mb-6 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-400 text-sm">Author:</span>
+                <span className="text-white font-medium">{existingTweet.author_name}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-400 text-sm">Status:</span>
+                <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                  existingTweet.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                  existingTweet.status === 'analyzing' ? 'bg-yellow-500/20 text-yellow-400' :
+                  existingTweet.status === 'pending' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-red-500/20 text-red-400'
+                }`}>
+                  {existingTweet.status}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-400 text-sm">Total Engagers:</span>
+                <span className="text-white font-medium">{existingTweet.total_engagers}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-400 text-sm">&gt;10k Followers:</span>
+                <span className="text-indigo-400 font-medium">{existingTweet.engagers_above_10k}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-400 text-sm">&lt;10k Followers:</span>
+                <span className="text-zinc-400 font-medium">{existingTweet.engagers_below_10k}</span>
+              </div>
+              {existingTweet.analyzed_at && (
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-400 text-sm">Analyzed:</span>
+                  <span className="text-zinc-400 text-xs">{new Date(existingTweet.analyzed_at).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-3">
+              <button
+                onClick={() => router.push(`/tweets/${existingTweet.tweet_id}`)}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                View Analysis
+              </button>
+              <button
+                onClick={handleReanalyze}
+                className="flex-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-white font-semibold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Re-analyze
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Navigation Button */}
       <div className="absolute top-6 right-6 z-20">
