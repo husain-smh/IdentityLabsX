@@ -34,10 +34,62 @@ export default function TwitterEngagement() {
   const [engagementData, setEngagementData] = useState<EngagementData[] | null>(null);
   const [existingTweet, setExistingTweet] = useState<ExistingTweet | null>(null);
   const [showExistingModal, setShowExistingModal] = useState(false);
+  const [isMonitoringLoading, setIsMonitoringLoading] = useState(false);
 
   // Function to construct Google Sheets URL from spreadsheetId
   const constructSheetsUrl = (spreadsheetId: string) => {
     return `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+  };
+
+  const handleStartMonitoring = async () => {
+    if (!tweetUrl.trim()) {
+      setMessage({
+        type: 'error',
+        text: 'Please enter a Twitter URL'
+      });
+      return;
+    }
+
+    setIsMonitoringLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/monitor-tweet/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tweetUrl: tweetUrl.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({
+          type: 'success',
+          text: data.message || 'Monitoring started successfully! Metrics will be collected every 30 minutes for 24 hours.'
+        });
+        // Extract tweet ID and navigate to monitoring dashboard
+        const tweetIdMatch = tweetUrl.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i);
+        if (tweetIdMatch && tweetIdMatch[1]) {
+          setTimeout(() => {
+            router.push(`/monitor/${tweetIdMatch[1]}`);
+          }, 1500);
+        }
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to start monitoring'
+        });
+      }
+    } catch {
+      setMessage({
+        type: 'error',
+        text: 'Network error. Please check your connection and try again.'
+      });
+    } finally {
+      setIsMonitoringLoading(false);
+    }
   };
 
   const handleReanalyze = async () => {
@@ -379,25 +431,48 @@ export default function TwitterEngagement() {
                 </p>
               </div>
 
-              <button
-                type="submit"
-                disabled={isLoading || !tweetUrl.trim()}
-                className="w-full gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-indigo-500/25"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                    Analyzing Engagement...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-                    </svg>
-                    Analyze Engagement
-                  </>
-                )}
-              </button>
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  disabled={isLoading || !tweetUrl.trim()}
+                  className="flex-1 gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-indigo-500/25"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      Analyzing Engagement...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                      </svg>
+                      Analyze Engagement
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={handleStartMonitoring}
+                  disabled={isMonitoringLoading || !tweetUrl.trim()}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-emerald-500/25"
+                >
+                  {isMonitoringLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Start 24h Monitoring
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
 
             {/* Message Display */}
