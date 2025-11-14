@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getActiveMonitoringJobs, completeMonitoringJob, storeMetricSnapshot } from '@/lib/models/monitoring';
-import { fetchTweetMetrics } from '@/lib/external-api';
+import { fetchTweetMetrics, TwitterApiError } from '@/lib/external-api';
 
 export async function GET(request: NextRequest) {
   try {
@@ -48,20 +48,52 @@ export async function GET(request: NextRequest) {
           completed++;
         }
       } catch (error) {
-        const errorMessage = `Error processing tweet ${job.tweet_id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-        console.error(errorMessage, error);
+        // Categorize errors for better logging
+        let errorMessage: string;
+        let errorType: string = 'unknown';
+        
+        if (error instanceof Error) {
+          if (error.name === 'TwitterApiError') {
+            errorType = 'api_error';
+            errorMessage = `Twitter API error for tweet ${job.tweet_id}: ${error.message}`;
+          } else if (error.message.includes('rate limit')) {
+            errorType = 'rate_limit';
+            errorMessage = `Rate limit hit for tweet ${job.tweet_id}. Will retry on next run.`;
+          } else if (error.message.includes('not found') || error.message.includes('deleted')) {
+            errorType = 'tweet_not_found';
+            errorMessage = `Tweet ${job.tweet_id} not found. It may have been deleted.`;
+            // Optionally mark job as completed if tweet is deleted
+            // await completeMonitoringJob(job.tweet_id);
+          } else {
+            errorType = 'network_error';
+            errorMessage = `Network/connection error for tweet ${job.tweet_id}: ${error.message}`;
+          }
+        } else {
+          errorMessage = `Unknown error processing tweet ${job.tweet_id}`;
+        }
+        
+        console.error(`[${errorType.toUpperCase()}] ${errorMessage}`, error);
         errors.push(errorMessage);
+        
         // Continue processing other jobs even if one fails
+        // This ensures one bad tweet doesn't stop monitoring for others
       }
     }
 
+    // Always return 200 OK even if there are errors
+    // This prevents N8N from marking the workflow as failed
+    // Errors are logged and included in response for monitoring
     return NextResponse.json({
       success: true,
       processed,
       completed,
       total_active: activeJobs.length,
       errors: errors.length > 0 ? errors : undefined,
+      error_count: errors.length,
       timestamp: now.toISOString(),
+      message: errors.length > 0 
+        ? `Processed ${processed} tweets, ${errors.length} errors occurred`
+        : `Successfully processed ${processed} tweets`,
     });
   } catch (error) {
     console.error('Error in check-monitors cron job:', error);

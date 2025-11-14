@@ -18,11 +18,18 @@ export async function POST(request: NextRequest) {
     // Extract tweet ID from URL
     const tweetId = extractTweetIdFromUrl(tweetUrl);
     if (!tweetId) {
+      console.error('Failed to extract tweet ID from URL:', tweetUrl);
       return NextResponse.json(
-        { error: 'Invalid Twitter/X URL. Please provide a valid tweet URL.' },
+        { 
+          error: 'Invalid Twitter/X URL. Please provide a valid tweet URL.',
+          details: 'URL must be in format: https://x.com/username/status/1234567890 or https://twitter.com/username/status/1234567890',
+          received_url: tweetUrl
+        },
         { status: 400 }
       );
     }
+    
+    console.log('Extracted tweet ID:', tweetId, 'from URL:', tweetUrl);
 
     // Check if tweet is already being monitored
     const existingJob = await getMonitoringJobByTweetId(tweetId);
@@ -42,12 +49,39 @@ export async function POST(request: NextRequest) {
     try {
       await fetchTweetMetrics(tweetId);
     } catch (error) {
+      console.error('Error validating tweet:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to fetch tweet. Please verify the tweet URL is correct.';
+      let statusCode = 400;
+      
+      if (error instanceof Error) {
+        if (error.message.includes('not found') || error.message.includes('404')) {
+          errorMessage = 'Tweet not found. The tweet may have been deleted or the URL is incorrect.';
+        } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+          errorMessage = 'Twitter API rate limit exceeded. Please try again in a few minutes.';
+          statusCode = 429;
+        } else if (error.message.includes('authentication') || error.message.includes('API key')) {
+          errorMessage = 'Twitter API authentication failed. Please check your API key configuration.';
+          statusCode = 401;
+        } else if (error.message.includes('credits') || error.message.includes('402') || error.message.includes('recharge')) {
+          errorMessage = 'Twitter API credits exhausted. Please recharge your API account to continue monitoring tweets.';
+          statusCode = 402;
+        } else if (error.message.includes('Network') || error.message.includes('timeout')) {
+          errorMessage = 'Network error connecting to Twitter API. Please try again.';
+          statusCode = 503;
+        } else {
+          errorMessage = `Failed to fetch tweet: ${error.message}`;
+        }
+      }
+      
       return NextResponse.json(
         {
-          error: 'Failed to fetch tweet. Please verify the tweet URL is correct.',
+          error: errorMessage,
           details: error instanceof Error ? error.message : 'Unknown error',
+          tweet_id: tweetId,
         },
-        { status: 400 }
+        { status: statusCode }
       );
     }
 
