@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -41,11 +41,10 @@ export default function TweetDetailPage() {
   const [page, setPage] = useState(1);
   const limit = 50;
 
-  useEffect(() => {
-    fetchTweetData();
-  }, [tweetId, page, minFollowers, sortBy, engagementFilter, verifiedOnly]);
-
-  const fetchTweetData = async () => {
+const fetchTweetData = useCallback(async () => {
+  if (!tweetId) {
+    return;
+  }
     try {
       setLoading(true);
       
@@ -72,12 +71,16 @@ export default function TweetDetailPage() {
       } else {
         setError(data.error || 'Failed to fetch tweet');
       }
-    } catch (err) {
+  } catch (_error) {
       setError('Failed to fetch tweet');
     } finally {
       setLoading(false);
     }
-  };
+}, [tweetId, page, minFollowers, sortBy, engagementFilter, verifiedOnly]);
+
+useEffect(() => {
+  fetchTweetData();
+}, [fetchTweetData]);
 
   const getEngagementBadges = (engager: Engager) => {
     const badges = [];

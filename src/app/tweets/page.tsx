@@ -44,7 +44,7 @@ export default function TweetsPage() {
       } else {
         setError(data.error || 'Failed to fetch tweets');
       }
-    } catch (err) {
+    } catch (_error) {
       setError('Failed to fetch tweets');
     } finally {
       setLoading(false);

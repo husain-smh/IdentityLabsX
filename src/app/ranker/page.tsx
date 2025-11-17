@@ -10,6 +10,7 @@ interface ImportantPerson {
   last_synced: string | null;
   following_count: number;
   is_active: boolean;
+  weight?: number;
 }
 
 interface SyncStatus {
@@ -31,6 +32,8 @@ export default function RankerAdmin() {
     text: string;
   } | null>(null);
   const [importantPeople, setImportantPeople] = useState<ImportantPerson[]>([]);
+  const [weightEdits, setWeightEdits] = useState<Record<string, string>>({});
+  const [updatingWeight, setUpdatingWeight] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<{
     summary: {
       total_people: number;
@@ -117,6 +120,7 @@ export default function RankerAdmin() {
         setTotalPages(data.data.pagination.total_pages);
         setTotalPeople(data.data.pagination.total);
         setCurrentPage(page);
+        setWeightEdits({});
       }
     } catch (error) {
       console.error('Error fetching important people:', error);
@@ -320,6 +324,80 @@ export default function RankerAdmin() {
       }
     } finally {
       setSyncingUsername(null);
+    }
+  };
+
+  const updatePeopleWeight = (list: ImportantPerson[], username: string, weight: number) =>
+    list.map((person) =>
+      person.username === username ? { ...person, weight } : person
+    );
+
+  const handleWeightInputChange = (username: string, value: string) => {
+    setWeightEdits((prev) => ({
+      ...prev,
+      [username]: value,
+    }));
+  };
+
+  const handleWeightSave = async (person: ImportantPerson) => {
+    const inputValue =
+      weightEdits[person.username] ?? (person.weight ?? 1).toString();
+    const parsedWeight = Number(inputValue);
+
+    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+      setMessage({
+        type: 'error',
+        text: 'Weight must be a positive number',
+      });
+      return;
+    }
+
+    if (Math.abs(parsedWeight - (person.weight ?? 1)) < 0.0001) {
+      return; // No change
+    }
+
+    setUpdatingWeight(person.username);
+
+    try {
+      const response = await fetch('/api/ranker/admin/important-person', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: person.username,
+          weight: parsedWeight,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage({
+          type: 'success',
+          text: data.message || `@${person.username} weight updated`,
+        });
+        setImportantPeople((prev) => updatePeopleWeight(prev, person.username, parsedWeight));
+        setAllPeople((prev) => updatePeopleWeight(prev, person.username, parsedWeight));
+        setWeightEdits((prev) => {
+          const next = { ...prev };
+          delete next[person.username];
+          return next;
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to update weight',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating weight:', error);
+      setMessage({
+        type: 'error',
+        text: 'Network error. Please try again.',
+      });
+    } finally {
+      setUpdatingWeight(null);
     }
   };
 
@@ -598,6 +676,7 @@ export default function RankerAdmin() {
                     <tr className="border-b border-zinc-800">
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Username</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Name</th>
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Weight</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Following</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Last Synced</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Status</th>
@@ -605,8 +684,15 @@ export default function RankerAdmin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredPeople.map((person) => (
-                      <tr key={person.username} className="border-b border-zinc-800/50 hover:bg-zinc-900/30 transition-colors">
+                    {filteredPeople.map((person) => {
+                      const weightValue = weightEdits[person.username] ?? (person.weight ?? 1).toString();
+                      const parsedWeight = Number(weightValue);
+                      const isWeightValid = Number.isFinite(parsedWeight) && parsedWeight > 0;
+                      const hasWeightChanged = isWeightValid && Math.abs(parsedWeight - (person.weight ?? 1)) >= 0.0001;
+                      const isUpdatingThisWeight = updatingWeight === person.username;
+
+                      return (
+                        <tr key={person.username} className="border-b border-zinc-800/50 hover:bg-zinc-900/30 transition-colors">
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-indigo-500/20 rounded-full flex items-center justify-center">
@@ -618,6 +704,43 @@ export default function RankerAdmin() {
                           </div>
                         </td>
                         <td className="py-4 px-4 text-zinc-300">{person.name || <span className="text-zinc-500 italic">Not synced yet</span>}</td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0.1}
+                              step={0.1}
+                              value={weightValue}
+                              disabled={isUpdatingThisWeight}
+                              onChange={(e) => handleWeightInputChange(person.username, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (hasWeightChanged && isWeightValid && !isUpdatingThisWeight) {
+                                    handleWeightSave(person);
+                                  }
+                                }
+                              }}
+                              className="w-20 px-3 py-1.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                            />
+                            <button
+                              onClick={() => handleWeightSave(person)}
+                              disabled={!hasWeightChanged || !isWeightValid || isUpdatingThisWeight}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isUpdatingThisWeight ? (
+                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                              <span>Save</span>
+                            </button>
+                          </div>
+                        </td>
                         <td className="py-4 px-4">
                           <span className="text-zinc-300">{person.following_count.toLocaleString()}</span>
                         </td>
@@ -676,8 +799,9 @@ export default function RankerAdmin() {
                             </button>
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

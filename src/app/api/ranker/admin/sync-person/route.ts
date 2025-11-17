@@ -104,6 +104,7 @@ async function syncSinglePerson(username: string): Promise<SyncResult> {
       username: trimmedUsername,
       user_id: (userData?.userId || userData?.user_id || userData?.id || person.user_id || trimmedUsername) as string,
       name: (userData?.name || userData?.displayName || person.name || trimmedUsername) as string,
+      weight: person.weight ?? 1,
     };
 
     // Update the inverse index

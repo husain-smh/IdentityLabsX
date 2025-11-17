@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addImportantPerson, removeImportantPerson } from '@/lib/models/ranker';
+import { addImportantPerson, removeImportantPerson, updateImportantPersonWeight } from '@/lib/models/ranker';
 
 // Type for add result
 interface AddResult {
@@ -141,6 +141,53 @@ export async function DELETE(request: NextRequest) {
       { 
         error: 'Failed to remove important person',
         details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH - Update important person weight
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { username, weight } = body;
+
+    if (!username || typeof username !== 'string') {
+      return NextResponse.json(
+        { error: 'username is required and must be a string' },
+        { status: 400 }
+      );
+    }
+
+    const parsedWeight = Number(weight);
+    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+      return NextResponse.json(
+        { error: 'weight must be a positive number' },
+        { status: 400 }
+      );
+    }
+
+    const updated = await updateImportantPersonWeight(username.trim(), parsedWeight);
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: 'Person not found or inactive' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `@${username.trim()} weight updated to ${parsedWeight}`,
+    });
+  } catch (error) {
+    console.error('Error updating important person weight:', error);
+
+    return NextResponse.json(
+      {
+        error: 'Failed to update weight',
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     );

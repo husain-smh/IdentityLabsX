@@ -8,6 +8,7 @@ export interface ImportantPerson {
   username: string;
   user_id?: string; // Optional until first sync
   name?: string; // Optional until first sync
+  weight?: number;
   last_synced?: Date | null;
   following_count: number;
   is_active: boolean;
@@ -28,6 +29,7 @@ export interface FollowedByEntry {
   username: string;
   user_id: string;
   name: string;
+  weight?: number;
 }
 
 export interface EngagementRanking {
@@ -56,6 +58,7 @@ export interface TwitterUser {
   username: string;
   user_id: string;
   name: string;
+  weight?: number;
 }
 
 export interface EngagerInput {
@@ -88,6 +91,37 @@ export async function getEngagementRankingsCollection(): Promise<Collection<Enga
   return db.collection<EngagementRanking>('engagement_rankings');
 }
 
+async function recalculateImportanceScores(
+  collection?: Collection<FollowingIndexEntry>
+): Promise<void> {
+  const followingIndexCollection = collection || (await getFollowingIndexCollection());
+
+  await followingIndexCollection.updateMany(
+    {},
+    [
+      {
+        $set: {
+          importance_score: {
+            $cond: {
+              if: { $isArray: '$followed_by' },
+              then: {
+                $sum: {
+                  $map: {
+                    input: '$followed_by',
+                    as: 'follower',
+                    in: { $ifNull: ['$$follower.weight', 1] },
+                  },
+                },
+              },
+              else: 0,
+            },
+          },
+        },
+      },
+    ]
+  );
+}
+
 // ===== Database Operations =====
 
 export async function addImportantPerson(username: string): Promise<ImportantPerson> {
@@ -95,6 +129,7 @@ export async function addImportantPerson(username: string): Promise<ImportantPer
   
   const newPerson: ImportantPerson = {
     username: username.trim(),
+    weight: 1,
     following_count: 0,
     is_active: true,
     last_synced: null,
@@ -122,6 +157,45 @@ export async function removeImportantPerson(username: string): Promise<boolean> 
   return result.modifiedCount > 0;
 }
 
+export async function updateImportantPersonWeight(
+  username: string,
+  weight: number
+): Promise<boolean> {
+  const importantPeopleCollection = await getImportantPeopleCollection();
+  const followingIndexCollection = await getFollowingIndexCollection();
+
+  const updatedPerson = await importantPeopleCollection.findOneAndUpdate(
+    { username, is_active: true },
+    {
+      $set: {
+        weight,
+        updated_at: new Date(),
+      },
+    },
+    { returnDocument: 'after' }
+  );
+
+  if (!updatedPerson) {
+    return false;
+  }
+
+  await followingIndexCollection.updateMany(
+    { 'followed_by.username': username },
+    {
+      $set: {
+        'followed_by.$[follower].weight': weight,
+        updated_at: new Date(),
+      },
+    },
+    {
+      arrayFilters: [{ 'follower.username': username }],
+    }
+  );
+
+  await recalculateImportanceScores(followingIndexCollection);
+  return true;
+}
+
 export async function getImportantPeople(page: number = 1, limit: number = 20): Promise<{ people: ImportantPerson[], total: number }> {
   const collection = await getImportantPeopleCollection();
   
@@ -134,7 +208,12 @@ export async function getImportantPeople(page: number = 1, limit: number = 20): 
   
   const total = await collection.countDocuments({ is_active: true });
   
-  return { people, total };
+  const normalizedPeople = people.map(person => ({
+    ...person,
+    weight: person.weight ?? 1,
+  }));
+
+  return { people: normalizedPeople, total };
 }
 
 export async function updateFollowingIndex(
@@ -143,6 +222,7 @@ export async function updateFollowingIndex(
 ): Promise<void> {
   const followingIndexCollection = await getFollowingIndexCollection();
   const importantPeopleCollection = await getImportantPeopleCollection();
+  const followerWeight = importantPerson.weight ?? 1;
   
   // Step 0: Update important person with user_id and name from N8N
   await importantPeopleCollection.updateOne(
@@ -176,6 +256,7 @@ export async function updateFollowingIndex(
               username: importantPerson.username,
               user_id: importantPerson.user_id,
               name: importantPerson.name,
+              weight: followerWeight,
             },
           },
           $set: {
@@ -199,16 +280,7 @@ export async function updateFollowingIndex(
   
   // Step 4: Recalculate importance scores for all users (single operation at the end)
   console.log('Recalculating importance scores...');
-  await followingIndexCollection.updateMany(
-    {},
-    [
-      {
-        $set: {
-          importance_score: { $size: '$followed_by' },
-        },
-      },
-    ]
-  );
+  await recalculateImportanceScores(followingIndexCollection);
   console.log('✅ Importance scores updated');
   
   // Step 5: Update last_synced for the important person
