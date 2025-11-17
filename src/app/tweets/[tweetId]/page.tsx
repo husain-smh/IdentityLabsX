@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface Engager {
   userId: string;
@@ -30,6 +31,11 @@ export default function TweetDetailPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // AI Report state
+  const [aiReport, setAiReport] = useState<any>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   
   // Filters
   const [minFollowers, setMinFollowers] = useState<string>('');
@@ -68,6 +74,10 @@ const fetchTweetData = useCallback(async () => {
         setStats(data.stats);
         setEngagers(data.engagers.engagers);
         setTotal(data.engagers.total);
+        // Set AI report if it exists
+        if (data.tweet?.ai_report) {
+          setAiReport(data.tweet.ai_report);
+        }
       } else {
         setError(data.error || 'Failed to fetch tweet');
       }
@@ -88,6 +98,34 @@ useEffect(() => {
     if (engager.retweeted) badges.push('🔁 Retweeted');
     if (engager.quoted) badges.push('💭 Quoted');
     return badges;
+  };
+
+  const handleGenerateReport = async () => {
+    if (!tweetId) return;
+    
+    setGeneratingReport(true);
+    setReportError(null);
+    
+    try {
+      const res = await fetch(`/api/tweets/${tweetId}/generate-report`, {
+        method: 'POST',
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setAiReport(data.report);
+        // Refresh tweet data to get updated report
+        await fetchTweetData();
+      } else {
+        setReportError(data.error || 'Failed to generate report');
+      }
+    } catch (err) {
+      setReportError('Failed to generate report. Please try again.');
+      console.error('Error generating report:', err);
+    } finally {
+      setGeneratingReport(false);
+    }
   };
 
   if (loading && !tweet) {
@@ -194,6 +232,223 @@ useEffect(() => {
               </div>
             </div>
           )}
+
+          {/* AI Report Section */}
+          <div className="glass rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">AI Engagement Report</h3>
+              <button
+                onClick={handleGenerateReport}
+                disabled={generatingReport || !tweetId}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              >
+                {generatingReport ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Generating...
+                  </>
+                ) : aiReport ? (
+                  'Regenerate Report'
+                ) : (
+                  'Generate Report'
+                )}
+              </button>
+            </div>
+
+            {reportError && (
+              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                {reportError}
+              </div>
+            )}
+
+            {generatingReport && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent mx-auto"></div>
+                <p className="mt-4 text-zinc-400">Analyzing engagers and generating report...</p>
+                <p className="mt-2 text-sm text-zinc-500">This may take 10-30 seconds</p>
+              </div>
+            )}
+
+            {aiReport && !generatingReport && (
+              <div className="space-y-8">
+                {/* Formatted Narrative Report */}
+                <div className="bg-zinc-900/30 rounded-lg p-6">
+                  <div className="text-zinc-200 leading-relaxed whitespace-pre-line text-sm">
+                    {aiReport.narrative}
+                  </div>
+                </div>
+
+                {/* Charts Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Pie Chart - Category Breakdown */}
+                  {(() => {
+                    const pieData = [
+                      { name: 'Founders', value: aiReport.structured_stats.categories.founders.count, color: '#60a5fa' },
+                      { name: 'VCs', value: aiReport.structured_stats.categories.vcs.count, color: '#a78bfa' },
+                      { name: 'AI Creators', value: aiReport.structured_stats.categories.ai_creators.count, color: '#34d399' },
+                      { name: 'Media', value: aiReport.structured_stats.categories.media.count, color: '#3b82f6' },
+                      { name: 'Developers', value: aiReport.structured_stats.categories.developers.count, color: '#f472b6' },
+                      { name: 'C-Level', value: aiReport.structured_stats.categories.c_level?.count || 0, color: '#fbbf24' },
+                      { name: 'YC Alumni', value: aiReport.structured_stats.categories.yc_alumni?.count || 0, color: '#fb923c' },
+                      { name: 'Others', value: aiReport.structured_stats.categories.others.count, color: '#94a3b8' },
+                    ].filter(item => item.value > 0);
+
+                    return pieData.length > 0 ? (
+                      <div className="bg-zinc-900/50 rounded-lg p-6">
+                        <h4 className="text-lg font-semibold text-white mb-4">Profile Type Distribution</h4>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              outerRadius={80}
+                              fill="#8884d8"
+                              dataKey="value"
+                            >
+                              {pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Bar Chart - Follower Tiers */}
+                  {aiReport.structured_stats.follower_tiers && aiReport.structured_stats.follower_tiers.length > 0 && (
+                    <div className="bg-zinc-900/50 rounded-lg p-6">
+                      <h4 className="text-lg font-semibold text-white mb-4">Follower Count Tiers</h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={aiReport.structured_stats.follower_tiers}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                          <XAxis dataKey="tier" stroke="#9ca3af" />
+                          <YAxis stroke="#9ca3af" />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                            labelStyle={{ color: '#f3f4f6' }}
+                          />
+                          <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+
+                {/* High Profile Engagers */}
+                {aiReport.structured_stats.high_profile_engagers && aiReport.structured_stats.high_profile_engagers.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-4">Highest Profile Engagers</h4>
+                    <div className="space-y-3">
+                      {aiReport.structured_stats.high_profile_engagers.map((engager: any, idx: number) => (
+                        <div key={idx} className="bg-zinc-900/50 rounded-lg p-4 flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-white font-semibold">{engager.name}</p>
+                              {engager.verified && (
+                                <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                            <p className="text-sm text-indigo-400">@{engager.username}</p>
+                            <p className="text-sm text-zinc-400 mt-1">
+                              {(engager.followers / 1000).toFixed(0)}K followers
+                            </p>
+                            {engager.bio && (
+                              <p className="text-xs text-zinc-500 mt-2 line-clamp-2">{engager.bio}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 ml-4">
+                            {engager.engagement_types.map((type: string, typeIdx: number) => (
+                              <span
+                                key={typeIdx}
+                                className="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-1 rounded-full capitalize whitespace-nowrap"
+                              >
+                                {type}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* VC Firms */}
+                {aiReport.structured_stats.vc_firms && aiReport.structured_stats.vc_firms.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-4">VCs by Firm Affiliation</h4>
+                    <div className="space-y-4">
+                      {aiReport.structured_stats.vc_firms.map((firm: any, idx: number) => (
+                        <div key={idx} className="bg-zinc-900/50 rounded-lg p-4">
+                          <h5 className="text-white font-semibold mb-3">{firm.firm_name}</h5>
+                          <div className="space-y-2">
+                            {firm.partners.map((partner: any, pIdx: number) => (
+                              <div key={pIdx} className="flex items-center justify-between text-sm">
+                                <div>
+                                  <span className="text-white font-medium">{partner.name}</span>
+                                  <span className="text-indigo-400 ml-2">@{partner.username}</span>
+                                </div>
+                                <span className="text-zinc-400">{(partner.followers / 1000).toFixed(1)}K followers</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Quality Metrics */}
+                <div>
+                  <h4 className="text-lg font-semibold text-white mb-4">Quality Metrics</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                      <p className="text-sm text-zinc-400">Verified</p>
+                      <p className="text-2xl font-bold text-emerald-400 mt-1">
+                        {aiReport.structured_stats.quality_metrics?.verified_percentage || 0}%
+                      </p>
+                    </div>
+                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                      <p className="text-sm text-zinc-400">Replied</p>
+                      <p className="text-2xl font-bold text-blue-400 mt-1">
+                        {aiReport.structured_stats.engagement.replied_percentage}%
+                      </p>
+                    </div>
+                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                      <p className="text-sm text-zinc-400">Retweeted</p>
+                      <p className="text-2xl font-bold text-indigo-400 mt-1">
+                        {aiReport.structured_stats.engagement.retweeted_percentage}%
+                      </p>
+                    </div>
+                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                      <p className="text-sm text-zinc-400">Top 10 Reach</p>
+                      <p className="text-2xl font-bold text-purple-400 mt-1">
+                        {(aiReport.structured_stats.quality_metrics?.top_10_followers_sum / 1000000).toFixed(2)}M+
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {aiReport.generated_at && (
+                  <p className="text-xs text-zinc-500 text-right">
+                    Generated: {new Date(aiReport.generated_at).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!aiReport && !generatingReport && (
+              <div className="text-center py-8 text-zinc-400">
+                <p>No report generated yet. Click "Generate Report" to create an AI-powered analysis.</p>
+              </div>
+            )}
+          </div>
 
           {/* Filters */}
           <div className="glass rounded-2xl p-6 mb-6">

@@ -1,5 +1,6 @@
 import { Collection, ObjectId } from 'mongodb';
 import { getDb } from '../mongodb-ranker';
+import type { AIReport } from '../generate-ai-report';
 
 // ===== TypeScript Interfaces =====
 
@@ -16,6 +17,7 @@ export interface Tweet {
   created_at: Date;
   analyzed_at?: Date;
   error?: string;
+  ai_report?: AIReport;
 }
 
 export interface Engager {
@@ -373,5 +375,24 @@ export async function createTweetsIndexes(): Promise<void> {
   await engagersCollection.createIndex({ username: 1 });
   
   console.log('✅ Tweets indexes created');
+}
+
+/**
+ * Update tweet with AI report
+ */
+export async function updateTweetReport(
+  tweetId: string,
+  report: AIReport
+): Promise<void> {
+  const collection = await getTweetsCollection();
+  
+  await collection.updateOne(
+    { tweet_id: tweetId },
+    {
+      $set: {
+        ai_report: report,
+      },
+    }
+  );
 }
 
