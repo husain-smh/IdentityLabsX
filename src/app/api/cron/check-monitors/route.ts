@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getActiveMonitoringJobs, completeMonitoringJob, storeMetricSnapshot } from '@/lib/models/monitoring';
 import { fetchTweetMetrics } from '@/lib/external-api';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     // Optional: Add basic auth check here if needed
     // const authHeader = request.headers.get('authorization');

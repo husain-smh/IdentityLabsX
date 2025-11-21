@@ -68,20 +68,19 @@ export interface AIReport {
 /**
  * Build the prompt for LLM generation
  */
-function buildPrompt(analysis: EngagerAnalysis, tweetText?: string): string {
+function buildPrompt(analysis: EngagerAnalysis): string {
   const { 
     category_counts, 
     category_percentages, 
     engagement_stats, 
     notable_people, 
-    sample_bios,
     follower_tiers,
     high_profile_engagers,
     vc_firms,
     quality_metrics
   } = analysis;
 
-  let prompt = `You are analyzing Twitter engagement data for a client report. Generate a professional, founder-friendly narrative report in the EXACT format specified below.
+  const prompt = `You are analyzing Twitter engagement data for a client report. Generate a professional, founder-friendly narrative report in the EXACT format specified below.
 
 CRITICAL RULES:
 1. ONLY use the data provided below. Do NOT make up numbers, names, or facts.
@@ -173,8 +172,8 @@ Write in a professional but enthusiastic tone. Make the client feel good about t
 /**
  * Generate AI report from analysis data
  */
-export async function generateAIReport(analysis: EngagerAnalysis, tweetText?: string): Promise<AIReport> {
-  const prompt = buildPrompt(analysis, tweetText);
+export async function generateAIReport(analysis: EngagerAnalysis): Promise<AIReport> {
+  const prompt = buildPrompt(analysis);
 
   try {
     const completion = await openai.chat.completions.create({
@@ -274,7 +273,6 @@ function validateNarrative(narrative: string, analysis: EngagerAnalysis): void {
 
   // Check for common hallucination patterns
   const total = analysis.engagement_stats.total;
-  const totalStr = total.toString();
 
   // If narrative mentions a total that's way off, flag it
   const mentionedNumbers = narrative.match(/\d+/g);

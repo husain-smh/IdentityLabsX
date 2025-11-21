@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface Engager {
   userId: string;
@@ -81,7 +81,7 @@ const fetchTweetData = useCallback(async () => {
       } else {
         setError(data.error || 'Failed to fetch tweet');
       }
-  } catch (_error) {
+  } catch {
       setError('Failed to fetch tweet');
     } finally {
       setLoading(false);
@@ -445,7 +445,7 @@ useEffect(() => {
 
             {!aiReport && !generatingReport && (
               <div className="text-center py-8 text-zinc-400">
-                <p>No report generated yet. Click "Generate Report" to create an AI-powered analysis.</p>
+                <p>No report generated yet. Click &quot;Generate Report&quot; to create an AI-powered analysis.</p>
               </div>
             )}
           </div>

@@ -105,42 +105,48 @@ export default function QuoteTweets() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] relative">
       <Navbar />
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
-      
+      <div
+        className="absolute inset-0 pointer-events-none opacity-80"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 15%, rgba(255,255,255,0.7), transparent 55%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.4), transparent 45%), radial-gradient(circle at 15% 80%, rgba(218,209,193,0.35), transparent 55%)",
+        }}
+      />
+
       <div className="relative z-10">
         {/* Header Section */}
         <div className="pt-24 pb-16">
           <div className="max-w-4xl mx-auto px-6 text-center">
-            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-zinc-400 text-sm font-medium">Identity Labs Analytics</span>
+            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-[var(--secondary)] border border-[var(--border)] rounded-full shadow-sm">
+              <div className="w-2 h-2 bg-emerald-600 rounded-full animate-pulse"></div>
+              <span className="text-[var(--muted-foreground)] text-sm font-medium">Identity Labs Analytics</span>
             </div>
-            
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="gradient-text">Quote Tweet</span>
+
+            <h1 className="text-5xl md:text-6xl font-semibold mb-6 leading-tight font-serif text-[var(--foreground)]">
+              Quote Tweet
               <br />
-              <span className="text-white">Analytics.</span>
+              <span className="text-[var(--foreground)]/85">Analytics.</span>
             </h1>
-            
-            <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed">
+
+            <p className="text-xl text-[var(--muted-foreground)] mb-8 max-w-2xl mx-auto leading-relaxed">
               Reverse-engineer viral content performance. Analyze quote tweet engagement 
               with precision-grade metrics that reveal true social impact.
             </p>
-            
-            <div className="flex flex-wrap justify-center gap-8 text-sm text-zinc-500">
+
+            <div className="flex flex-wrap justify-center gap-8 text-sm text-[var(--muted-foreground)]/85">
               <div className="flex items-center gap-2">
-                <div className="w-1 h-1 bg-zinc-500 rounded-full"></div>
+                <div className="w-1 h-1 bg-[var(--muted-foreground)]/60 rounded-full"></div>
                 <span>Real-time processing</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-1 h-1 bg-zinc-500 rounded-full"></div>
+                <div className="w-1 h-1 bg-[var(--muted-foreground)]/60 rounded-full"></div>
                 <span>Deep engagement analysis</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-1 h-1 bg-zinc-500 rounded-full"></div>
+                <div className="w-1 h-1 bg-[var(--muted-foreground)]/60 rounded-full"></div>
                 <span>Viral metrics tracking</span>
               </div>
             </div>
@@ -151,12 +157,12 @@ export default function QuoteTweets() {
         <div className="max-w-2xl mx-auto px-6 pb-20">
           {/* Analytics Tool Card */}
 
-          <div className="glass rounded-2xl p-8 mb-8">
+          <div className="glass rounded-2xl p-8 mb-8 border border-[var(--border)]">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label 
                   htmlFor="tweetUrl" 
-                  className="block text-sm font-semibold text-white mb-3"
+                  className="block text-sm font-semibold text-[var(--foreground)] mb-3"
                 >
                   Tweet URL
                 </label>
@@ -167,16 +173,16 @@ export default function QuoteTweets() {
                     value={tweetUrl}
                     onChange={(e) => setTweetUrl(e.target.value)}
                     placeholder="https://x.com/username/status/123456789..."
-                    className="w-full px-6 py-4 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all text-lg"
+                    className="w-full px-6 py-4 bg-[var(--secondary)] border border-[var(--border)] rounded-xl text-[var(--foreground)] placeholder-[var(--muted-foreground)]/70 focus:border-[var(--foreground)] focus:ring-2 focus:ring-[var(--foreground)]/15 focus:outline-none transition-all text-lg"
                     disabled={isLoading}
                   />
                   <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <svg className="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-[var(--muted-foreground)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                   </div>
                 </div>
-                <p className="mt-3 text-sm text-zinc-500">
+                <p className="mt-3 text-sm text-[var(--muted-foreground)]/85">
                   Supports both twitter.com and x.com URLs
                 </p>
               </div>
@@ -184,7 +190,7 @@ export default function QuoteTweets() {
               <button
                 type="submit"
                 disabled={isLoading || !tweetUrl.trim()}
-                className="w-full gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-indigo-500/25"
+                className="w-full bg-[var(--foreground)] text-[var(--primary-foreground)] hover:bg-[var(--foreground)]/90 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-[var(--shadow-soft)]"
               >
                 {isLoading ? (
                   <>
@@ -235,49 +241,49 @@ export default function QuoteTweets() {
             <div className="space-y-6">
               {/* Main Results Header */}
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-white mb-2">results:</h2>
-                <p className="text-zinc-400">Deep analytics for viral content performance</p>
+                <h2 className="text-3xl font-semibold text-[var(--foreground)] mb-2">results:</h2>
+                <p className="text-[var(--muted-foreground)]">Deep analytics for viral content performance</p>
               </div>
 
               {/* Key Metrics - Identity Labs Style */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="glass rounded-2xl p-6 text-center">
-                  <div className="text-5xl font-bold text-white mb-2">
+                <div className="glass rounded-2xl p-6 text-center border border-[var(--border)]">
+                  <div className="text-5xl font-bold text-[var(--foreground)] mb-2">
                     {analyticsData.totalQuoteTwtViews.toLocaleString()}
                   </div>
-                  <div className="text-zinc-400 font-medium">
-                    <span className="text-white font-bold">views</span>
+                  <div className="text-[var(--muted-foreground)] font-medium">
+                    <span className="text-[var(--foreground)] font-semibold">views</span>
                   </div>
-                  <div className="text-sm text-zinc-500 mt-2">
+                  <div className="text-sm text-[var(--muted-foreground)]/85 mt-2">
                     Total quote tweet impressions
                   </div>
                 </div>
 
-                <div className="glass rounded-2xl p-6 text-center">
-                  <div className="text-5xl font-bold text-white mb-2">
+                <div className="glass rounded-2xl p-6 text-center border border-[var(--border)]">
+                  <div className="text-5xl font-bold text-[var(--foreground)] mb-2">
                     {analyticsData.totalUniqueUsers.toLocaleString()}
                   </div>
-                  <div className="text-zinc-400 font-medium">
-                    <span className="text-white font-bold">unique users</span>
+                  <div className="text-[var(--muted-foreground)] font-medium">
+                    <span className="text-[var(--foreground)] font-semibold">unique users</span>
                   </div>
-                  <div className="text-sm text-zinc-500 mt-2">
+                  <div className="text-sm text-[var(--muted-foreground)]/85 mt-2">
                     Who quoted this tweet
                   </div>
                 </div>
               </div>
 
               {/* Analysis Summary */}
-              <div className="glass rounded-2xl p-6">
+              <div className="glass rounded-2xl p-6 border border-[var(--border)]">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 gradient-primary rounded-full flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <div className="w-10 h-10 bg-[var(--foreground)] text-[var(--primary-foreground)] rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-white font-semibold mb-2">Analysis Summary</h3>
-                    <p className="text-zinc-400 leading-relaxed">
-                      This tweet generated <span className="text-white font-semibold">{analyticsData.totalQuoteTwtViews.toLocaleString()} total views</span> across <span className="text-white font-semibold">{analyticsData.totalUniqueUsers.toLocaleString()} quote tweets</span> by unique users, demonstrating significant viral engagement potential.
+                    <h3 className="text-[var(--foreground)] font-semibold mb-2">Analysis Summary</h3>
+                    <p className="text-[var(--muted-foreground)] leading-relaxed">
+                      This tweet generated <span className="text-[var(--foreground)] font-semibold">{analyticsData.totalQuoteTwtViews.toLocaleString()} total views</span> across <span className="text-[var(--foreground)] font-semibold">{analyticsData.totalUniqueUsers.toLocaleString()} quote tweets</span> by unique users, demonstrating significant viral engagement potential.
                     </p>
                   </div>
                 </div>
@@ -286,40 +292,40 @@ export default function QuoteTweets() {
               {/* Detailed Processing Statistics */}
               {analyticsData.fullAnalytics?.statistics && (
                 <div className="glass rounded-2xl p-6">
-                  <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 20 20">
+                  <h3 className="text-[var(--foreground)] font-semibold mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-[var(--muted-foreground)]" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
                     Processing Details
                   </h3>
                   
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
-                      <div className="text-2xl font-bold text-white mb-1">
+                    <div className="bg-[var(--secondary)] rounded-xl p-4 border border-[var(--border)]">
+                      <div className="text-2xl font-bold text-[var(--foreground)] mb-1">
                         {analyticsData.fullAnalytics.statistics.totalTweetsProcessed.toLocaleString()}
                       </div>
-                      <p className="text-zinc-400 text-sm">Tweets Processed</p>
+                      <p className="text-[var(--muted-foreground)] text-sm">Tweets Processed</p>
                     </div>
                     
-                    <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
-                      <div className="text-2xl font-bold text-white mb-1">
+                    <div className="bg-[var(--secondary)] rounded-xl p-4 border border-[var(--border)]">
+                      <div className="text-2xl font-bold text-[var(--foreground)] mb-1">
                         {analyticsData.fullAnalytics.statistics.duplicatesRemoved.toLocaleString()}
                       </div>
-                      <p className="text-zinc-400 text-sm">Duplicates Removed</p>
+                      <p className="text-[var(--muted-foreground)] text-sm">Duplicates Removed</p>
                     </div>
                     
-                    <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
-                      <div className="text-2xl font-bold text-white mb-1">
+                    <div className="bg-[var(--secondary)] rounded-xl p-4 border border-[var(--border)]">
+                      <div className="text-2xl font-bold text-[var(--foreground)] mb-1">
                         {analyticsData.fullAnalytics.statistics.processingTimeSeconds}s
                       </div>
-                      <p className="text-zinc-400 text-sm">Processing Time</p>
+                      <p className="text-[var(--muted-foreground)] text-sm">Processing Time</p>
                     </div>
                     
-                    <div className="bg-zinc-900/50 rounded-xl p-4 border border-zinc-800">
-                      <div className="text-2xl font-bold text-white mb-1">
+                    <div className="bg-[var(--secondary)] rounded-xl p-4 border border-[var(--border)]">
+                      <div className="text-2xl font-bold text-[var(--foreground)] mb-1">
                         {analyticsData.fullAnalytics.statistics.deduplicationRate}%
                       </div>
-                      <p className="text-zinc-400 text-sm">Dedup Rate</p>
+                      <p className="text-[var(--muted-foreground)] text-sm">Dedup Rate</p>
                     </div>
                   </div>
                 </div>
@@ -327,15 +333,15 @@ export default function QuoteTweets() {
 
               {/* Top Quote Tweet Users */}
               {analyticsData.fullAnalytics?.filteredUsers && analyticsData.fullAnalytics.filteredUsers.length > 0 && (
-                <div className="glass rounded-2xl p-6">
+                <div className="glass rounded-2xl p-6 border border-[var(--border)]">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-white font-semibold flex items-center gap-2">
-                      <svg className="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 20 20">
+                    <h3 className="text-[var(--foreground)] font-semibold flex items-center gap-2">
+                      <svg className="w-5 h-5 text-[var(--muted-foreground)]" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                       </svg>
                       Top Influencers
                     </h3>
-                    <span className="text-xs bg-indigo-500/20 text-indigo-400 px-3 py-1 rounded-full border border-indigo-500/20">
+                    <span className="text-xs bg-[var(--secondary)] text-[var(--muted-foreground)] px-3 py-1 rounded-full border border-[var(--border)]">
                       Top {Math.min(25, analyticsData.fullAnalytics.filteredUsers.length)}
                     </span>
                   </div>
@@ -345,34 +351,34 @@ export default function QuoteTweets() {
                       .sort((a, b) => b.totalViewsFromQuoteTweets - a.totalViewsFromQuoteTweets)
                       .slice(0, 25)
                       .map((user, index) => (
-                        <div key={user.userId} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 flex items-center gap-4">
+                        <div key={user.userId} className="bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-4 flex items-center gap-4">
                           <div className="flex-shrink-0">
-                            <div className="w-10 h-10 gradient-primary rounded-full flex items-center justify-center text-white font-bold">
+                            <div className="w-10 h-10 bg-[var(--foreground)] text-[var(--primary-foreground)] rounded-full flex items-center justify-center font-bold">
                               #{index + 1}
                             </div>
                           </div>
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <p className="font-semibold text-white truncate">
+                              <p className="font-semibold text-[var(--foreground)] truncate">
                                 {user.name || 'Unknown User'}
                               </p>
                               {user.verified && (
-                                <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 text-[var(--foreground)]/70" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                               )}
                             </div>
-                            <p className="text-sm text-zinc-400">
+                            <p className="text-sm text-[var(--muted-foreground)]">
                               @{user.username || 'unknown'} • {user.followers.toLocaleString()} followers
                             </p>
                           </div>
                           
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-white">
+                            <p className="text-2xl font-bold text-[var(--foreground)]">
                               {user.totalViewsFromQuoteTweets.toLocaleString()}
                             </p>
-                            <p className="text-xs text-zinc-500">views</p>
+                            <p className="text-xs text-[var(--muted-foreground)]/80">views</p>
                           </div>
                         </div>
                       ))}
@@ -387,7 +393,7 @@ export default function QuoteTweets() {
                     setAnalyticsData(null);
                     setMessage(null);
                   }}
-                  className="inline-flex items-center gap-3 px-8 py-4 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-white font-semibold rounded-xl transition-all"
+                  className="inline-flex items-center gap-3 px-8 py-4 bg-[var(--foreground)] hover:bg-[var(--foreground)]/90 border border-[var(--foreground)]/10 text-[var(--primary-foreground)] font-semibold rounded-xl transition-all shadow-[var(--shadow-soft)]"
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -399,47 +405,34 @@ export default function QuoteTweets() {
           )}
           {/* How it Works Section */}
           <div className="mt-16 text-center">
-            <h2 className="text-2xl font-bold text-white mb-8">How it works:</h2>
+            <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-8">How it works:</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">1</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Copy URL</h3>
-                <p className="text-zinc-400 text-sm">Get any Twitter/X tweet URL from the share button</p>
-              </div>
-              
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">2</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Paste & Analyze</h3>
-                <p className="text-zinc-400 text-sm">Input the URL and click analyze for deep insights</p>
-              </div>
-              
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">3</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Get Metrics</h3>
-                <p className="text-zinc-400 text-sm">Receive comprehensive quote tweet analytics</p>
-              </div>
-              
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">4</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Optimize</h3>
-                <p className="text-zinc-400 text-sm">Use insights to improve your viral content strategy</p>
-              </div>
+              {[1, 2, 3, 4].map((step, idx) => {
+                const titles = ["Copy URL", "Paste & Analyze", "Get Metrics", "Optimize"];
+                const descriptions = [
+                  "Get any Twitter/X tweet URL from the share button",
+                  "Input the URL and click analyze for deep insights",
+                  "Receive comprehensive quote tweet analytics",
+                  "Use insights to improve your viral content strategy",
+                ];
+                return (
+                  <div key={step} className="glass rounded-xl p-6 border border-[var(--border)]">
+                    <div className="w-12 h-12 bg-[var(--foreground)] text-[var(--primary-foreground)] rounded-full flex items-center justify-center mx-auto mb-4 font-semibold">
+                      {step}
+                    </div>
+                    <h3 className="text-[var(--foreground)] font-semibold mb-2">{titles[idx]}</h3>
+                    <p className="text-[var(--muted-foreground)] text-sm">{descriptions[idx]}</p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-20 py-8 border-t border-zinc-800">
+        <div className="mt-20 py-8 border-t border-[var(--border)]/70">
           <div className="max-w-4xl mx-auto px-6 text-center">
-            <p className="text-zinc-500 text-sm">
+            <p className="text-[var(--muted-foreground)] text-sm">
               Powered by Identity Labs • Advanced analytics for viral content creators
             </p>
           </div>

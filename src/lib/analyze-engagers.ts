@@ -207,8 +207,6 @@ export function categorizeEngager(engager: Engager): (keyof EngagerCategory)[] {
  * Extract VC firm names from bio
  */
 export function extractVCFirm(bio: string): string | null {
-  const bioLower = bio.toLowerCase();
-  
   const firmPatterns = [
     { pattern: /a16z|andreessen horowitz/gi, name: 'a16z' },
     { pattern: /y combinator|ycombinator/gi, name: 'Y Combinator' },

@@ -56,22 +56,22 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] relative">
       <Navbar />
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
-      
+      <div className="absolute inset-0 pointer-events-none opacity-80" style={{ background: "radial-gradient(circle at 50% 20%, rgba(255,255,255,0.6), transparent 60%), radial-gradient(circle at 80% 0%, rgba(255,255,255,0.35), transparent 45%), radial-gradient(circle at 20% 80%, rgba(218,209,193,0.3), transparent 55%)" }} />
+
       <div className="relative z-10">
         {/* Header Section */}
         <div className="pt-24 pb-16">
           <div className="max-w-6xl mx-auto px-6 text-center">
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="gradient-text">Identity Labs</span>
+            <h1 className="text-5xl md:text-6xl font-semibold mb-6 leading-tight text-[var(--foreground)] font-serif">
+              Identity Labs
               <br />
-              <span className="text-white">Internal Tools.</span>
+              <span className="text-[var(--foreground)]/80">Internal Tools.</span>
             </h1>
             
-            <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-[var(--muted-foreground)] mb-8 max-w-2xl mx-auto leading-relaxed font-sans">
               Analytics Tool for Identity Labs.
             </p>
           </div>
@@ -82,7 +82,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {tools.map((tool, index) => (
               <Link key={index} href={tool.href}>
-                <div className="glass rounded-2xl p-8 hover:border-zinc-600 transition-all duration-300 group cursor-pointer h-full">
+                <div className="glass rounded-2xl p-8 border border-[var(--border)] transition-all duration-300 group cursor-pointer h-full">
                   <div className="flex flex-col h-full">
                     {/* Icon & Title */}
                     <div className="flex items-start gap-4 mb-6">
@@ -92,29 +92,29 @@ export default function Home() {
                         </div>
                       </div>
                       <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-indigo-400 group-hover:to-purple-400 transition-all">
+                        <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
                           {tool.name}
                         </h2>
                       </div>
                     </div>
 
                     {/* Description */}
-                    <p className="text-zinc-400 mb-6 leading-relaxed flex-grow">
+                    <p className="text-[var(--muted-foreground)] mb-6 leading-relaxed flex-grow">
                       {tool.description}
                     </p>
 
                     {/* Features */}
                     <div className="space-y-2 mb-6">
                       {tool.features.map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-2 text-sm text-zinc-500">
-                          <div className="w-1.5 h-1.5 bg-zinc-500 rounded-full"></div>
+                        <div key={idx} className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]/80">
+                          <div className="w-1.5 h-1.5 bg-[var(--muted-foreground)]/60 rounded-full"></div>
                           <span>{feature}</span>
                         </div>
                       ))}
                     </div>
 
                     {/* Action Button */}
-                    <div className="inline-flex items-center gap-2 text-indigo-400 font-medium group-hover:gap-3 transition-all">
+                    <div className="inline-flex items-center gap-2 text-[var(--foreground)] font-medium group-hover:gap-3 transition-all">
                       <span>Open Tool</span>
                       <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -128,9 +128,9 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <div className="mt-20 py-8 border-t border-zinc-800">
+        <div className="mt-20 py-8 border-t border-[var(--border)]/60">
           <div className="max-w-6xl mx-auto px-6 text-center">
-            <p className="text-zinc-500 text-sm">
+            <p className="text-[var(--muted-foreground)] text-sm">
               Powered by Identity Labs • Advanced analytics for social intelligence
             </p>
           </div>

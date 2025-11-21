@@ -62,7 +62,7 @@ export default function MonitoringDashboard() {
       } else {
         setError(result.error || 'Failed to fetch monitoring data');
       }
-    } catch (_error) {
+    } catch {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);

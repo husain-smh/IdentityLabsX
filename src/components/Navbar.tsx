@@ -55,15 +55,15 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-zinc-900/95 backdrop-blur-sm border-b border-zinc-800">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-[var(--border)] text-[var(--foreground)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">IL</span>
+            <div className="w-8 h-8 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-xl flex items-center justify-center">
+              <span className="font-bold text-sm">IL</span>
             </div>
-            <span className="text-white font-semibold hidden sm:inline">Identity Labs</span>
+            <span className="text-[var(--foreground)] font-semibold hidden sm:inline">Identity Labs</span>
           </Link>
 
           {/* Navigation Items */}
@@ -76,8 +76,8 @@ export default function Navbar() {
                   href={item.href}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                     isActive
-                      ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+                      ? 'bg-[var(--foreground)] text-[var(--primary-foreground)] border border-[var(--foreground)]/20 shadow-sm'
+                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--secondary)]'
                   }`}
                 >
                   {item.icon}
