@@ -50,6 +50,7 @@ export default function MonitoringDashboard() {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStopping, setIsStopping] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -85,6 +86,34 @@ export default function MonitoringDashboard() {
       return () => clearInterval(interval);
     }
   }, [data?.stats.is_active, fetchData]);
+
+  const handleStopMonitoring = async () => {
+    if (!tweetId || !data?.stats.is_active) return;
+
+    setIsStopping(true);
+    try {
+      const response = await fetch('/api/monitor-tweet/stop', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tweetId }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Refresh data to show updated status
+        await fetchData();
+      } else {
+        setError(result.error || 'Failed to stop monitoring');
+      }
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsStopping(false);
+    }
+  };
 
   // Format data for charts
   const chartData = data?.snapshots.map((snapshot) => ({
@@ -129,10 +158,10 @@ export default function MonitoringDashboard() {
             <h2 className="text-white text-xl font-bold mb-2">Error</h2>
             <p className="text-zinc-400 mb-6">{error || 'Monitoring data not found'}</p>
             <button
-              onClick={() => router.push('/twtengagement')}
+              onClick={() => router.push('/monitor')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-xl transition-all"
             >
-              Go Back
+              Go Back to All
             </button>
           </div>
         </div>
@@ -161,15 +190,39 @@ export default function MonitoringDashboard() {
                   Real-time engagement metrics over 24 hours
                 </p>
               </div>
-              <Link
-                href="/twtengagement"
-                className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-semibold py-2 px-4 rounded-xl transition-all flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                Back
-              </Link>
+              <div className="flex items-center gap-3">
+                {data.stats.is_active && (
+                  <button
+                    onClick={handleStopMonitoring}
+                    disabled={isStopping}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed border border-red-700 text-white font-semibold py-2 px-4 rounded-xl transition-all flex items-center gap-2"
+                  >
+                    {isStopping ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        Stopping...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                        </svg>
+                        Stop Monitoring
+                      </>
+                    )}
+                  </button>
+                )}
+                <Link
+                  href="/monitor"
+                  className="bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-semibold py-2 px-4 rounded-xl transition-all flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  Back to All
+                </Link>
+              </div>
             </div>
 
             {/* Status Card */}

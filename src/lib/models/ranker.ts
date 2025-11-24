@@ -61,6 +61,15 @@ export interface TwitterUser {
   weight?: number;
 }
 
+export interface ImportantAccountCandidate {
+  followed_username: string;
+  followed_user_id: string;
+  follower_count: number;
+  total_weight: number;
+  importance_score: number;
+  sample_followed_by: FollowedByEntry[];
+}
+
 export interface EngagerInput {
   username: string;
   userId: string;
@@ -89,6 +98,125 @@ export async function getFollowingIndexCollection(): Promise<Collection<Followin
 export async function getEngagementRankingsCollection(): Promise<Collection<EngagementRanking>> {
   const db = await getDb();
   return db.collection<EngagementRanking>('engagement_rankings');
+}
+
+interface CandidateQueryParams {
+  limit?: number;
+  minFollowers?: number;
+  minWeight?: number;
+}
+
+export async function getImportantAccountCandidates({
+  limit = 30,
+  minFollowers = 3,
+  minWeight = 0,
+}: CandidateQueryParams = {}): Promise<ImportantAccountCandidate[]> {
+  const followingIndexCollection = await getFollowingIndexCollection();
+
+  const pipeline = [
+    {
+      $match: {
+        importance_score: { $gte: minWeight },
+      },
+    },
+    {
+      $addFields: {
+        follower_count: {
+          $cond: [{ $isArray: '$followed_by' }, { $size: '$followed_by' }, 0],
+        },
+        total_weight: {
+          $cond: [
+            { $isArray: '$followed_by' },
+            {
+              $sum: {
+                $map: {
+                  input: '$followed_by',
+                  as: 'follower',
+                  in: { $ifNull: ['$$follower.weight', 1] },
+                },
+              },
+            },
+            0,
+          ],
+        },
+      },
+    },
+    {
+      $match: {
+        follower_count: { $gte: minFollowers },
+      },
+    },
+    {
+      $lookup: {
+        from: 'important_people',
+        let: {
+          candidateUserId: '$followed_user_id',
+          candidateUsername: '$followed_username',
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ['$is_active', true] },
+                  {
+                    $or: [
+                      {
+                        $and: [
+                          { $ne: ['$$candidateUserId', null] },
+                          { $eq: ['$user_id', '$$candidateUserId'] },
+                        ],
+                      },
+                      { $eq: ['$username', '$$candidateUsername'] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: 'existingImportant',
+      },
+    },
+    {
+      $match: {
+        existingImportant: { $size: 0 },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        followed_username: 1,
+        followed_user_id: 1,
+        importance_score: 1,
+        follower_count: 1,
+        total_weight: 1,
+        sample_followed_by: {
+          $slice: [
+            {
+              $ifNull: ['$followed_by', []],
+            },
+            5,
+          ],
+        },
+      },
+    },
+    {
+      $sort: {
+        follower_count: -1,
+        total_weight: -1,
+        importance_score: -1,
+      },
+    },
+    { $limit: limit },
+  ];
+
+  const candidates = await followingIndexCollection
+    .aggregate<ImportantAccountCandidate>(pipeline)
+    .toArray();
+
+  return candidates;
 }
 
 async function recalculateImportanceScores(

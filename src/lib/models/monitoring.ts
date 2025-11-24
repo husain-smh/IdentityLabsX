@@ -77,6 +77,22 @@ export async function getActiveMonitoringJobs(): Promise<MonitoringJob[]> {
 }
 
 /**
+ * Get all monitoring jobs (active and completed), sorted by most recent first
+ */
+export async function getAllMonitoringJobs(
+  limit: number = 100,
+  skip: number = 0
+): Promise<MonitoringJob[]> {
+  const collection = await getMonitoringJobsCollection();
+  return await collection
+    .find({})
+    .sort({ started_at: -1 }) // Most recent first
+    .limit(limit)
+    .skip(skip)
+    .toArray();
+}
+
+/**
  * Get monitoring job by tweet ID
  */
 export async function getMonitoringJobByTweetId(tweetId: string): Promise<MonitoringJob | null> {

@@ -13,6 +13,20 @@ interface ImportantPerson {
   weight?: number;
 }
 
+interface ImportantAccountCandidate {
+  followed_username: string;
+  followed_user_id: string;
+  follower_count: number;
+  total_weight: number;
+  importance_score: number;
+  sample_followed_by: {
+    username: string;
+    user_id: string;
+    name: string;
+    weight?: number;
+  }[];
+}
+
 interface SyncStatus {
   username: string;
   user_id: string;
@@ -55,6 +69,15 @@ export default function RankerAdmin() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allPeople, setAllPeople] = useState<ImportantPerson[]>([]); // Store all people for search
   const [isSearching, setIsSearching] = useState(false);
+  const [isCandidateModalOpen, setIsCandidateModalOpen] = useState(false);
+  const [candidateLoading, setCandidateLoading] = useState(false);
+  const [candidateError, setCandidateError] = useState<string | null>(null);
+  const [candidateList, setCandidateList] = useState<ImportantAccountCandidate[]>([]);
+  const [candidateAdding, setCandidateAdding] = useState<Record<string, boolean>>({});
+  const [candidateMinFollowers, setCandidateMinFollowers] = useState(3);
+  const [candidateMinWeight, setCandidateMinWeight] = useState(0);
+  const [selectedCandidates, setSelectedCandidates] = useState<string[]>([]);
+  const [isBatchAdding, setIsBatchAdding] = useState(false);
 
   // Fetch important people on mount
   useEffect(() => {
@@ -416,6 +439,132 @@ export default function RankerAdmin() {
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
+  const fetchCandidates = async () => {
+    setCandidateLoading(true);
+    setCandidateError(null);
+    setSelectedCandidates([]);
+    try {
+      const params = new URLSearchParams({
+        minFollowers: String(candidateMinFollowers),
+        minWeight: String(candidateMinWeight),
+      });
+      const response = await fetch(`/api/ranker/admin/important-candidates?${params.toString()}`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to load candidates');
+      }
+      setCandidateList(data.data.candidates);
+    } catch (error) {
+      console.error('Error fetching candidates:', error);
+      setCandidateError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setCandidateLoading(false);
+    }
+  };
+
+  const openCandidateModal = () => {
+    setIsCandidateModalOpen(true);
+    if (candidateList.length === 0) {
+      fetchCandidates();
+    }
+  };
+
+  const closeCandidateModal = () => {
+    setIsCandidateModalOpen(false);
+  };
+
+  const handleAddCandidate = async (candidate: ImportantAccountCandidate) => {
+    await addCandidates([candidate.followed_username], candidate.followed_username);
+  };
+
+  const addCandidates = async (usernames: string[], trackingKey?: string) => {
+    if (usernames.length === 0) {
+      return;
+    }
+
+    if (trackingKey) {
+      setCandidateAdding((prev) => ({ ...prev, [trackingKey]: true }));
+    } else {
+      setIsBatchAdding(true);
+    }
+
+    setMessage({
+      type: 'success',
+      text: usernames.length === 1
+        ? `Adding @${usernames[0]}...`
+        : `Adding ${usernames.length} candidates...`,
+    });
+
+    try {
+      const response = await fetch('/api/ranker/admin/important-candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        const firstError = data?.results?.find((r: { success: boolean }) => !r.success)?.error;
+        throw new Error(data.error || firstError || 'Failed to add candidate(s)');
+      }
+
+      const addedUsernames: string[] = data.results
+        ?.filter((result: { success: boolean }) => result.success)
+        .map((result: { username: string }) => result.username) ?? usernames;
+
+      setMessage({
+        type: 'success',
+        text: usernames.length === 1
+          ? `@${usernames[0]} added to important people. Remember to sync them.`
+          : `${addedUsernames.length} candidates added. Remember to sync them.`,
+      });
+
+      setCandidateList((prev) =>
+        prev.filter((item) => !addedUsernames.includes(item.followed_username))
+      );
+      setSelectedCandidates((prev) => prev.filter((name) => !addedUsernames.includes(name)));
+      setAllPeople([]); // ensure future fetch reflects new person
+      fetchImportantPeople(1);
+      fetchSyncStatus();
+    } catch (error) {
+      console.error('Error adding candidate(s):', error);
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Failed to add candidate(s)',
+      });
+    } finally {
+      if (trackingKey) {
+        setCandidateAdding((prev) => {
+          const next = { ...prev };
+          delete next[trackingKey];
+          return next;
+        });
+      } else {
+        setIsBatchAdding(false);
+      }
+    }
+  };
+
+  const handleBatchAdd = () => {
+    addCandidates(selectedCandidates);
+  };
+
+  const toggleCandidateSelection = (username: string) => {
+    setSelectedCandidates((prev) =>
+      prev.includes(username)
+        ? prev.filter((item) => item !== username)
+        : [...prev, username]
+    );
+  };
+
+  const toggleSelectAllCandidates = () => {
+    if (selectedCandidates.length === candidateList.length) {
+      setSelectedCandidates([]);
+    } else {
+      setSelectedCandidates(candidateList.map((candidate) => candidate.followed_username));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
@@ -556,32 +705,48 @@ export default function RankerAdmin() {
 
           {/* Important People Table */}
           <div className="glass rounded-2xl p-8">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">Important People</h2>
-              <button
-                onClick={() => {
-                  setAllPeople([]); // Clear search cache on refresh
-                  fetchImportantPeople();
-                  fetchSyncStatus();
-                }}
-                disabled={isFetching}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
-              >
-                <svg
-                  className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={openCandidateModal}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-all"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                Refresh
-              </button>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Extract important accounts
+                </button>
+                <button
+                  onClick={() => {
+                    setAllPeople([]); // Clear search cache on refresh
+                    fetchImportantPeople();
+                    fetchSyncStatus();
+                  }}
+                  disabled={isFetching}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+                >
+                  <svg
+                    className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
             </div>
 
             {/* Search Bar */}
@@ -905,6 +1070,214 @@ export default function RankerAdmin() {
             </div>
           </div>
         </div>
+
+        {isCandidateModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
+            <div className="glass max-w-4xl w-full mx-4 rounded-2xl border border-zinc-800 p-6 relative">
+              <button
+                onClick={closeCandidateModal}
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div className="flex items-center justify-between mb-4 pr-8">
+                <div>
+                  <h3 className="text-2xl font-bold text-white">Candidate Important Accounts</h3>
+                  <p className="text-sm text-zinc-400">
+                    Accounts followed by multiple important people but not yet in your list.
+                  </p>
+                </div>
+                <button
+                  onClick={fetchCandidates}
+                  disabled={candidateLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white disabled:opacity-50"
+                >
+                  <svg
+                    className={`w-4 h-4 ${candidateLoading ? 'animate-spin' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  Refresh
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <label className="flex flex-col gap-2 text-sm text-zinc-300">
+                  Minimum important followers
+                  <input
+                    type="number"
+                    min={1}
+                    value={candidateMinFollowers}
+                    onChange={(e) => setCandidateMinFollowers(Math.max(1, Number(e.target.value)))}
+                    className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm text-zinc-300">
+                  Minimum total weight
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={candidateMinWeight}
+                    onChange={(e) =>
+                      setCandidateMinWeight(Math.max(0, Number(e.target.value)))
+                    }
+                    className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  />
+                </label>
+                <div className="flex items-end">
+                  <button
+                    onClick={fetchCandidates}
+                    disabled={candidateLoading}
+                    className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium disabled:opacity-50"
+                  >
+                    Apply filters
+                  </button>
+                </div>
+              </div>
+              {candidateError && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                  {candidateError}
+                </div>
+              )}
+              {candidateLoading ? (
+                <div className="flex items-center justify-center py-12 text-zinc-400">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-zinc-600 border-t-transparent mr-3"></div>
+                  Extracting potential accounts...
+                </div>
+              ) : candidateList.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-zinc-300 font-medium mb-2">No candidates found</p>
+                  <p className="text-sm text-zinc-500">
+                    Try syncing more important people or lowering the threshold.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleBatchAdd}
+                      disabled={selectedCandidates.length === 0 || isBatchAdding}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 rounded-lg text-sm font-medium disabled:opacity-50"
+                    >
+                      {isBatchAdding ? (
+                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                      )}
+                      Add selected ({selectedCandidates.length})
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto max-h-[500px] pr-2">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-zinc-800/80 text-left text-zinc-400">
+                          <th className="py-3 px-2">
+                            <input
+                              type="checkbox"
+                              checked={
+                                candidateList.length > 0 &&
+                                selectedCandidates.length === candidateList.length
+                              }
+                              ref={(el) => {
+                                if (el) {
+                                  el.indeterminate =
+                                    selectedCandidates.length > 0 &&
+                                    selectedCandidates.length < candidateList.length;
+                                }
+                              }}
+                              onChange={toggleSelectAllCandidates}
+                            />
+                          </th>
+                          <th className="py-3 px-2">Username</th>
+                          <th className="py-3 px-2">Followers</th>
+                          <th className="py-3 px-2">Weight Sum</th>
+                          <th className="py-3 px-2">Score</th>
+                          <th className="py-3 px-2">Followed By</th>
+                          <th className="py-3 px-2 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {candidateList.map((candidate) => {
+                          const isSelected = selectedCandidates.includes(candidate.followed_username);
+                          return (
+                            <tr
+                              key={candidate.followed_user_id || candidate.followed_username}
+                              className="border-b border-zinc-800/40"
+                            >
+                              <td className="py-3 px-2">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleCandidateSelection(candidate.followed_username)}
+                                />
+                              </td>
+                              <td className="py-3 px-2">
+                                <span className="text-white font-medium">@{candidate.followed_username}</span>
+                                <div className="text-xs text-zinc-500">{candidate.followed_user_id}</div>
+                              </td>
+                              <td className="py-3 px-2 text-zinc-200">{candidate.follower_count}</td>
+                              <td className="py-3 px-2 text-zinc-200">{candidate.total_weight.toFixed(1)}</td>
+                              <td className="py-3 px-2 text-zinc-200">{candidate.importance_score.toFixed(1)}</td>
+                              <td className="py-3 px-2">
+                                <div className="flex flex-wrap gap-1">
+                                  {candidate.sample_followed_by.map((follower) => (
+                                    <span
+                                      key={`${candidate.followed_username}-${follower.user_id}`}
+                                      className="px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-300"
+                                    >
+                                      @{follower.username}
+                                    </span>
+                                  ))}
+                                  {candidate.follower_count > candidate.sample_followed_by.length && (
+                                    <span className="text-xs text-zinc-500">
+                                      +{candidate.follower_count - candidate.sample_followed_by.length} more
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-2 text-right">
+                                <button
+                                  onClick={() => handleAddCandidate(candidate)}
+                                  disabled={!!candidateAdding[candidate.followed_username]}
+                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium disabled:opacity-50"
+                                >
+                                  {candidateAdding[candidate.followed_username] ? (
+                                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
+                                    </svg>
+                                  ) : (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                  )}
+                                  Add
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-20 py-8 border-t border-zinc-800">
