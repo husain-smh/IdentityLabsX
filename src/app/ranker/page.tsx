@@ -1110,31 +1110,39 @@ export default function RankerAdmin() {
                   Refresh
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <label className="flex flex-col gap-2 text-sm text-zinc-300">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
+                <label className="flex flex-col gap-2 text-sm text-white">
                   Minimum important followers
                   <input
                     type="number"
                     min={1}
+                    placeholder="e.g. 3 followers"
                     value={candidateMinFollowers}
                     onChange={(e) => setCandidateMinFollowers(Math.max(1, Number(e.target.value)))}
                     className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                   />
+                  <span className="text-xs text-zinc-400">
+                    Only show accounts followed by at least this many important people.
+                  </span>
                 </label>
-                <label className="flex flex-col gap-2 text-sm text-zinc-300">
+                <label className="flex flex-col gap-2 text-sm text-white">
                   Minimum total weight
                   <input
                     type="number"
                     min={0}
                     step={0.5}
+                    placeholder="e.g. 5 weight"
                     value={candidateMinWeight}
                     onChange={(e) =>
                       setCandidateMinWeight(Math.max(0, Number(e.target.value)))
                     }
                     className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
                   />
+                  <span className="text-xs text-zinc-400">
+                    Weighted by follower importance. Raise to prioritize higher-signal overlaps.
+                  </span>
                 </label>
-                <div className="flex items-end">
+                <div className="flex flex-col justify-end gap-2">
                   <button
                     onClick={fetchCandidates}
                     disabled={candidateLoading}
@@ -1142,6 +1150,9 @@ export default function RankerAdmin() {
                   >
                     Apply filters
                   </button>
+                  <span className="text-xs text-zinc-500">
+                    Use filters when the list feels too broad or too sparse.
+                  </span>
                 </div>
               </div>
               {candidateError && (
