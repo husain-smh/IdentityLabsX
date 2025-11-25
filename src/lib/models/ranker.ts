@@ -10,6 +10,7 @@ export interface ImportantPerson {
   name?: string; // Optional until first sync
   weight?: number;
   last_synced?: Date | null;
+  tags?: string[];
   following_count: number;
   is_active: boolean;
   created_at: Date;
@@ -88,6 +89,19 @@ export interface EngagerInput {
 export async function getImportantPeopleCollection(): Promise<Collection<ImportantPerson>> {
   const db = await getDb();
   return db.collection<ImportantPerson>('important_people');
+}
+
+export async function getDistinctImportantPersonTags(): Promise<string[]> {
+  const collection = await getImportantPeopleCollection();
+  const tags = await collection.distinct('tags', { is_active: true });
+  const cleaned = (tags as string[])
+    .filter((tag) => typeof tag === 'string')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+
+  const unique = Array.from(new Map(cleaned.map((tag) => [tag.toLowerCase(), tag])).values());
+  unique.sort((a, b) => a.localeCompare(b));
+  return unique;
 }
 
 export async function getFollowingIndexCollection(): Promise<Collection<FollowingIndexEntry>> {
@@ -258,6 +272,7 @@ export async function addImportantPerson(username: string): Promise<ImportantPer
   const newPerson: ImportantPerson = {
     username: username.trim(),
     weight: 1,
+    tags: [],
     following_count: 0,
     is_active: true,
     last_synced: null,
@@ -339,9 +354,38 @@ export async function getImportantPeople(page: number = 1, limit: number = 20): 
   const normalizedPeople = people.map(person => ({
     ...person,
     weight: person.weight ?? 1,
+    tags: person.tags ?? [],
   }));
 
   return { people: normalizedPeople, total };
+}
+
+export async function updateImportantPersonTags(
+  username: string,
+  tags: string[]
+): Promise<boolean> {
+  const importantPeopleCollection = await getImportantPeopleCollection();
+
+  const normalizedTags = Array.from(
+    new Map(
+      tags
+        .map((tag) => (typeof tag === 'string' ? tag.trim() : ''))
+        .filter((tag) => tag.length > 0)
+        .map((tag) => [tag.toLowerCase(), tag] as const)
+    ).values()
+  );
+
+  const result = await importantPeopleCollection.updateOne(
+    { username, is_active: true },
+    {
+      $set: {
+        tags: normalizedTags,
+        updated_at: new Date(),
+      },
+    }
+  );
+
+  return result.modifiedCount > 0;
 }
 
 export async function updateFollowingIndex(

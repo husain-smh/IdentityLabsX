@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addImportantPerson, removeImportantPerson, updateImportantPersonWeight } from '@/lib/models/ranker';
+import {
+  addImportantPerson,
+  removeImportantPerson,
+  updateImportantPersonWeight,
+  updateImportantPersonTags,
+} from '@/lib/models/ranker';
 
 // Type for add result
 interface AddResult {
@@ -151,7 +156,7 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, weight } = body;
+    const { username, weight, tags } = body;
 
     if (!username || typeof username !== 'string') {
       return NextResponse.json(
@@ -160,26 +165,79 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const parsedWeight = Number(weight);
-    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+    const hasWeightUpdate = weight !== undefined;
+    const hasTagUpdate = tags !== undefined;
+
+    if (!hasWeightUpdate && !hasTagUpdate) {
       return NextResponse.json(
-        { error: 'weight must be a positive number' },
+        { error: 'Provide weight and/or tags to update' },
         { status: 400 }
       );
     }
 
-    const updated = await updateImportantPersonWeight(username.trim(), parsedWeight);
+    let parsedWeight: number | undefined;
+    if (hasWeightUpdate) {
+      parsedWeight = Number(weight);
+      if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+        return NextResponse.json(
+          { error: 'weight must be a positive number' },
+          { status: 400 }
+        );
+      }
+    }
 
-    if (!updated) {
-      return NextResponse.json(
-        { error: 'Person not found or inactive' },
-        { status: 404 }
+    let normalizedTags: string[] | undefined;
+    if (hasTagUpdate) {
+      if (!Array.isArray(tags)) {
+        return NextResponse.json(
+          { error: 'tags must be an array of strings' },
+          { status: 400 }
+        );
+      }
+
+      normalizedTags = Array.from(
+        new Map(
+          tags
+            .map((tag) => (typeof tag === 'string' ? tag.trim() : ''))
+            .filter((tag) => tag.length > 0)
+            .map((tag) => [tag.toLowerCase(), tag] as const)
+        ).values()
       );
+    }
+
+    const trimmedUsername = username.trim();
+    const results: string[] = [];
+
+    if (hasWeightUpdate && parsedWeight !== undefined) {
+      const updated = await updateImportantPersonWeight(trimmedUsername, parsedWeight);
+      if (!updated) {
+        return NextResponse.json(
+          { error: 'Person not found or inactive' },
+          { status: 404 }
+        );
+      }
+      results.push(`weight updated to ${parsedWeight}`);
+    }
+
+    if (hasTagUpdate && normalizedTags) {
+      const updated = await updateImportantPersonTags(trimmedUsername, normalizedTags);
+      if (!updated) {
+        return NextResponse.json(
+          { error: 'Person not found or inactive' },
+          { status: 404 }
+        );
+      }
+      results.push(`tags set (${normalizedTags.length})`);
     }
 
     return NextResponse.json({
       success: true,
-      message: `@${username.trim()} weight updated to ${parsedWeight}`,
+      message: `@${trimmedUsername} ${results.join(' & ')}`,
+      data: {
+        username: trimmedUsername,
+        weight: parsedWeight,
+        tags: normalizedTags,
+      },
     });
   } catch (error) {
     console.error('Error updating important person weight:', error);
