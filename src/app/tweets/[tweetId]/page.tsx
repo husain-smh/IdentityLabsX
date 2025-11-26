@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -21,6 +21,34 @@ interface Engager {
   importance_score?: number;
   followed_by?: string[];
 }
+
+const CATEGORY_KEYS = [
+  'founders',
+  'vcs',
+  'ai_creators',
+  'media',
+  'developers',
+  'c_level',
+  'yc_alumni',
+  'others',
+] as const;
+
+type CategoryKey = (typeof CATEGORY_KEYS)[number];
+
+const CATEGORY_CONFIG: {
+  key: CategoryKey;
+  label: string;
+  color: string;
+}[] = [
+  { key: 'founders', label: 'Founders', color: '#60a5fa' },
+  { key: 'vcs', label: 'VCs', color: '#a78bfa' },
+  { key: 'ai_creators', label: 'AI Creators', color: '#34d399' },
+  { key: 'media', label: 'Media', color: '#3b82f6' },
+  { key: 'developers', label: 'Developers', color: '#f472b6' },
+  { key: 'c_level', label: 'C-Level', color: '#fbbf24' },
+  { key: 'yc_alumni', label: 'YC Alumni', color: '#fb923c' },
+  { key: 'others', label: 'Others', color: '#94a3b8' },
+];
 
 export default function TweetDetailPage() {
   const params = useParams();
@@ -47,6 +75,9 @@ export default function TweetDetailPage() {
   // Pagination
   const [page, setPage] = useState(1);
   const limit = 50;
+
+  // Interactive category selection for charts
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
 
 const fetchTweetData = useCallback(async () => {
   if (!tweetId) {
@@ -100,6 +131,159 @@ useEffect(() => {
     if (engager.quoted) badges.push('💭 Quoted');
     return badges;
   };
+
+  // Local categorization helper (mirrors backend `categorizeEngager`)
+  const categorizeEngagerProfile = (engager: Engager): CategoryKey[] => {
+    const bio = (engager.bio || '').toLowerCase();
+    const name = (engager.name || '').toLowerCase();
+    const username = (engager.username || '').toLowerCase();
+
+    const combined = `${bio} ${name} ${username}`;
+    const categories: CategoryKey[] = [];
+
+    // YC alumni
+    const ycKeywords = ['y combinator', 'yc s', 'yc w', 'yc ', 'ycombinator'];
+    if (ycKeywords.some(kw => combined.includes(kw))) {
+      categories.push('yc_alumni');
+    }
+
+    // C-Level (but not explicit founders/CEOs)
+    const cLevelKeywords = ['cto', 'cfo', 'coo', 'chief technology', 'chief financial', 'chief operating'];
+    if (cLevelKeywords.some(kw => combined.includes(kw)) && !combined.includes('founder') && !combined.includes('ceo')) {
+      categories.push('c_level');
+    }
+
+    // Founders / CEOs
+    const founderKeywords = [
+      'founder',
+      'co-founder',
+      'cofounder',
+      'ceo',
+      'chief executive',
+      'startup founder',
+      'company founder',
+    ];
+    if (founderKeywords.some(kw => combined.includes(kw))) {
+      categories.push('founders');
+    }
+
+    // VCs / Investors
+    const vcKeywords = [
+      'vc',
+      'venture capital',
+      'venture capitalist',
+      'investor',
+      'angel investor',
+      'a16z',
+      'andreessen horowitz',
+      'partner at',
+      'investment partner',
+      'venture partner',
+      'seed fund',
+      'series a',
+      'series b',
+      'series c',
+      'portfolio',
+      'backed by',
+    ];
+    if (vcKeywords.some(kw => combined.includes(kw))) {
+      categories.push('vcs');
+    }
+
+    // AI Creators
+    const aiCreatorKeywords = [
+      'ai content creator',
+      'ai influencer',
+      'ai writer',
+      'ai educator',
+      'newsletter',
+      'ai newsletter',
+      'building in ai',
+      'ai builder',
+      'ai creator',
+      'ai content',
+      'generative ai',
+      'llm',
+      'chatgpt',
+      'ai researcher',
+      'ai practitioner',
+    ];
+    if (aiCreatorKeywords.some(kw => combined.includes(kw))) {
+      categories.push('ai_creators');
+    }
+
+    // Media
+    const mediaKeywords = [
+      'journalist',
+      'reporter',
+      'media',
+      'press',
+      'writer',
+      'editor',
+      'tech journalist',
+      'tech reporter',
+      'news',
+      'publication',
+      'techcrunch',
+      'the verge',
+      'wired',
+      'forbes',
+      'bloomberg',
+    ];
+    if (mediaKeywords.some(kw => combined.includes(kw))) {
+      categories.push('media');
+    }
+
+    // Developers
+    const developerKeywords = [
+      'developer',
+      'engineer',
+      'software engineer',
+      'programmer',
+      'coder',
+      'building',
+      'builder',
+      'full stack',
+      'backend',
+      'frontend',
+      'dev',
+      'tech lead',
+      'senior engineer',
+      'principal engineer',
+    ];
+    if (developerKeywords.some(kw => combined.includes(kw))) {
+      categories.push('developers');
+    }
+
+    if (categories.length === 0) {
+      categories.push('others');
+    }
+
+    return categories;
+  };
+
+  // Pre-categorize currently loaded engagers for the interactive table
+  const categorizedEngagers = useMemo(() => {
+    const initial: Record<CategoryKey, Engager[]> = {
+      founders: [],
+      vcs: [],
+      ai_creators: [],
+      media: [],
+      developers: [],
+      c_level: [],
+      yc_alumni: [],
+      others: [],
+    };
+
+    for (const engager of engagers) {
+      const cats = categorizeEngagerProfile(engager);
+      for (const cat of cats) {
+        initial[cat].push(engager);
+      }
+    }
+
+    return initial;
+  }, [engagers]);
 
   const handleGenerateReport = async () => {
     if (!tweetId) return;
@@ -312,64 +496,194 @@ useEffect(() => {
                 )}
 
                 {/* Charts Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Pie Chart - Category Breakdown */}
+                <div className="space-y-6">
+                  {/* Pie Chart - Category Breakdown with interactive details */}
                   {(() => {
-                    const pieData = [
-                      { name: 'Founders', value: aiReport.structured_stats.categories.founders.count, color: '#60a5fa' },
-                      { name: 'VCs', value: aiReport.structured_stats.categories.vcs.count, color: '#a78bfa' },
-                      { name: 'AI Creators', value: aiReport.structured_stats.categories.ai_creators.count, color: '#34d399' },
-                      { name: 'Media', value: aiReport.structured_stats.categories.media.count, color: '#3b82f6' },
-                      { name: 'Developers', value: aiReport.structured_stats.categories.developers.count, color: '#f472b6' },
-                      { name: 'C-Level', value: aiReport.structured_stats.categories.c_level?.count || 0, color: '#fbbf24' },
-                      { name: 'YC Alumni', value: aiReport.structured_stats.categories.yc_alumni?.count || 0, color: '#fb923c' },
-                      { name: 'Others', value: aiReport.structured_stats.categories.others.count, color: '#94a3b8' },
-                    ].filter(item => item.value > 0);
+                    const pieData = CATEGORY_CONFIG.map(cfg => ({
+                      key: cfg.key,
+                      name: cfg.label,
+                      color: cfg.color,
+                      value: aiReport.structured_stats.categories[cfg.key]?.count || 0,
+                    })).filter(item => item.value > 0);
+
+                    const activeCategory = selectedCategory && pieData.find(d => d.key === selectedCategory)
+                      ? selectedCategory
+                      : null;
+
+                    const handleSliceClick = (_: any, index: number) => {
+                      const clicked = pieData[index];
+                      if (!clicked) return;
+                      setSelectedCategory(prev =>
+                        prev === clicked.key ? null : (clicked.key as CategoryKey)
+                      );
+                    };
+
+                    const selectedEngagers =
+                      activeCategory ? categorizedEngagers[activeCategory] ?? [] : [];
 
                     return pieData.length > 0 ? (
-                      <div className="bg-zinc-900/50 rounded-lg p-6">
-                        <h4 className="text-lg font-semibold text-white mb-4">Profile Type Distribution</h4>
-                        <ResponsiveContainer width="100%" height={300}>
-                          <PieChart>
-                            <Pie
-                              data={pieData}
-                              cx="50%"
-                              cy="50%"
-                              labelLine={false}
-                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                              outerRadius={80}
-                              fill="#8884d8"
-                              dataKey="value"
+                      <div
+                        className={`bg-zinc-900/50 rounded-lg p-6 transition-all duration-200 ${
+                          activeCategory ? 'lg:flex lg:items-start lg:gap-6' : ''
+                        }`}
+                      >
+                        <div className={activeCategory ? 'lg:w-1/2' : ''}>
+                          <div className="flex items-center justify-between mb-2 gap-2">
+                            <h4 className="text-lg font-semibold text-white">
+                              Profile Type Distribution
+                            </h4>
+                            <button
+                              type="button"
+                              className="shrink-0 w-5 h-5 rounded-full border border-zinc-600 text-[10px] text-zinc-300 flex items-center justify-center hover:bg-zinc-800 hover:text-white"
+                              title="One account can be in many groups (founder, VC, etc). This chart shows each group’s share of all group labels, not unique people, so the slices always add up to 100%."
                             >
-                              {pieData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
+                              i
+                            </button>
+                          </div>
+                          <p className="text-xs text-zinc-400 mb-4">
+                            Click a segment to see the specific accounts in that category.
+                          </p>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={({ name, percent }) =>
+                                  `${name}: ${(percent * 100).toFixed(0)}%`
+                                }
+                                outerRadius={100}
+                                fill="#8884d8"
+                                dataKey="value"
+                                onClick={handleSliceClick}
+                              >
+                                {pieData.map((entry, index) => {
+                                  const isActive =
+                                    activeCategory && entry.key === activeCategory;
+                                  return (
+                                    <Cell
+                                      key={`cell-${index}`}
+                                      fill={entry.color}
+                                      stroke={isActive ? '#e5e7eb' : '#000000'}
+                                      strokeWidth={isActive ? 2 : 1}
+                                      className="cursor-pointer"
+                                    />
+                                  );
+                                })}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        {activeCategory && (
+                          <div className="mt-6 lg:mt-0 lg:w-1/2">
+                            <h5 className="text-sm font-semibold text-white mb-2 flex items-center justify-between">
+                              <span>
+                                {CATEGORY_CONFIG.find(c => c.key === activeCategory)?.label}{' '}
+                                ({selectedEngagers.length} accounts)
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCategory(null)}
+                                className="text-xs text-zinc-400 hover:text-zinc-200 underline"
+                              >
+                                Clear
+                              </button>
+                            </h5>
+                            {selectedEngagers.length === 0 ? (
+                              <p className="text-xs text-zinc-500">
+                                No accounts found in this category for the current page of
+                                engagers.
+                              </p>
+                            ) : (
+                              <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
+                                {selectedEngagers
+                                  .slice()
+                                  .sort((a, b) => b.followers - a.followers)
+                                  .slice(0, 20)
+                                  .map(engager => (
+                                    <div
+                                      key={engager.userId}
+                                      className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
+                                    >
+                                      <div className="flex items-center justify-between">
+                                        <div>
+                                          <div className="text-sm font-medium text-white flex items-center gap-1">
+                                            {engager.name}
+                                            {engager.verified && (
+                                              <svg
+                                                className="w-4 h-4 text-indigo-400"
+                                                fill="currentColor"
+                                                viewBox="0 0 20 20"
+                                              >
+                                                <path
+                                                  fillRule="evenodd"
+                                                  d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                  clipRule="evenodd"
+                                                />
+                                              </svg>
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-zinc-400">
+                                            @{engager.username}
+                                          </div>
+                                        </div>
+                                        <div className="text-xs text-zinc-300 font-medium ml-4 whitespace-nowrap">
+                                          {engager.followers.toLocaleString()}
+                                        </div>
+                                      </div>
+                                      {engager.bio && (
+                                        <p className="text-xs text-zinc-500 mt-2 line-clamp-2">
+                                          {engager.bio}
+                                        </p>
+                                      )}
+                                      <div className="mt-2 flex flex-wrap gap-1">
+                                        {getEngagementBadges(engager).map((badge, idx) => (
+                                          <span
+                                            key={idx}
+                                            className="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full"
+                                          >
+                                            {badge}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : null;
                   })()}
 
-                  {/* Bar Chart - Follower Tiers */}
-                  {aiReport.structured_stats.follower_tiers && aiReport.structured_stats.follower_tiers.length > 0 && (
-                    <div className="bg-zinc-900/50 rounded-lg p-6">
-                      <h4 className="text-lg font-semibold text-white mb-4">Follower Count Tiers</h4>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={aiReport.structured_stats.follower_tiers}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                          <XAxis dataKey="tier" stroke="#9ca3af" />
-                          <YAxis stroke="#9ca3af" />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
-                            labelStyle={{ color: '#f3f4f6' }}
-                          />
-                          <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
+                  {/* Bar Chart - Follower Tiers (stacked below) */}
+                  {aiReport.structured_stats.follower_tiers &&
+                    aiReport.structured_stats.follower_tiers.length > 0 && (
+                      <div className="bg-zinc-900/50 rounded-lg p-6">
+                        <h4 className="text-lg font-semibold text-white mb-4">
+                          Follower Count Tiers
+                        </h4>
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={aiReport.structured_stats.follower_tiers}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                            <XAxis dataKey="tier" stroke="#9ca3af" />
+                            <YAxis stroke="#9ca3af" />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: '#1f2937',
+                                border: '1px solid #374151',
+                                borderRadius: '8px',
+                              }}
+                              labelStyle={{ color: '#f3f4f6' }}
+                            />
+                            <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
                 </div>
 
                 {/* High Profile Engagers */}
