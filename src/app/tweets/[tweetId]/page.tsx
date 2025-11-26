@@ -375,7 +375,7 @@ useEffect(() => {
                 {/* High Profile Engagers */}
                 {aiReport.structured_stats.high_profile_engagers && aiReport.structured_stats.high_profile_engagers.length > 0 && (
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-4">Highest Profile Engagers</h4>
+                    <h4 className="text-lg font-semibold text-white mb-4">Most Valuable Accounts that have Engaged</h4>
                     <div className="space-y-3">
                       {aiReport.structured_stats.high_profile_engagers.map((engager: any, idx: number) => (
                         <div key={idx} className="bg-zinc-900/50 rounded-lg p-4 flex items-start justify-between">

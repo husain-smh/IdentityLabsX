@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 
@@ -21,20 +21,10 @@ export default function TweetsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchTweets();
-    
-    // Auto-refresh every 10 seconds if there are analyzing tweets
-    const interval = setInterval(() => {
-      if (tweets.some(t => t.status === 'analyzing' || t.status === 'pending')) {
-        fetchTweets();
-      }
-    }, 10000);
-    
-    return () => clearInterval(interval);
-  }, [tweets]);
-
-  const fetchTweets = async () => {
+  const fetchTweets = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
     try {
       const res = await fetch('/api/tweets');
       const data = await res.json();
@@ -47,9 +37,33 @@ export default function TweetsPage() {
     } catch {
       setError('Failed to fetch tweets');
     } finally {
-      setLoading(false);
+      if (showLoader) {
+        setLoading(false);
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchTweets();
+  }, [fetchTweets]);
+
+  const hasActiveTweets = useMemo(
+    () => tweets.some(t => t.status === 'analyzing' || t.status === 'pending'),
+    [tweets]
+  );
+
+  useEffect(() => {
+    if (!hasActiveTweets) {
+      return;
+    }
+
+    // Auto-refresh every 10 seconds only while there are active tweets
+    const interval = setInterval(() => {
+      fetchTweets(false);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [hasActiveTweets, fetchTweets]);
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -90,7 +104,7 @@ export default function TweetsPage() {
           <div className="text-center">
             <p className="text-red-400 text-lg">{error}</p>
             <button
-              onClick={fetchTweets}
+              onClick={() => fetchTweets()}
               className="mt-4 px-4 py-2 gradient-primary text-white rounded-lg hover:opacity-90 transition-all"
             >
               Retry

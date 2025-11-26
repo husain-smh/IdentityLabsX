@@ -388,8 +388,7 @@ export default function TwitterEngagement() {
                 The workflow takes time to process. You&apos;ll see a loading state — please be patient.
               </li>
               <li>
-                After completion, you&apos;ll receive a Google Spreadsheet link that you can open to view the
-                results.
+                After completion, you can see the reports in the Tweets tab in Nav Bar which contains all the tweets analyzed.
               </li>
               <li>
                 Provide the complete Tweet URL, including the full path like /status/123456789...

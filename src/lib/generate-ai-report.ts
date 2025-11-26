@@ -88,7 +88,7 @@ CRITICAL RULES:
 2. Do NOT mention comparisons to other tweets or historical data.
 3. Be specific and reference actual numbers from the data.
 4. Write in a tone that makes the client feel good about their engagement.
-5. Follow the format structure provided below.
+5. Follow the example format structure provided below.
 
 DATA PROVIDED:
 
@@ -106,7 +106,7 @@ Breakdown of Profiles:
 Follower Count Tiers:
 ${follower_tiers.map(t => `- ${t.count} users with ${t.tier} followers`).join('\n')}
 
-Highest Profile Engagers (Top 20 by Importance Score):
+Most Important Accounts that have Engaged (Top 20 by Importance Score):
 ${high_profile_engagers.map(e => 
   `- ${e.name} (@${e.username}) – Score: ${e.importance_score || 0} – ${(e.followers / 1000).toFixed(0)}K followers${e.bio ? ' – ' + e.bio.substring(0, 80) : ''}`
 ).join('\n')}
@@ -148,9 +148,9 @@ Generate a report in this EXACT format:
 
 [List each tier with count]
 
-**Highest Profile Engagers:**
+**Most Important Accounts that have Engaged:**
 
-[List top engagers with format: Name (@username) – XK followers – Bio snippet]
+[List top engagers with format: Name (@username) – XK followers – Bio snippet] and generate a compelling notification that gives a brief overview of the importance of the accounts and their engagement.
 
 **Major Investors:**
 
@@ -163,7 +163,7 @@ ${vc_firms.length > 0 ? `**VCs by Firm Affiliation:**\n\n[List each firm with pa
 - Approximately [X]% of engaged accounts are verified, indicating a solid presence of authentic high-profile figures
 - [X]% of accounts replied directly to the tweet, showing real engagement beyond passive likes or retweets
 - [X]% retweeted the content, amplifying its reach to new audiences
-- Top 10 engaged accounts collectively amass over [X]M+ followers, driving massive potential visibility
+- Top 10 accounts that engaged with this tweet collectively amass over [X]M+ followers, driving massive potential visibility
 
 Write in a professional but enthusiastic tone. Make the client feel good about their engagement while being factual and accurate. Use the exact numbers provided.`;
 
