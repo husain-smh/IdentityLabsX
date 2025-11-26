@@ -370,7 +370,7 @@ export default function TwitterEngagement() {
               </div>
               <h3 className="text-white font-semibold text-lg">Important notes</h3>
             </div>
-            <ul className="list-disc list-inside space-y-2 text-zinc-300 text-sm">
+            <ul className="list-disc list-inside space-y-2 text-black text-sm">
               <li>
                 Ensure the account&apos;s sheet exists in your Google Spreadsheet (
                 <a
