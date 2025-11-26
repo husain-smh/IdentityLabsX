@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ReactMarkdown from 'react-markdown';
 
 interface Engager {
   userId: string;
@@ -114,6 +115,11 @@ useEffect(() => {
       const data = await res.json();
       
       if (data.success) {
+        console.log('[Frontend] Report received:', {
+          hasNarrative: !!data.report?.narrative,
+          narrativeLength: data.report?.narrative?.length || 0,
+          hasStructuredStats: !!data.report?.structured_stats,
+        });
         setAiReport(data.report);
         // Refresh tweet data to get updated report
         await fetchTweetData();
@@ -272,11 +278,38 @@ useEffect(() => {
             {aiReport && !generatingReport && (
               <div className="space-y-8">
                 {/* Formatted Narrative Report */}
-                <div className="bg-zinc-900/30 rounded-lg p-6">
-                  <div className="text-zinc-200 leading-relaxed whitespace-pre-line text-sm">
-                    {aiReport.narrative}
+                {!aiReport.narrative || aiReport.narrative.trim().length === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-yellow-800 text-sm">
+                      ⚠️ Report generated but narrative text is missing. Check console logs for details.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg p-8 shadow-lg border border-zinc-200">
+                    <div className="font-mono text-black text-sm leading-relaxed">
+                      <ReactMarkdown
+                        components={{
+                        // Style headings
+                        h1: (props) => <h1 className="text-2xl font-bold text-black mb-4 mt-6 first:mt-0" {...props} />,
+                        h2: (props) => <h2 className="text-xl font-bold text-black mb-3 mt-5 first:mt-0" {...props} />,
+                        h3: (props) => <h3 className="text-lg font-bold text-black mb-2 mt-4 first:mt-0" {...props} />,
+                        // Style paragraphs
+                        p: (props) => <p className="text-black mb-3 last:mb-0" {...props} />,
+                        // Style lists
+                        ul: (props) => <ul className="list-disc list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
+                        ol: (props) => <ol className="list-decimal list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
+                        li: (props) => <li className="text-black" {...props} />,
+                        // Style bold text
+                        strong: (props) => <strong className="font-bold text-black" {...props} />,
+                        // Style code
+                        code: (props) => <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-black text-xs font-mono" {...props} />,
+                      }}
+                    >
+                      {aiReport.narrative}
+                    </ReactMarkdown>
                   </div>
                 </div>
+                )}
 
                 {/* Charts Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

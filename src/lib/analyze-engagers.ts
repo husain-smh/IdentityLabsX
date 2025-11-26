@@ -26,6 +26,7 @@ export interface HighProfileEngager {
   bio?: string;
   verified: boolean;
   engagement_types: string[];
+  importance_score?: number;
 }
 
 export interface VCFirm {
@@ -381,12 +382,12 @@ export function calculateFollowerTiers(engagers: Engager[]): FollowerTier[] {
 }
 
 /**
- * Get highest profile engagers (sorted by followers)
+ * Get highest profile engagers (sorted by importance_score)
  */
-export function getHighProfileEngagers(engagers: Engager[], limit: number = 10): HighProfileEngager[] {
+export function getHighProfileEngagers(engagers: Engager[], limit: number = 20): HighProfileEngager[] {
   return engagers
-    .filter(e => e.followers > 0)
-    .sort((a, b) => (b.followers || 0) - (a.followers || 0))
+    .filter(e => e.importance_score !== undefined && e.importance_score !== null)
+    .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0))
     .slice(0, limit)
     .map(e => {
       const engagementTypes: string[] = [];
@@ -401,6 +402,7 @@ export function getHighProfileEngagers(engagers: Engager[], limit: number = 10):
         bio: e.bio,
         verified: e.verified,
         engagement_types: engagementTypes,
+        importance_score: e.importance_score,
       };
     });
 }
@@ -499,8 +501,8 @@ export async function analyzeEngagers(tweetId: string): Promise<EngagerAnalysis>
   // Calculate follower tiers
   const follower_tiers = calculateFollowerTiers(allEngagers);
 
-  // Get high profile engagers
-  const high_profile_engagers = getHighProfileEngagers(allEngagers, 10);
+  // Get high profile engagers (top 20 by importance_score)
+  const high_profile_engagers = getHighProfileEngagers(allEngagers, 20);
 
   // Extract VC firms
   const vc_firms = extractVCFirms(categories.vcs);

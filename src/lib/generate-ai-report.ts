@@ -35,6 +35,7 @@ export interface AIReport {
       bio?: string;
       verified: boolean;
       engagement_types: string[];
+      importance_score?: number;
     }>;
     vc_firms: Array<{
       firm_name: string;
@@ -87,7 +88,7 @@ CRITICAL RULES:
 2. Do NOT mention comparisons to other tweets or historical data.
 3. Be specific and reference actual numbers from the data.
 4. Write in a tone that makes the client feel good about their engagement.
-5. Follow the EXACT format structure provided below.
+5. Follow the format structure provided below.
 
 DATA PROVIDED:
 
@@ -105,9 +106,9 @@ Breakdown of Profiles:
 Follower Count Tiers:
 ${follower_tiers.map(t => `- ${t.count} users with ${t.tier} followers`).join('\n')}
 
-Highest Profile Engagers:
-${high_profile_engagers.slice(0, 10).map(e => 
-  `- ${e.name} (@${e.username}) – ${(e.followers / 1000).toFixed(0)}K followers${e.bio ? ' – ' + e.bio.substring(0, 80) : ''}`
+Highest Profile Engagers (Top 20 by Importance Score):
+${high_profile_engagers.map(e => 
+  `- ${e.name} (@${e.username}) – Score: ${e.importance_score || 0} – ${(e.followers / 1000).toFixed(0)}K followers${e.bio ? ' – ' + e.bio.substring(0, 80) : ''}`
 ).join('\n')}
 
 ${vc_firms.length > 0 ? `VCs by Firm Affiliation:\n${vc_firms.map(f => 
@@ -141,7 +142,7 @@ Generate a report in this EXACT format:
 
 - [X] Notable Tech Leaders including founders and investors recognized at top firms
 
-- [X] Y Combinator-backed founders and alumni actively engaged
+- [X] Y Combinator-backed or similar programs founders and alumni actively engaged
 
 **Follower Count Tiers:**
 
@@ -175,6 +176,11 @@ Write in a professional but enthusiastic tone. Make the client feel good about t
 export async function generateAIReport(analysis: EngagerAnalysis): Promise<AIReport> {
   const prompt = buildPrompt(analysis);
 
+  // Log prompt size for debugging (approximate token count: ~4 chars per token)
+  const approximateTokens = Math.ceil(prompt.length / 4);
+  console.log(`[AI Report] Prompt size: ${prompt.length} characters (~${approximateTokens} tokens)`);
+  console.log(`[AI Report] Total engagers analyzed: ${analysis.engagement_stats.total}`);
+
   try {
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -189,10 +195,18 @@ export async function generateAIReport(analysis: EngagerAnalysis): Promise<AIRep
         },
       ],
       temperature: 0.7, // Slightly creative but still factual
-      max_tokens: 3000,
+      max_tokens: 5000, // Increased from 3000 to allow for more detailed reports
     });
 
     const narrative = completion.choices[0].message.content?.trim() || '';
+    
+    // Debug logging
+    console.log(`[AI Report] Narrative length: ${narrative.length} characters`);
+    console.log(`[AI Report] Narrative preview (first 200 chars): ${narrative.substring(0, 200)}`);
+    if (!narrative || narrative.length === 0) {
+      console.warn('[AI Report] WARNING: Narrative is empty! AI response might be empty.');
+      console.log('[AI Report] Full completion response:', JSON.stringify(completion, null, 2));
+    }
 
     // Validate narrative doesn't contain made-up data
     validateNarrative(narrative, analysis);
