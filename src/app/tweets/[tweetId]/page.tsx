@@ -403,9 +403,9 @@ useEffect(() => {
 
           {/* Stats */}
           {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
               <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">Total Engagers</p>
+                <p className="text-sm text-zinc-400">Total Unique Engagers</p>
                 <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
               </div>
               <div className="glass rounded-xl p-4">
@@ -416,10 +416,24 @@ useEffect(() => {
                 <p className="text-sm text-zinc-400">&lt;10k Followers</p>
                 <p className="text-2xl font-bold text-zinc-300 mt-1">{stats.below_10k}</p>
               </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">Max Score</p>
-                <p className="text-2xl font-bold text-emerald-400 mt-1">{stats.max_importance_score}</p>
-              </div>
+            </div>
+          )}
+
+          {tweet?.metrics && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+              {[
+                { label: 'View Count', value: tweet.metrics.viewCount },
+                { label: 'Reply Count', value: tweet.metrics.replyCount },
+                { label: 'Like Count', value: tweet.metrics.likeCount },
+                { label: 'Retweet Count', value: tweet.metrics.retweetCount },
+                { label: 'Bookmark Count', value: tweet.metrics.bookmarkCount },
+                { label: 'Quote Count', value: tweet.metrics.quoteCount },
+              ].map(card => (
+                <div key={card.label} className="glass rounded-xl p-4">
+                  <p className="text-sm text-zinc-400">{card.label}</p>
+                  <p className="text-2xl font-bold text-white mt-1">{card.value?.toLocaleString?.() ?? card.value ?? 0}</p>
+                </div>
+              ))}
             </div>
           )}
 

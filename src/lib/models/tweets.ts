@@ -4,6 +4,25 @@ import type { AIReport } from '../generate-ai-report';
 
 // ===== TypeScript Interfaces =====
 
+export interface TweetMetrics {
+  likeCount: number;
+  retweetCount: number;
+  replyCount: number;
+  quoteCount: number;
+  viewCount: number;
+  bookmarkCount: number;
+  last_updated: Date;
+}
+
+export interface TweetMetricsHistory {
+  timestamp: Date;
+  likeCount: number;
+  retweetCount: number;
+  replyCount: number;
+  quoteCount: number;
+  viewCount: number;
+}
+
 export interface Tweet {
   _id?: ObjectId;
   tweet_id: string;
@@ -18,6 +37,8 @@ export interface Tweet {
   analyzed_at?: Date;
   error?: string;
   ai_report?: AIReport;
+  metrics?: TweetMetrics;
+  metrics_history?: TweetMetricsHistory[];
 }
 
 export interface Engager {
@@ -366,6 +387,8 @@ export async function createTweetsIndexes(): Promise<void> {
   await tweetsCollection.createIndex({ tweet_id: 1 }, { unique: true });
   await tweetsCollection.createIndex({ status: 1 });
   await tweetsCollection.createIndex({ created_at: -1 });
+  await tweetsCollection.createIndex({ 'metrics.last_updated': -1 });
+  await tweetsCollection.createIndex({ status: 1, 'metrics.last_updated': -1 });
   
   // Engagers indexes
   await engagersCollection.createIndex({ tweet_id: 1 });
@@ -394,5 +417,171 @@ export async function updateTweetReport(
       },
     }
   );
+}
+
+/**
+ * Update tweet author info
+ */
+export async function updateTweetAuthorInfo(
+  tweetId: string,
+  authorName: string,
+  authorUsername?: string
+): Promise<void> {
+  const collection = await getTweetsCollection();
+  await collection.updateOne(
+    { tweet_id: tweetId },
+    {
+      $set: {
+        author_name: authorName,
+        author_username: authorUsername,
+      },
+    }
+  );
+}
+
+/**
+ * Update tweet metrics
+ */
+export async function updateTweetMetrics(
+  tweetId: string,
+  metrics: Omit<TweetMetrics, 'last_updated'>
+): Promise<void> {
+  const collection = await getTweetsCollection();
+  
+  const now = new Date();
+  const metricsWithTimestamp: TweetMetrics = {
+    ...metrics,
+    last_updated: now,
+  };
+  
+  // Get current tweet to check if we should add to history
+  const tweet = await collection.findOne({ tweet_id: tweetId });
+  
+  const update: any = {
+    'metrics': metricsWithTimestamp,
+  };
+  
+  // Add to history if metrics exist and have changed
+  if (tweet?.metrics) {
+    const oldMetrics = tweet.metrics;
+    const hasChanged = 
+      oldMetrics.likeCount !== metrics.likeCount ||
+      oldMetrics.retweetCount !== metrics.retweetCount ||
+      oldMetrics.replyCount !== metrics.replyCount ||
+      oldMetrics.quoteCount !== metrics.quoteCount ||
+      oldMetrics.viewCount !== metrics.viewCount;
+    
+    if (hasChanged) {
+      const historyEntry: TweetMetricsHistory = {
+        timestamp: now,
+        likeCount: metrics.likeCount,
+        retweetCount: metrics.retweetCount,
+        replyCount: metrics.replyCount,
+        quoteCount: metrics.quoteCount,
+        viewCount: metrics.viewCount,
+      };
+      
+      // Keep last 100 history entries
+      const existingHistory = tweet.metrics_history || [];
+      const updatedHistory = [...existingHistory, historyEntry].slice(-100);
+      
+      update['metrics_history'] = updatedHistory;
+    }
+  } else {
+    // First time storing metrics, initialize history
+    const historyEntry: TweetMetricsHistory = {
+      timestamp: now,
+      likeCount: metrics.likeCount,
+      retweetCount: metrics.retweetCount,
+      replyCount: metrics.replyCount,
+      quoteCount: metrics.quoteCount,
+      viewCount: metrics.viewCount,
+    };
+    update['metrics_history'] = [historyEntry];
+  }
+  
+  await collection.updateOne(
+    { tweet_id: tweetId },
+    { $set: update }
+  );
+}
+
+/**
+ * Get tweet metrics
+ */
+export async function getTweetMetrics(tweetId: string): Promise<TweetMetrics | null> {
+  const collection = await getTweetsCollection();
+  const tweet = await collection.findOne({ tweet_id: tweetId });
+  return tweet?.metrics || null;
+}
+
+/**
+ * Compare metrics to determine what changed
+ */
+export interface MetricsComparison {
+  hasChanges: boolean;
+  changedFields: {
+    likes: boolean;
+    retweets: boolean;
+    replies: boolean;
+    quotes: boolean;
+    views: boolean;
+  };
+  deltas: {
+    likes: number;
+    retweets: number;
+    replies: number;
+    quotes: number;
+    views: number;
+  };
+}
+
+export function compareMetrics(
+  oldMetrics: TweetMetrics | null,
+  newMetrics: TweetMetrics
+): MetricsComparison {
+  if (!oldMetrics) {
+    return {
+      hasChanges: true,
+      changedFields: {
+        likes: true,
+        retweets: true,
+        replies: true,
+        quotes: true,
+        views: true,
+      },
+      deltas: {
+        likes: newMetrics.likeCount,
+        retweets: newMetrics.retweetCount,
+        replies: newMetrics.replyCount,
+        quotes: newMetrics.quoteCount,
+        views: newMetrics.viewCount,
+      },
+    };
+  }
+  
+  const deltas = {
+    likes: newMetrics.likeCount - oldMetrics.likeCount,
+    retweets: newMetrics.retweetCount - oldMetrics.retweetCount,
+    replies: newMetrics.replyCount - oldMetrics.replyCount,
+    quotes: newMetrics.quoteCount - oldMetrics.quoteCount,
+    views: newMetrics.viewCount - oldMetrics.viewCount,
+  };
+  
+  const changedFields = {
+    likes: deltas.likes !== 0,
+    retweets: deltas.retweets !== 0,
+    replies: deltas.replies !== 0,
+    quotes: deltas.quotes !== 0,
+    views: deltas.views !== 0,
+  };
+  
+  const hasChanges = Object.values(changedFields).some(changed => changed);
+  
+  return {
+    hasChanges,
+    changedFields,
+    deltas,
+  };
 }
 

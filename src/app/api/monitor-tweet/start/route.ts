@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMonitoringJob, getMonitoringJobByTweetId } from '@/lib/models/monitoring';
-import { extractTweetIdFromUrl, fetchTweetMetrics } from '@/lib/external-api';
+import { fetchTweetMetrics } from '@/lib/external-api';
+import { extractTweetIdFromUrl } from '@/lib/utils/tweet-utils';
 
 export async function POST(request: NextRequest) {
   try {

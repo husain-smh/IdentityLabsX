@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 
@@ -34,6 +34,8 @@ export default function TwitterEngagement() {
   const [existingTweet, setExistingTweet] = useState<ExistingTweet | null>(null);
   const [showExistingModal, setShowExistingModal] = useState(false);
   const [isMonitoringLoading, setIsMonitoringLoading] = useState(false);
+  const [pollingTweetId, setPollingTweetId] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to construct Google Sheets URL from spreadsheetId
   const constructSheetsUrl = (spreadsheetId: string) => {
@@ -91,6 +93,63 @@ export default function TwitterEngagement() {
     }
   };
 
+  // Polling function to check tweet status
+  const pollTweetStatus = async (tweetId: string) => {
+    try {
+      const response = await fetch(`/api/tweets/${tweetId}`);
+      const data = await response.json();
+
+      if (data.success && data.tweet) {
+        if (data.tweet.status === 'completed') {
+          // Analysis complete - stop polling and navigate
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setPollingTweetId(null);
+          setIsLoading(false);
+          setMessage({
+            type: 'success',
+            text: 'Analysis completed successfully!'
+          });
+          // Navigate to tweet detail page
+          router.push(`/tweets/${tweetId}`);
+        } else if (data.tweet.status === 'failed') {
+          // Analysis failed - stop polling
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          setPollingTweetId(null);
+          setIsLoading(false);
+          setMessage({
+            type: 'error',
+            text: data.tweet.error || 'Analysis failed. Please try again.'
+          });
+        }
+        // If still analyzing or pending, continue polling
+      }
+    } catch (error) {
+      console.error('Error polling tweet status:', error);
+      // On error, stop polling after a few attempts
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setPollingTweetId(null);
+      setIsLoading(false);
+    }
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
   const handleReanalyze = async () => {
     if (!tweetUrl.trim()) return;
     
@@ -100,7 +159,7 @@ export default function TwitterEngagement() {
     setEngagementData(null);
 
     try {
-      const response = await fetch('/api/twtengagement', {
+      const response = await fetch('/api/tweets/analyze-native', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -110,24 +169,39 @@ export default function TwitterEngagement() {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.success) {
+        // Re-analysis started - begin polling
+        const tweetId = data.tweet_id;
+        setPollingTweetId(tweetId);
         setMessage({
           type: 'success',
-          text: 'Re-analysis started! The tweet is being analyzed again with fresh data.'
+          text: 'Re-analysis started! Processing in background. This may take a few minutes...'
         });
-        setTweetUrl('');
+
+        // Start polling every 3 seconds
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+        }
+        pollingIntervalRef.current = setInterval(() => {
+          if (tweetId) {
+            pollTweetStatus(tweetId);
+          }
+        }, 3000);
+
+        // Initial poll
+        pollTweetStatus(tweetId);
       } else {
         setMessage({
           type: 'error',
           text: data.error || 'Failed to re-analyze tweet'
         });
+        setIsLoading(false);
       }
     } catch {
       setMessage({
         type: 'error',
         text: 'Network error. Please try again.'
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -149,7 +223,7 @@ export default function TwitterEngagement() {
     setShowExistingModal(false);
 
     try {
-      const response = await fetch('/api/twtengagement', {
+      const response = await fetch('/api/tweets/analyze-native', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,65 +241,39 @@ export default function TwitterEngagement() {
         return;
       }
 
-      // Frontend logging for debugging
-      console.log('=== FRONTEND DEBUG INFO ===');
-      console.log('API Response Status:', response.status);
-      console.log('API Response Data:', JSON.stringify(data, null, 2));
-      console.log('Data Type:', typeof data);
-      console.log('Data Keys:', Object.keys(data));
-      if (data.data) {
-        console.log('data.data:', JSON.stringify(data.data, null, 2));
-        console.log('data.data Type:', typeof data.data);
-        console.log('data.data Is Array:', Array.isArray(data.data));
-      }
-      console.log('=== END FRONTEND DEBUG ===');
+      if (response.ok && data.success) {
+        // Analysis started - begin polling
+        const tweetId = data.tweet_id;
+        setPollingTweetId(tweetId);
+        setMessage({
+          type: 'success',
+          text: 'Analysis started! Processing in background. This may take a few minutes...'
+        });
 
-      if (response.ok) {
-        // Extract sheetdata from the response
-        // Handle different response formats from the API
-        let sheetData = null;
-        
-        if (data.data && data.data.sheetdata) {
-          // Format: { data: { sheetdata: [...] } } - This is what we're getting
-          sheetData = data.data.sheetdata;
-        } else if (data.data && Array.isArray(data.data) && data.data[0] && data.data[0].sheetdata) {
-          // Format: { data: [{ sheetdata: [...] }] }
-          sheetData = data.data[0].sheetdata;
-        } else if (Array.isArray(data) && data[0] && data[0].sheetdata) {
-          // Format: [{ sheetdata: [...] }]
-          sheetData = data[0].sheetdata;
-        } else if (data.sheetdata) {
-          // Format: { sheetdata: [...] }
-          sheetData = data.sheetdata;
+        // Start polling every 3 seconds
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
         }
-        
-        console.log('Extracted sheetData:', sheetData);
+        pollingIntervalRef.current = setInterval(() => {
+          if (tweetId) {
+            pollTweetStatus(tweetId);
+          }
+        }, 3000);
 
-        if (sheetData && Array.isArray(sheetData) && sheetData.length > 0) {
-          setEngagementData(sheetData);
-          setMessage({
-            type: 'success',
-            text: 'Engagement analysis complete! Here are your results:'
-          });
-        } else {
-          setMessage({
-            type: 'success',
-            text: 'Analysis completed, but no engagement data was found. This tweet may not have sufficient engagement activity to analyze.'
-          });
-        }
-        setTweetUrl(''); // Clear the input
+        // Initial poll
+        pollTweetStatus(tweetId);
       } else {
         setMessage({
           type: 'error',
-          text: data.error || 'Failed to analyze tweet engagement'
+          text: data.error || 'Failed to start analysis'
         });
+        setIsLoading(false);
       }
-    } catch {
+    } catch (error) {
       setMessage({
         type: 'error',
         text: 'Network error. Please check your connection and try again.'
       });
-    } finally {
       setIsLoading(false);
     }
   };
