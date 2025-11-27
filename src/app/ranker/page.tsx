@@ -37,6 +37,21 @@ interface SyncStatus {
   sync_status: 'never_synced' | 'synced';
 }
 
+interface AccountImportanceResult {
+  id: string; // unique ID for removal
+  username: string;
+  found: boolean;
+  followed_username?: string;
+  followed_user_id?: string;
+  importance_score: number;
+  followed_by: Array<{
+    username: string;
+    user_id: string;
+    name: string;
+    weight: number;
+  }>;
+}
+
 export default function RankerAdmin() {
   const [username, setUsername] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +106,13 @@ export default function RankerAdmin() {
   const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
   const [syncFilter, setSyncFilter] = useState<'all' | 'synced' | 'unsynced'>('all');
   const [isLoadingTagFilterData, setIsLoadingTagFilterData] = useState(false);
+  
+  // Check Important Score section state
+  const [checkUsername, setCheckUsername] = useState('');
+  const [isCheckLoading, setIsCheckLoading] = useState(false);
+  const [isCheckSectionOpen, setIsCheckSectionOpen] = useState(false);
+  const [checkResults, setCheckResults] = useState<AccountImportanceResult[]>([]);
+  
   const clearAllPeopleCache = () => {
     setAllPeople([]);
     setHasLoadedAllPeople(false);
@@ -246,6 +268,55 @@ export default function RankerAdmin() {
     } finally {
       setIsFetchingTags(false);
     }
+  };
+
+  const handleCheckImportance = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!checkUsername.trim()) {
+      return;
+    }
+
+    setIsCheckLoading(true);
+
+    try {
+      const usernameToCheck = checkUsername.trim().replace(/^@/, '');
+      const response = await fetch(`/api/ranker/account-importance?username=${encodeURIComponent(usernameToCheck)}`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const result: AccountImportanceResult = {
+          id: `${usernameToCheck}-${Date.now()}`, // unique ID for removal
+          username: usernameToCheck,
+          found: data.data.found,
+          followed_username: data.data.followed_username,
+          followed_user_id: data.data.followed_user_id,
+          importance_score: data.data.importance_score,
+          followed_by: data.data.followed_by || [],
+        };
+        
+        // Add result to the list (allows multiple checks)
+        setCheckResults((prev) => [result, ...prev]);
+        setCheckUsername(''); // Clear input after successful check
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to check importance score',
+        });
+      }
+    } catch (error) {
+      console.error('Error checking importance:', error);
+      setMessage({
+        type: 'error',
+        text: 'Network error. Please try again.',
+      });
+    } finally {
+      setIsCheckLoading(false);
+    }
+  };
+
+  const handleRemoveResult = (resultId: string) => {
+    setCheckResults((prev) => prev.filter((result) => result.id !== resultId));
   };
 
   const handleAddPerson = async (e: React.FormEvent) => {
@@ -804,6 +875,141 @@ export default function RankerAdmin() {
 
         {/* Main Content */}
         <div className="max-w-6xl mx-auto px-6 pb-20">
+          {/* Check Important Score Section */}
+          <div className="glass rounded-2xl p-8 mb-8">
+            <button
+              onClick={() => setIsCheckSectionOpen(!isCheckSectionOpen)}
+              className="w-full flex items-center justify-between text-left"
+            >
+              <h2 className="text-2xl font-bold text-white">Check Important Score</h2>
+              <svg
+                className={`w-6 h-6 text-zinc-400 transition-transform ${isCheckSectionOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {isCheckSectionOpen && (
+              <div className="mt-6 space-y-6">
+                <form onSubmit={handleCheckImportance} className="space-y-6">
+                  <div>
+                    <label htmlFor="check-username" className="block text-sm font-semibold text-white mb-3">
+                      Twitter Username
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-lg">@</span>
+                      <input
+                        type="text"
+                        id="check-username"
+                        value={checkUsername}
+                        onChange={(e) => setCheckUsername(e.target.value)}
+                        placeholder="elonmusk"
+                        className="w-full pl-10 pr-4 py-4 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all text-lg"
+                        disabled={isCheckLoading}
+                      />
+                    </div>
+                    <p className="mt-3 text-sm text-zinc-500">
+                      Enter a username to check their importance score and see which important people follow them.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isCheckLoading || !checkUsername.trim()}
+                    className="w-full gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-indigo-500/25"
+                  >
+                    {isCheckLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        Checking...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Check Importance Score
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                {/* Results Display */}
+                {checkResults.length > 0 && (
+                  <div className="space-y-4 mt-8">
+                    <h3 className="text-lg font-semibold text-white">Results</h3>
+                    {checkResults.map((result) => (
+                      <div
+                        key={result.id}
+                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 relative"
+                      >
+                        <button
+                          onClick={() => handleRemoveResult(result.id)}
+                          className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+                          title="Remove result"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+
+                        <div className="flex items-start justify-between pr-8">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="px-4 py-2 bg-zinc-100 text-zinc-900 font-semibold rounded-lg text-base">
+                                @{result.found ? result.followed_username || result.username : result.username}
+                              </span>
+                            </div>
+                            {!result.found && (
+                              <p className="text-sm text-zinc-500 mt-1">Account not found in the reverse index</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-zinc-400 mb-1">Importance Score</div>
+                            <div className="text-3xl font-bold text-indigo-400">{result.importance_score.toFixed(2)}</div>
+                          </div>
+                        </div>
+
+                        {result.found && result.followed_by.length > 0 && (
+                          <div className="mt-4 pt-4 border-t border-zinc-800">
+                            <div className="text-sm font-semibold text-zinc-300 mb-3">
+                              Followed by {result.followed_by.length} important {result.followed_by.length === 1 ? 'person' : 'people'}:
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {result.followed_by.map((follower) => (
+                                <div
+                                  key={`${result.id}-${follower.user_id}`}
+                                  className="px-3 py-2 bg-zinc-100 border border-zinc-200 rounded-lg"
+                                >
+                                  <div className="text-zinc-900 font-semibold text-sm">@{follower.username}</div>
+                                  {follower.name && (
+                                    <div className="text-zinc-700 text-xs mt-0.5">{follower.name}</div>
+                                  )}
+                                  {follower.weight !== undefined && follower.weight !== 1 && (
+                                    <div className="text-zinc-600 text-xs mt-1">Weight: {follower.weight}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {result.found && result.followed_by.length === 0 && (
+                          <div className="mt-4 pt-4 border-t border-zinc-800">
+                            <p className="text-sm text-zinc-500">No important people follow this account</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Add Important Person Form */}
           <div className="glass rounded-2xl p-8 mb-8">
             <h2 className="text-2xl font-bold text-white mb-6">Add Important Person</h2>
