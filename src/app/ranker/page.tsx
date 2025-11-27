@@ -881,7 +881,7 @@ export default function RankerAdmin() {
               onClick={() => setIsCheckSectionOpen(!isCheckSectionOpen)}
               className="w-full flex items-center justify-between text-left"
             >
-              <h2 className="text-2xl font-bold text-white">Check Important Score</h2>
+              <h2 className="text-2xl font-bold text-white">Check Importance Score</h2>
               <svg
                 className={`w-6 h-6 text-zinc-400 transition-transform ${isCheckSectionOpen ? 'rotate-180' : ''}`}
                 fill="none"
