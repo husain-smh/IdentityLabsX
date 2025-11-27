@@ -124,42 +124,21 @@ export async function analyzeTweet(
 
     // Step 7: Fetch engagement data in parallel (only what changed)
     logger.info('Fetching engagement data', { tweetId, strategy });
-    const fetchPromises: Promise<any>[] = [];
+    const repliesPromise = strategy.fetchReplies
+      ? fetchTweetReplies(tweetId)
+      : Promise.resolve({ data: [] });
+    const retweetsPromise = strategy.fetchRetweets
+      ? fetchTweetRetweets(tweetId)
+      : Promise.resolve({ data: [] });
+    const quotesPromise = strategy.fetchQuotes
+      ? fetchTweetQuotes(tweetId)
+      : Promise.resolve({ data: [] });
 
-    if (strategy.fetchReplies) {
-      fetchPromises.push(
-        fetchTweetReplies(tweetId).catch(err => {
-          logger.error('Failed to fetch replies', err, { tweetId });
-          return { data: [] };
-        })
-      );
-    } else {
-      fetchPromises.push(Promise.resolve({ data: [] }));
-    }
-
-    if (strategy.fetchRetweets) {
-      fetchPromises.push(
-        fetchTweetRetweets(tweetId).catch(err => {
-          logger.error('Failed to fetch retweets', err, { tweetId });
-          return { data: [] };
-        })
-      );
-    } else {
-      fetchPromises.push(Promise.resolve({ data: [] }));
-    }
-
-    if (strategy.fetchQuotes) {
-      fetchPromises.push(
-        fetchTweetQuotes(tweetId).catch(err => {
-          logger.error('Failed to fetch quotes', err, { tweetId });
-          return { data: [] };
-        })
-      );
-    } else {
-      fetchPromises.push(Promise.resolve({ data: [] }));
-    }
-
-    const [repliesResult, retweetsResult, quotesResult] = await Promise.all(fetchPromises);
+    const [repliesResult, retweetsResult, quotesResult] = await Promise.all([
+      repliesPromise,
+      retweetsPromise,
+      quotesPromise,
+    ]);
 
     logger.info('Fetched engagement data', {
       tweetId,

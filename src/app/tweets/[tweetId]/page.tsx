@@ -66,6 +66,12 @@ export default function TweetDetailPage() {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
   
+  // Collapsible sections state
+  const [isNarrativeOpen, setIsNarrativeOpen] = useState(true);
+  const [isChartsOpen, setIsChartsOpen] = useState(true);
+  const [isVCFirmsOpen, setIsVCFirmsOpen] = useState(true);
+  const [isQualityMetricsOpen, setIsQualityMetricsOpen] = useState(true);
+  
   // Filters
   const [minFollowers, setMinFollowers] = useState<string>('');
   const [sortBy, setSortBy] = useState('importance_score');
@@ -476,41 +482,77 @@ useEffect(() => {
             {aiReport && !generatingReport && (
               <div className="space-y-8">
                 {/* Formatted Narrative Report */}
-                {!aiReport.narrative || aiReport.narrative.trim().length === 0 ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-yellow-800 text-sm">
-                      ⚠️ Report generated but narrative text is missing. Check console logs for details.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded-lg p-8 shadow-lg border border-zinc-200">
-                    <div className="font-mono text-black text-sm leading-relaxed">
-                      <ReactMarkdown
-                        components={{
-                        // Style headings
-                        h1: (props) => <h1 className="text-2xl font-bold text-black mb-4 mt-6 first:mt-0" {...props} />,
-                        h2: (props) => <h2 className="text-xl font-bold text-black mb-3 mt-5 first:mt-0" {...props} />,
-                        h3: (props) => <h3 className="text-lg font-bold text-black mb-2 mt-4 first:mt-0" {...props} />,
-                        // Style paragraphs
-                        p: (props) => <p className="text-black mb-3 last:mb-0" {...props} />,
-                        // Style lists
-                        ul: (props) => <ul className="list-disc list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
-                        ol: (props) => <ol className="list-decimal list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
-                        li: (props) => <li className="text-black" {...props} />,
-                        // Style bold text
-                        strong: (props) => <strong className="font-bold text-black" {...props} />,
-                        // Style code
-                        code: (props) => <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-black text-xs font-mono" {...props} />,
-                      }}
+                <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                  <button
+                    onClick={() => setIsNarrativeOpen(!isNarrativeOpen)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                  >
+                    <h4 className="text-lg font-semibold text-white">Narrative Report</h4>
+                    <svg
+                      className={`w-5 h-5 text-zinc-400 transition-transform ${isNarrativeOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      {aiReport.narrative}
-                    </ReactMarkdown>
-                  </div>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isNarrativeOpen && (
+                    <div className="p-6">
+                      {!aiReport.narrative || aiReport.narrative.trim().length === 0 ? (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <p className="text-yellow-800 text-sm">
+                            ⚠️ Report generated but narrative text is missing. Check console logs for details.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-lg p-8 shadow-lg border border-zinc-200">
+                          <div className="font-mono text-black text-sm leading-relaxed">
+                            <ReactMarkdown
+                              components={{
+                              // Style headings
+                              h1: (props) => <h1 className="text-2xl font-bold text-black mb-4 mt-6 first:mt-0" {...props} />,
+                              h2: (props) => <h2 className="text-xl font-bold text-black mb-3 mt-5 first:mt-0" {...props} />,
+                              h3: (props) => <h3 className="text-lg font-bold text-black mb-2 mt-4 first:mt-0" {...props} />,
+                              // Style paragraphs
+                              p: (props) => <p className="text-black mb-3 last:mb-0" {...props} />,
+                              // Style lists
+                              ul: (props) => <ul className="list-disc list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
+                              ol: (props) => <ol className="list-decimal list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
+                              li: (props) => <li className="text-black" {...props} />,
+                              // Style bold text
+                              strong: (props) => <strong className="font-bold text-black" {...props} />,
+                              // Style code
+                              code: (props) => <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-black text-xs font-mono" {...props} />,
+                            }}
+                          >
+                            {aiReport.narrative}
+                          </ReactMarkdown>
+                        </div>
+                      </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                )}
 
                 {/* Charts Section */}
-                <div className="space-y-6">
+                <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                  <button
+                    onClick={() => setIsChartsOpen(!isChartsOpen)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                  >
+                    <h4 className="text-lg font-semibold text-white">Charts & Visualizations</h4>
+                    <svg
+                      className={`w-5 h-5 text-zinc-400 transition-transform ${isChartsOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isChartsOpen && (
+                    <div className="p-6 space-y-6">
                   {/* Pie Chart - Category Breakdown with interactive details */}
                   {(() => {
                     const pieData = CATEGORY_CONFIG.map(cfg => ({
@@ -698,102 +740,98 @@ useEffect(() => {
                         </ResponsiveContainer>
                       </div>
                     )}
-                </div>
-
-                {/* High Profile Engagers */}
-                {aiReport.structured_stats.high_profile_engagers && aiReport.structured_stats.high_profile_engagers.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold text-white mb-4">Most Valuable Accounts that have Engaged</h4>
-                    <div className="space-y-3">
-                      {aiReport.structured_stats.high_profile_engagers.map((engager: any, idx: number) => (
-                        <div key={idx} className="bg-zinc-900/50 rounded-lg p-4 flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="text-white font-semibold">{engager.name}</p>
-                              {engager.verified && (
-                                <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-                            <p className="text-sm text-indigo-400">@{engager.username}</p>
-                            <p className="text-sm text-zinc-400 mt-1">
-                              {(engager.followers / 1000).toFixed(0)}K followers
-                            </p>
-                            {engager.bio && (
-                              <p className="text-xs text-zinc-500 mt-2 line-clamp-2">{engager.bio}</p>
-                            )}
-                          </div>
-                          <div className="flex gap-2 ml-4">
-                            {engager.engagement_types.map((type: string, typeIdx: number) => (
-                              <span
-                                key={typeIdx}
-                                className="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-1 rounded-full capitalize whitespace-nowrap"
-                              >
-                                {type}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* VC Firms */}
                 {aiReport.structured_stats.vc_firms && aiReport.structured_stats.vc_firms.length > 0 && (
-                  <div>
-                    <h4 className="text-lg font-semibold text-white mb-4">VCs by Firm Affiliation</h4>
-                    <div className="space-y-4">
-                      {aiReport.structured_stats.vc_firms.map((firm: any, idx: number) => (
-                        <div key={idx} className="bg-zinc-900/50 rounded-lg p-4">
-                          <h5 className="text-white font-semibold mb-3">{firm.firm_name}</h5>
-                          <div className="space-y-2">
-                            {firm.partners.map((partner: any, pIdx: number) => (
-                              <div key={pIdx} className="flex items-center justify-between text-sm">
-                                <div>
-                                  <span className="text-white font-medium">{partner.name}</span>
-                                  <span className="text-indigo-400 ml-2">@{partner.username}</span>
-                                </div>
-                                <span className="text-zinc-400">{(partner.followers / 1000).toFixed(1)}K followers</span>
+                  <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                    <button
+                      onClick={() => setIsVCFirmsOpen(!isVCFirmsOpen)}
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                    >
+                      <h4 className="text-lg font-semibold text-white">VCs by Firm Affiliation</h4>
+                      <svg
+                        className={`w-5 h-5 text-zinc-400 transition-transform ${isVCFirmsOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {isVCFirmsOpen && (
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          {aiReport.structured_stats.vc_firms.map((firm: any, idx: number) => (
+                            <div key={idx} className="bg-zinc-900/50 rounded-lg p-4">
+                              <h5 className="text-white font-semibold mb-3">{firm.firm_name}</h5>
+                              <div className="space-y-2">
+                                {firm.partners.map((partner: any, pIdx: number) => (
+                                  <div key={pIdx} className="flex items-center justify-between text-sm">
+                                    <div>
+                                      <span className="text-white font-medium">{partner.name}</span>
+                                      <span className="text-indigo-400 ml-2">@{partner.username}</span>
+                                    </div>
+                                    <span className="text-zinc-400">{(partner.followers / 1000).toFixed(1)}K followers</span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Quality Metrics */}
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-4">Quality Metrics</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                      <p className="text-sm text-zinc-400">Verified</p>
-                      <p className="text-2xl font-bold text-emerald-400 mt-1">
-                        {aiReport.structured_stats.quality_metrics?.verified_percentage || 0}%
-                      </p>
+                <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                  <button
+                    onClick={() => setIsQualityMetricsOpen(!isQualityMetricsOpen)}
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                  >
+                    <h4 className="text-lg font-semibold text-white">Quality Metrics</h4>
+                    <svg
+                      className={`w-5 h-5 text-zinc-400 transition-transform ${isQualityMetricsOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isQualityMetricsOpen && (
+                    <div className="p-6">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                          <p className="text-sm text-zinc-400">Verified</p>
+                          <p className="text-2xl font-bold text-emerald-400 mt-1">
+                            {aiReport.structured_stats.quality_metrics?.verified_percentage || 0}%
+                          </p>
+                        </div>
+                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                          <p className="text-sm text-zinc-400">Replied</p>
+                          <p className="text-2xl font-bold text-blue-400 mt-1">
+                            {aiReport.structured_stats.engagement.replied_percentage}%
+                          </p>
+                        </div>
+                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                          <p className="text-sm text-zinc-400">Retweeted</p>
+                          <p className="text-2xl font-bold text-indigo-400 mt-1">
+                            {aiReport.structured_stats.engagement.retweeted_percentage}%
+                          </p>
+                        </div>
+                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
+                          <p className="text-sm text-zinc-400">Top 10 Reach</p>
+                          <p className="text-2xl font-bold text-purple-400 mt-1">
+                            {(aiReport.structured_stats.quality_metrics?.top_10_followers_sum / 1000000).toFixed(2)}M+
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                      <p className="text-sm text-zinc-400">Replied</p>
-                      <p className="text-2xl font-bold text-blue-400 mt-1">
-                        {aiReport.structured_stats.engagement.replied_percentage}%
-                      </p>
-                    </div>
-                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                      <p className="text-sm text-zinc-400">Retweeted</p>
-                      <p className="text-2xl font-bold text-indigo-400 mt-1">
-                        {aiReport.structured_stats.engagement.retweeted_percentage}%
-                      </p>
-                    </div>
-                    <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                      <p className="text-sm text-zinc-400">Top 10 Reach</p>
-                      <p className="text-2xl font-bold text-purple-400 mt-1">
-                        {(aiReport.structured_stats.quality_metrics?.top_10_followers_sum / 1000000).toFixed(2)}M+
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
 
                 {aiReport.generated_at && (

@@ -106,11 +106,6 @@ Breakdown of Profiles:
 Follower Count Tiers:
 ${follower_tiers.map(t => `- ${t.count} users with ${t.tier} followers`).join('\n')}
 
-Most Important Accounts that have Engaged (Top 20 by Importance Score):
-${high_profile_engagers.map(e => 
-  `- ${e.name} (@${e.username}) – Score: ${e.importance_score || 0} – ${(e.followers / 1000).toFixed(0)}K followers${e.bio ? ' – ' + e.bio.substring(0, 80) : ''}`
-).join('\n')}
-
 ${vc_firms.length > 0 ? `VCs by Firm Affiliation:\n${vc_firms.map(f => 
   `- ${f.firm_name}: ${f.partners.length} partner(s) engaged${f.partners.map(p => 
     ` (${p.name} @${p.username}, ${(p.followers / 1000).toFixed(1)}K followers)`
@@ -147,10 +142,6 @@ Generate a report in this EXACT format:
 **Follower Count Tiers:**
 
 [List each tier with count]
-
-**Most Important Accounts that have Engaged:**
-
-[List top engagers with format: Name (@username) – XK followers – Bio snippet] and generate a compelling notification that gives a brief overview of the importance of the accounts and their engagement.
 
 **Major Investors:**
 

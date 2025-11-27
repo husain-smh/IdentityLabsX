@@ -31,6 +31,38 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let nextAvailableTime = 0;
+let limiterChain: Promise<void> = Promise.resolve();
+
+async function scheduleGlobalRateLimit(config: ReturnType<typeof getTwitterApiConfig>): Promise<void> {
+  const qps = Math.max(0, config.qpsLimit || 0);
+  if (qps <= 0) {
+    return;
+  }
+
+  const interval = Math.ceil(1000 / qps);
+
+  let release: () => void;
+  const current = new Promise<void>(resolve => {
+    release = resolve;
+  });
+
+  const previous = limiterChain;
+  limiterChain = previous.then(() => current);
+
+  await previous;
+
+  const now = Date.now();
+  const waitTime = Math.max(0, nextAvailableTime - now);
+  nextAvailableTime = Math.max(now, nextAvailableTime) + interval;
+
+  release!();
+
+  if (waitTime > 0) {
+    await sleep(waitTime);
+  }
+}
+
 /**
  * Make API request with retry logic
  */
@@ -39,6 +71,7 @@ async function makeApiRequest(
   config: ReturnType<typeof getTwitterApiConfig>,
   retries = 0
 ): Promise<any> {
+  await scheduleGlobalRateLimit(config);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), config.requestTimeout);
 
