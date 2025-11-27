@@ -6,7 +6,6 @@
 import { analyzeTweet, type AnalysisResult } from '../tweet-analysis-orchestrator';
 import { logger } from '../logger';
 import { metricsTracker } from '../metrics-tracker';
-import { ProcessingError } from '../errors/analysis-errors';
 
 export interface JobStatus {
   id: string;

@@ -76,7 +76,6 @@ function buildPrompt(analysis: EngagerAnalysis): string {
     engagement_stats, 
     notable_people, 
     follower_tiers,
-    high_profile_engagers,
     vc_firms,
     quality_metrics
   } = analysis;

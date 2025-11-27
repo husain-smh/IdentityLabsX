@@ -12,7 +12,7 @@ interface MetricEntry {
 }
 
 class MetricsTracker {
-  private metrics: Map<string, MetricEntry[]> = new Map();
+  private metrics: Map<string, MetricEntry> = new Map();
 
   /**
    * Start tracking an operation

@@ -10,6 +10,7 @@ export interface TweetMetrics {
   quoteCount: number;
   viewCount: number;
   bookmarkCount: number;
+  last_updated?: Date;
 }
 
 export interface TwitterApiResponse {
@@ -311,12 +312,12 @@ export async function fetchTweetDetails(
       }
       
       const tweet = data.tweets[0];
-      const author = tweet.author || {};
+      const author = tweet.author;
       
       return {
         id: tweet.id,
-        authorName: author.name || 'Unknown',
-        authorUsername: author.userName || author.screen_name,
+        authorName: author?.name || 'Unknown',
+        authorUsername: author?.userName || author?.screen_name,
         metrics: {
           likeCount: tweet.likeCount || 0,
           retweetCount: tweet.retweetCount || 0,

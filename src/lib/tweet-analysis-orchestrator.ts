@@ -7,7 +7,6 @@ import { fetchTweetReplies, fetchTweetRetweets, fetchTweetQuotes } from './twitt
 import { processAllEngagements } from './user-processor';
 import {
   getTweet,
-  getTweetMetrics,
   updateTweetMetrics,
   compareMetrics,
   createTweet,

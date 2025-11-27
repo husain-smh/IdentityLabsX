@@ -22,18 +22,15 @@ interface Engager {
   followed_by?: string[];
 }
 
-const CATEGORY_KEYS = [
-  'founders',
-  'vcs',
-  'ai_creators',
-  'media',
-  'developers',
-  'c_level',
-  'yc_alumni',
-  'others',
-] as const;
-
-type CategoryKey = (typeof CATEGORY_KEYS)[number];
+type CategoryKey =
+  | 'founders'
+  | 'vcs'
+  | 'ai_creators'
+  | 'media'
+  | 'developers'
+  | 'c_level'
+  | 'yc_alumni'
+  | 'others';
 
 const CATEGORY_CONFIG: {
   key: CategoryKey;

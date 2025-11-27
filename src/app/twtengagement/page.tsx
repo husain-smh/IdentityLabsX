@@ -34,7 +34,7 @@ export default function TwitterEngagement() {
   const [existingTweet, setExistingTweet] = useState<ExistingTweet | null>(null);
   const [showExistingModal, setShowExistingModal] = useState(false);
   const [isMonitoringLoading, setIsMonitoringLoading] = useState(false);
-  const [pollingTweetId, setPollingTweetId] = useState<string | null>(null);
+  const [, setPollingTweetId] = useState<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to construct Google Sheets URL from spreadsheetId
@@ -269,7 +269,7 @@ export default function TwitterEngagement() {
         });
         setIsLoading(false);
       }
-    } catch (error) {
+    } catch {
       setMessage({
         type: 'error',
         text: 'Network error. Please check your connection and try again.'
