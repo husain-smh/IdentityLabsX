@@ -298,7 +298,7 @@ export default async function UserReportPage({
         <div className="pt-24 pb-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-8">
             <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-2xl">
-              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Aggregated footprint</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">USER DETAILS</p>
               <h1 className="mt-3 text-4xl font-semibold text-zinc-900">
                 {report.author.name}{' '}
                 {report.author.username ? (
@@ -510,28 +510,6 @@ export default async function UserReportPage({
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-                <h3 className="text-xs uppercase tracking-wide text-zinc-400">
-                  Notable followers referencing this author
-                </h3>
-                {report.engagers.notableFollowers.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {report.engagers.notableFollowers.map((handle) => (
-                      <span
-                        key={handle}
-                        className="rounded-full border border-zinc-800 px-3 py-1 text-xs font-medium text-white"
-                      >
-                        @{handle}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2 text-sm text-zinc-500">
-                    No tracked “followed_by” mentions yet.
-                  </p>
-                )}
-              </div>
-
               <div className="mt-6">
                 <FollowerTierChart tiers={report.engagers.followerTiers} />
               </div>
@@ -540,7 +518,7 @@ export default async function UserReportPage({
             <CollapsibleSection
               badge="Network reach"
               title="High-importance engagers by role"
-              description="Pie slice shows each role’s share. Click to inspect the accounts."
+              description="Pie slice shows each role's share. Click to inspect the accounts."
             >
               {report.networkReach.totalHighImportance === 0 ? (
                 <p className="text-sm text-zinc-400">
@@ -551,177 +529,90 @@ export default async function UserReportPage({
               )}
             </CollapsibleSection>
 
-            <CollapsibleSection
-              badge="Temporal dynamics"
-              title="How each launch performed in sequence"
-              description="Raw per-tweet stats plus a rolling average to highlight consistency."
-            >
-              {hasTimeline ? (
-                <div className="space-y-6">
-                  <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
-                    <table className="w-full table-auto text-sm">
-                      <thead className="bg-zinc-900/80 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                        <tr>
-                          <th className="px-4 py-3">Tweet</th>
-                          <th className="px-4 py-3">Published</th>
-                          <th className="px-4 py-3">Engagers</th>
-                          <th className="px-4 py-3">Views</th>
-                          <th className="px-4 py-3">Likes</th>
-                          <th className="px-4 py-3">Quotes</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {report.timeline.points.map((point) => (
-                          <tr key={point.tweetId} className="border-t border-zinc-800">
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col">
-                                <Link
-                                  href={`/tweets/${point.tweetId}`}
-                                  className="text-sm font-semibold text-white hover:underline"
+            <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-2xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">TOP ENGAGERS</p>
+              <h2 className="mt-3 text-2xl font-semibold text-zinc-900">Valuable Accounts Engaging with your tweets</h2>
+              <p className="mt-2 text-sm text-zinc-500">
+                Valuable accounts that engaged your tweets, ranked by importance score.
+              </p>
+              {report.engagers.topValuableEngagers.length > 0 ? (
+                <div className="mt-6 space-y-4">
+                  {report.engagers.topValuableEngagers.map((engager) => (
+                    <div
+                      key={engager.userId}
+                      className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg font-bold text-emerald-600">
+                              {engager.importance_score.toFixed(1)}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-semibold text-zinc-900">
+                                {engager.name}
+                              </span>
+                              {engager.verified && (
+                                <svg
+                                  className="w-4 h-4 text-indigo-500"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
                                 >
-                                  {point.tweetId}
-                                </Link>
-                                <a
-                                  href={point.tweetUrl}
-                                  className="text-xs text-zinc-500 hover:underline"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  View tweet
-                                </a>
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm text-zinc-600 mb-1">@{engager.username}</div>
+                          {engager.bio && (
+                            <div className="text-xs text-zinc-600 mb-2 line-clamp-2">
+                              {engager.bio}
+                            </div>
+                          )}
+                          <div className="text-xs text-zinc-500 mb-3">
+                            {formatCompact(engager.followers)} followers
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-zinc-700 mb-1">
+                              Actions:
+                            </div>
+                            {engager.tweetEngagements.map((tweetEngagement, idx) => (
+                              <div key={idx} className="ml-4 text-xs text-zinc-700 space-y-0.5">
+                                {tweetEngagement.actions.map((action, actionIdx) => (
+                                  <div key={actionIdx} className="flex items-center gap-1">
+                                    <span className="text-zinc-500">• </span>
+                                    <span className="text-zinc-600">
+                                      {action === 'replied' && 'Replied to '}
+                                      {action === 'retweeted' && 'Retweeted '}
+                                      {action === 'quoted' && 'Quoted '}
+                                    </span>
+                                    <Link
+                                      href={`/tweets/${tweetEngagement.tweetId}`}
+                                      className="text-indigo-600 hover:text-indigo-700 hover:underline"
+                                    >
+                                      Tweet {tweetEngagement.tweetId.slice(-8)}
+                                    </Link>
+                                  </div>
+                                ))}
                               </div>
-                            </td>
-                            <td className="px-4 py-3 text-zinc-500">{formatDate(point.createdAt)}</td>
-                            <td className="px-4 py-3 font-semibold text-white">
-                              {standardNumber.format(point.totalEngagers)}
-                            </td>
-                            <td className="px-4 py-3">
-                              {point.views !== null ? standardNumber.format(point.views) : '—'}
-                            </td>
-                            <td className="px-4 py-3">
-                              {point.likes !== null ? standardNumber.format(point.likes) : '—'}
-                            </td>
-                            <td className="px-4 py-3">
-                              {point.quotes !== null ? standardNumber.format(point.quotes) : '—'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {hasMomentum ? (
-                    <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60">
-                      <table className="w-full table-auto text-sm">
-                        <thead className="bg-zinc-900/80 text-left text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                          <tr>
-                            <th className="px-4 py-3">Window ending</th>
-                            <th className="px-4 py-3">Rolling engagers (3 tweet avg)</th>
-                            <th className="px-4 py-3">Rolling views (if available)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {report.timeline.momentum.map((point) => (
-                            <tr key={`${point.tweetId}-momentum`} className="border-t border-zinc-800">
-                              <td className="px-4 py-3 text-zinc-500">{formatDate(point.createdAt)}</td>
-                              <td className="px-4 py-3 font-semibold text-white">
-                                {standardNumber.format(point.rollingEngagers)}
-                              </td>
-                              <td className="px-4 py-3">
-                                {point.rollingViews !== null
-                                  ? standardNumber.format(point.rollingViews)
-                                  : '—'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  ) : null}
+                  ))}
                 </div>
               ) : (
-                <p className="text-sm text-zinc-400">
-                  No per-tweet metrics yet. Re-run tweet analysis to populate this view.
+                <p className="mt-6 text-sm text-zinc-500">
+                  No engagers with importance scores yet.
                 </p>
               )}
-            </CollapsibleSection>
+            </div>
 
-            <CollapsibleSection
-              badge="AI reports"
-              title="Narratives & backlog"
-              description="Quick glance at which tweets already have structured write-ups."
-            >
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Reports ready</p>
-                    <p className="text-4xl font-semibold text-white">
-                      {report.aiReports.completedCount}
-                    </p>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {report.aiReports.completedReports.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        No AI narratives have been generated yet.
-                      </p>
-                    ) : (
-                      report.aiReports.completedReports.map((pointer) => (
-                        <div key={pointer.tweetId} className="rounded-xl border border-zinc-800 p-3">
-                          <div className="flex items-center justify-between">
-                            <Link
-                              href={`/tweets/${pointer.tweetId}`}
-                              className="text-sm font-semibold text-white hover:underline"
-                            >
-                              Tweet {pointer.tweetId}
-                            </Link>
-                            <span className="text-xs text-zinc-500">
-                              {pointer.analyzedAt ? formatDate(pointer.analyzedAt) : '—'}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            {pointer.summarySnippet ||
-                              'Report ready – open tweet view for the write-up.'}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-400">Insights backlog</p>
-                    <p className="text-4xl font-semibold text-white">
-                      {report.aiReports.backlogCount}
-                    </p>
-                  </div>
-                  <div className="mt-4 space-y-3">
-                    {report.aiReports.backlog.length === 0 ? (
-                      <p className="text-sm text-zinc-500">
-                        Nothing pending – every tweet has an AI write-up.
-                      </p>
-                    ) : (
-                      report.aiReports.backlog.map((pointer) => (
-                        <div key={pointer.tweetId} className="rounded-xl border border-zinc-800 p-3">
-                          <div className="flex items-center justify-between">
-                            <Link
-                              href={`/tweets/${pointer.tweetId}`}
-                              className="text-sm font-semibold text-white hover:underline"
-                            >
-                              Tweet {pointer.tweetId}
-                            </Link>
-                            <span className="text-xs text-zinc-500">{pointer.status}</span>
-                          </div>
-                          <p className="mt-1 text-xs text-zinc-500">
-                            Created {formatDate(pointer.createdAt)}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CollapsibleSection>
           </div>
         </div>
       </div>

@@ -86,6 +86,23 @@ export interface FollowerTier {
   range: string;
 }
 
+export interface TweetEngagement {
+  tweetId: string;
+  tweetUrl: string;
+  actions: string[]; // ['replied', 'retweeted', 'quoted']
+}
+
+export interface TopValuableEngager {
+  userId: string;
+  username: string;
+  name: string;
+  bio?: string;
+  followers: number;
+  verified: boolean;
+  importance_score: number;
+  tweetEngagements: TweetEngagement[];
+}
+
 export interface EngagerRollup {
   totalEngagements: number;
   uniqueEngagers: number;
@@ -97,7 +114,7 @@ export interface EngagerRollup {
   topFollowerTier: string | null;
   engagementMix: EngagementMix;
   importance: ImportanceStats;
-  notableFollowers: string[];
+  topValuableEngagers: TopValuableEngager[];
   followerTiers: FollowerTier[];
 }
 
@@ -167,6 +184,7 @@ type AggregatedEngager = {
   importance_score?: number;
   followed_by?: string[];
   engagements: number;
+  tweetEngagements: TweetEngagement[];
 };
 
 function getFollowerTierLabel(value: number | undefined): string | null {
@@ -226,7 +244,10 @@ function buildMomentum(points: TimelinePoint[], windowSize = 3): MomentumPoint[]
   });
 }
 
-function aggregateEngagers(allEngagers: Engager[]): {
+function aggregateEngagers(
+  allEngagers: Engager[],
+  tweetsMap: Map<string, Tweet>,
+): {
   rollup: EngagerRollup;
   aggregated: AggregatedEngager[];
 } {
@@ -234,6 +255,21 @@ function aggregateEngagers(allEngagers: Engager[]): {
 
   for (const engager of allEngagers) {
     const existing = map.get(engager.userId);
+    
+    // Build actions array for this tweet
+    const actions: string[] = [];
+    if (engager.replied) actions.push('replied');
+    if (engager.retweeted) actions.push('retweeted');
+    if (engager.quoted) actions.push('quoted');
+    
+    // Get tweet URL
+    const tweet = tweetsMap.get(engager.tweet_id);
+    const tweetEngagement: TweetEngagement = {
+      tweetId: engager.tweet_id,
+      tweetUrl: tweet?.tweet_url || `https://twitter.com/i/status/${engager.tweet_id}`,
+      actions,
+    };
+    
     if (!existing) {
       map.set(engager.userId, {
         userId: engager.userId,
@@ -249,6 +285,7 @@ function aggregateEngagers(allEngagers: Engager[]): {
         importance_score: engager.importance_score,
         followed_by: engager.followed_by ? [...engager.followed_by] : undefined,
         engagements: 1,
+        tweetEngagements: [tweetEngagement],
       });
       continue;
     }
@@ -275,6 +312,25 @@ function aggregateEngagers(allEngagers: Engager[]): {
       }
       existing.followed_by = Array.from(current);
     }
+    
+    // Add tweet engagement if it has actions
+    if (actions.length > 0) {
+      // Check if we already have engagement for this tweet
+      const existingTweetEngagement = existing.tweetEngagements.find(
+        (te) => te.tweetId === engager.tweet_id,
+      );
+      if (existingTweetEngagement) {
+        // Merge actions if tweet already tracked
+        const combinedActions = new Set([
+          ...existingTweetEngagement.actions,
+          ...actions,
+        ]);
+        existingTweetEngagement.actions = Array.from(combinedActions);
+      } else {
+        existing.tweetEngagements.push(tweetEngagement);
+      }
+    }
+    
     existing.engagements += 1;
   }
 
@@ -327,15 +383,21 @@ function aggregateEngagers(allEngagers: Engager[]): {
     population: importanceScores.length,
   };
 
-  const notableFollowers = Array.from(
-    new Set(
-      aggregated
-        .flatMap((engager) => engager.followed_by || [])
-        .filter((handle): handle is string => Boolean(handle && handle.trim())),
-    ),
-  )
+  // Extract top valuable engagers (with importance_score > 0, sorted by score)
+  const topValuableEngagers: TopValuableEngager[] = aggregated
+    .filter((engager) => (engager.importance_score || 0) > 0)
+    .sort((a, b) => (b.importance_score || 0) - (a.importance_score || 0))
     .slice(0, 50)
-    .map((handle) => handle.replace(/^@/, ''));
+    .map((engager) => ({
+      userId: engager.userId,
+      username: engager.username,
+      name: engager.name,
+      bio: engager.bio,
+      followers: engager.followers,
+      verified: engager.verified,
+      importance_score: engager.importance_score || 0,
+      tweetEngagements: engager.tweetEngagements.filter((te) => te.actions.length > 0),
+    }));
 
   const followerTierBuckets: FollowerTier[] = FOLLOWER_TIER_DEFS.map((tier) => ({
     tier: tier.label,
@@ -368,7 +430,7 @@ function aggregateEngagers(allEngagers: Engager[]): {
       topFollowerTier,
       engagementMix,
       importance,
-      notableFollowers,
+      topValuableEngagers,
       followerTiers: followerTiersDistribution,
     },
     aggregated,
@@ -535,7 +597,13 @@ export async function getUserReport(identifier: string): Promise<UserReportPaylo
     .find({ tweet_id: { $in: tweetIds } })
     .toArray();
 
-  const { rollup, aggregated } = aggregateEngagers(engagersCursor);
+  // Create a map of tweet_id -> Tweet for quick lookup
+  const tweetsMap = new Map<string, Tweet>();
+  for (const tweet of tweets) {
+    tweetsMap.set(tweet.tweet_id, tweet);
+  }
+
+  const { rollup, aggregated } = aggregateEngagers(engagersCursor, tweetsMap);
   const networkReach = buildNetworkReach(aggregated);
   const aiReports = buildAIReportStatus(tweets);
 
