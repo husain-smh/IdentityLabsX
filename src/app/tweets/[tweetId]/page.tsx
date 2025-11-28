@@ -81,6 +81,8 @@ export default function TweetDetailPage() {
 
   // Interactive category selection for charts
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
+  // Pagination for categorized engagers list
+  const [displayedCount, setDisplayedCount] = useState(20);
 
 const fetchTweetData = useCallback(async () => {
   if (!tweetId) {
@@ -265,8 +267,37 @@ useEffect(() => {
     return categories;
   };
 
-  // Pre-categorize currently loaded engagers for the interactive table
+  // Get categorized engagers from AI report (all engagers) or fallback to current page
   const categorizedEngagers = useMemo(() => {
+    // If AI report has categorized engagers, use those (includes ALL engagers)
+    if (aiReport?.structured_stats?.categorized_engagers) {
+      // Convert CategorizedEngager to Engager-compatible format
+      const convert = (e: any): Engager => ({
+        userId: e.userId,
+        username: e.username,
+        name: e.name,
+        bio: e.bio,
+        followers: e.followers,
+        verified: e.verified,
+        replied: e.replied,
+        retweeted: e.retweeted,
+        quoted: e.quoted,
+        importance_score: e.importance_score,
+      });
+
+      return {
+        founders: (aiReport.structured_stats.categorized_engagers.founders || []).map(convert),
+        vcs: (aiReport.structured_stats.categorized_engagers.vcs || []).map(convert),
+        ai_creators: (aiReport.structured_stats.categorized_engagers.ai_creators || []).map(convert),
+        media: (aiReport.structured_stats.categorized_engagers.media || []).map(convert),
+        developers: (aiReport.structured_stats.categorized_engagers.developers || []).map(convert),
+        c_level: (aiReport.structured_stats.categorized_engagers.c_level || []).map(convert),
+        yc_alumni: (aiReport.structured_stats.categorized_engagers.yc_alumni || []).map(convert),
+        others: (aiReport.structured_stats.categorized_engagers.others || []).map(convert),
+      };
+    }
+
+    // Fallback: Pre-categorize currently loaded engagers (for backwards compatibility)
     const initial: Record<CategoryKey, Engager[]> = {
       founders: [],
       vcs: [],
@@ -286,7 +317,7 @@ useEffect(() => {
     }
 
     return initial;
-  }, [engagers]);
+  }, [aiReport, engagers]);
 
   const handleGenerateReport = async () => {
     if (!tweetId) return;
@@ -566,13 +597,28 @@ useEffect(() => {
                     const handleSliceClick = (_: any, index: number) => {
                       const clicked = pieData[index];
                       if (!clicked) return;
-                      setSelectedCategory(prev =>
-                        prev === clicked.key ? null : (clicked.key as CategoryKey)
-                      );
+                      setSelectedCategory(prev => {
+                        const newCategory = prev === clicked.key ? null : (clicked.key as CategoryKey);
+                        // Reset displayed count when switching categories
+                        if (newCategory !== prev) {
+                          setDisplayedCount(20);
+                        }
+                        return newCategory;
+                      });
                     };
 
                     const selectedEngagers =
                       activeCategory ? categorizedEngagers[activeCategory] ?? [] : [];
+                    
+                    // Get total count from pie chart data (all engagers)
+                    const totalCountForCategory = activeCategory
+                      ? pieData.find(d => d.key === activeCategory)?.value || 0
+                      : 0;
+                    
+                    // Check if we're using full data or fallback (current page only)
+                    const isUsingFullData = !!aiReport?.structured_stats?.categorized_engagers;
+                    const displayedCount = selectedEngagers.length;
+                    const isLimited = !isUsingFullData && displayedCount < totalCountForCategory;
 
                     return pieData.length > 0 ? (
                       <div
@@ -588,7 +634,7 @@ useEffect(() => {
                             <button
                               type="button"
                               className="shrink-0 w-5 h-5 rounded-full border border-zinc-600 text-[10px] text-zinc-300 flex items-center justify-center hover:bg-zinc-800 hover:text-white"
-                              title="One account can be in many groups (founder, VC, etc). This chart shows each group’s share of all group labels, not unique people, so the slices always add up to 100%."
+                              title="One account can be in many groups (founder, VC, etc). This chart shows each group's share of all group labels, not unique people, so the slices always add up to 100%."
                             >
                               i
                             </button>
@@ -635,7 +681,13 @@ useEffect(() => {
                             <h5 className="text-sm font-semibold text-white mb-2 flex items-center justify-between">
                               <span>
                                 {CATEGORY_CONFIG.find(c => c.key === activeCategory)?.label}{' '}
-                                ({selectedEngagers.length} accounts)
+                                {isLimited ? (
+                                  <span className="text-zinc-400">
+                                    ({displayedCount} shown of {totalCountForCategory} total)
+                                  </span>
+                                ) : (
+                                  <span>({totalCountForCategory} accounts)</span>
+                                )}
                               </span>
                               <button
                                 type="button"
@@ -645,66 +697,81 @@ useEffect(() => {
                                 Clear
                               </button>
                             </h5>
+                            {isLimited && (
+                              <div className="mb-3 p-2 bg-yellow-500/20 border border-yellow-500/30 rounded text-xs text-yellow-400">
+                                ⚠️ Showing limited results. Regenerate the report to see all {totalCountForCategory} accounts in this category.
+                              </div>
+                            )}
                             {selectedEngagers.length === 0 ? (
                               <p className="text-xs text-zinc-500">
-                                No accounts found in this category for the current page of
-                                engagers.
+                                No accounts found in this category.
                               </p>
                             ) : (
-                              <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
-                                {selectedEngagers
-                                  .slice()
-                                  .sort((a, b) => b.followers - a.followers)
-                                  .slice(0, 20)
-                                  .map(engager => (
-                                    <div
-                                      key={engager.userId}
-                                      className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <div>
-                                          <div className="text-sm font-medium text-white flex items-center gap-1">
-                                            {engager.name}
-                                            {engager.verified && (
-                                              <svg
-                                                className="w-4 h-4 text-indigo-400"
-                                                fill="currentColor"
-                                                viewBox="0 0 20 20"
-                                              >
-                                                <path
-                                                  fillRule="evenodd"
-                                                  d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                  clipRule="evenodd"
-                                                />
-                                              </svg>
-                                            )}
+                              <>
+                                <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
+                                  {selectedEngagers
+                                    .slice()
+                                    .sort((a, b) => b.followers - a.followers)
+                                    .slice(0, displayedCount)
+                                    .map(engager => (
+                                      <div
+                                        key={engager.userId}
+                                        className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <div>
+                                            <div className="text-sm font-medium text-white flex items-center gap-1">
+                                              {engager.name}
+                                              {engager.verified && (
+                                                <svg
+                                                  className="w-4 h-4 text-indigo-400"
+                                                  fill="currentColor"
+                                                  viewBox="0 0 20 20"
+                                                >
+                                                  <path
+                                                    fillRule="evenodd"
+                                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                    clipRule="evenodd"
+                                                  />
+                                                </svg>
+                                              )}
+                                            </div>
+                                            <div className="text-xs text-zinc-400">
+                                              @{engager.username}
+                                            </div>
                                           </div>
-                                          <div className="text-xs text-zinc-400">
-                                            @{engager.username}
+                                          <div className="text-xs text-zinc-300 font-medium ml-4 whitespace-nowrap">
+                                            {engager.followers.toLocaleString()}
                                           </div>
                                         </div>
-                                        <div className="text-xs text-zinc-300 font-medium ml-4 whitespace-nowrap">
-                                          {engager.followers.toLocaleString()}
+                                        {engager.bio && (
+                                          <p className="text-xs text-zinc-500 mt-2 line-clamp-2">
+                                            {engager.bio}
+                                          </p>
+                                        )}
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                          {getEngagementBadges(engager).map((badge, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full"
+                                            >
+                                              {badge}
+                                            </span>
+                                          ))}
                                         </div>
                                       </div>
-                                      {engager.bio && (
-                                        <p className="text-xs text-zinc-500 mt-2 line-clamp-2">
-                                          {engager.bio}
-                                        </p>
-                                      )}
-                                      <div className="mt-2 flex flex-wrap gap-1">
-                                        {getEngagementBadges(engager).map((badge, idx) => (
-                                          <span
-                                            key={idx}
-                                            className="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full"
-                                          >
-                                            {badge}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  ))}
-                              </div>
+                                    ))}
+                                </div>
+                                {displayedCount < selectedEngagers.length && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setDisplayedCount(prev => Math.min(prev + 20, selectedEngagers.length))}
+                                    className="mt-3 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+                                  >
+                                    Show More ({Math.min(20, selectedEngagers.length - displayedCount)} more)
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         )}

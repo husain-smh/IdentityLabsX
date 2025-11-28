@@ -222,7 +222,7 @@ export default async function UserReportPage({
                 ) : null}
               </h1>
               <p className="mt-3 text-sm text-zinc-400">
-                Every manually analyzed tweet plus deduped engagers for this author.
+                Every manually analyzed tweet details.
               </p>
             </div>
 

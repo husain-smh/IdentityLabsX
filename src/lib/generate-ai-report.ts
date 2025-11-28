@@ -5,6 +5,20 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAIAPIKEY,
 });
 
+// Compact engager data for categorized lists (only essential fields)
+export interface CategorizedEngager {
+  userId: string;
+  username: string;
+  name: string;
+  bio?: string;
+  followers: number;
+  verified: boolean;
+  replied: boolean;
+  retweeted: boolean;
+  quoted: boolean;
+  importance_score?: number;
+}
+
 export interface AIReport {
   generated_at: Date;
   structured_stats: {
@@ -49,6 +63,17 @@ export interface AIReport {
     quality_metrics: {
       verified_percentage: number;
       top_10_followers_sum: number;
+    };
+    // Categorized engagers for interactive pie chart
+    categorized_engagers: {
+      founders: CategorizedEngager[];
+      vcs: CategorizedEngager[];
+      ai_creators: CategorizedEngager[];
+      media: CategorizedEngager[];
+      developers: CategorizedEngager[];
+      c_level: CategorizedEngager[];
+      yc_alumni: CategorizedEngager[];
+      others: CategorizedEngager[];
     };
   };
   notable_people: Array<{
@@ -201,6 +226,20 @@ export async function generateAIReport(analysis: EngagerAnalysis): Promise<AIRep
     // Validate narrative doesn't contain made-up data
     validateNarrative(narrative, analysis);
 
+    // Convert categorized engagers to compact format
+    const convertToCategorizedEngager = (engager: any): CategorizedEngager => ({
+      userId: engager.userId,
+      username: engager.username,
+      name: engager.name,
+      bio: engager.bio,
+      followers: engager.followers,
+      verified: engager.verified,
+      replied: engager.replied,
+      retweeted: engager.retweeted,
+      quoted: engager.quoted,
+      importance_score: engager.importance_score,
+    });
+
     return {
       generated_at: new Date(),
       structured_stats: {
@@ -251,6 +290,17 @@ export async function generateAIReport(analysis: EngagerAnalysis): Promise<AIRep
         high_profile_engagers: analysis.high_profile_engagers,
         vc_firms: analysis.vc_firms,
         quality_metrics: analysis.quality_metrics,
+        // Include categorized engagers for interactive pie chart
+        categorized_engagers: {
+          founders: analysis.categories.founders.map(convertToCategorizedEngager),
+          vcs: analysis.categories.vcs.map(convertToCategorizedEngager),
+          ai_creators: analysis.categories.ai_creators.map(convertToCategorizedEngager),
+          media: analysis.categories.media.map(convertToCategorizedEngager),
+          developers: analysis.categories.developers.map(convertToCategorizedEngager),
+          c_level: analysis.categories.c_level.map(convertToCategorizedEngager),
+          yc_alumni: analysis.categories.yc_alumni.map(convertToCategorizedEngager),
+          others: analysis.categories.others.map(convertToCategorizedEngager),
+        },
       },
       notable_people: analysis.notable_people.map(np => ({
         username: np.username,
