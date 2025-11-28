@@ -106,26 +106,26 @@ export default async function UserReportPage({
 
   if (!report) {
     return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="relative min-h-screen bg-white text-zinc-900">
         <Navbar />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(99,102,241,0.08),transparent_65%)]"></div>
         <div className="relative z-10 pt-28">
-          <div className="mx-auto max-w-3xl space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-8 text-center shadow-2xl">
-            <p className="text-lg font-semibold text-white">No aggregated data yet</p>
-            <p className="text-sm text-zinc-400">
+          <div className="mx-auto max-w-3xl space-y-4 rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-2xl">
+            <p className="text-lg font-semibold text-zinc-900">No aggregated data yet</p>
+            <p className="text-sm text-zinc-500">
               We couldn’t find any analyzed tweets for “{identifier}”. Double-check the handle or try
               again after running a tweet analysis.
             </p>
             <div className="flex justify-center gap-3">
               <Link
                 href="/tweets"
-                className="rounded-full bg-indigo-500/80 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500/90"
               >
                 Browse tweets
               </Link>
               <Link
                 href="/monitor"
-                className="rounded-full border border-zinc-700 px-4 py-2 text-sm text-white transition hover:bg-zinc-800"
+                className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
               >
                 Monitor new tweet
               </Link>
@@ -291,23 +291,23 @@ export default async function UserReportPage({
   ];
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="relative min-h-screen bg-white text-zinc-900">
       <Navbar />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(99,102,241,0.08),transparent_65%)]"></div>
       <div className="relative z-10">
         <div className="pt-24 pb-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 space-y-8">
-            <div className="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-8 shadow-2xl">
-              <p className="text-xs uppercase tracking-[0.3em] text-zinc-400">Aggregated footprint</p>
-              <h1 className="mt-3 text-4xl font-semibold text-white">
+            <div className="rounded-3xl border border-zinc-200 bg-white p-8 shadow-2xl">
+              <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">Aggregated footprint</p>
+              <h1 className="mt-3 text-4xl font-semibold text-zinc-900">
                 {report.author.name}{' '}
                 {report.author.username ? (
-                  <span className="text-2xl text-zinc-400">
+                  <span className="text-2xl text-zinc-500">
                     (@{report.author.username.replace('@', '')})
                   </span>
                 ) : null}
               </h1>
-              <p className="mt-3 text-sm text-zinc-400">
+              <p className="mt-3 text-sm text-zinc-500">
                 Every manually analyzed tweet details.
               </p>
             </div>

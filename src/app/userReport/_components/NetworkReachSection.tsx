@@ -42,6 +42,14 @@ export function NetworkReachSection({ groups }: Props) {
     () => pieData[0]?.category ?? null,
   );
 
+  const followerFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('en-US', {
+        maximumFractionDigits: 0,
+      }),
+    [],
+  );
+
   const selectedGroup =
     groups.find((group) => group.category === selectedCategory) ?? null;
 
@@ -114,7 +122,8 @@ export function NetworkReachSection({ groups }: Props) {
                     </p>
                     <p className="mt-2 text-xs text-zinc-400">
                       Importance {engager.importanceScore.toFixed(1)} ·{' '}
-                      {Math.round(engager.followers).toLocaleString()} followers
+                      {followerFormatter.format(Math.round(engager.followers))}{' '}
+                      followers
                     </p>
                   </div>
                 ))}
