@@ -542,12 +542,9 @@ export default async function UserReportPage({
                       key={engager.userId}
                       className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
                     >
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-lg font-bold text-emerald-600">
-                              {engager.importance_score.toFixed(1)}
-                            </span>
                             <div className="flex items-center gap-1">
                               <span className="text-sm font-semibold text-zinc-900">
                                 {engager.name}
@@ -573,15 +570,26 @@ export default async function UserReportPage({
                               {engager.bio}
                             </div>
                           )}
-                          <div className="text-xs text-zinc-500 mb-3">
+                          <div className="text-xs text-zinc-500">
                             {formatCompact(engager.followers)} followers
                           </div>
+                        </div>
+
+                        <div className="md:w-2/5 flex flex-col gap-3 border-t border-zinc-200 pt-3 md:border-t-0 md:border-l md:pl-4">
+                          <div className="flex items-center justify-between md:justify-end">
+                            <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                              Imp. Score - 
+                            </span>
+                            <span className="text-lg font-bold text-emerald-600">
+                              {engager.importance_score.toFixed(1)}
+                            </span>
+                          </div>
                           <div className="space-y-1">
-                            <div className="text-xs font-medium text-zinc-700 mb-1">
-                              Actions:
+                            <div className="text-xs font-medium text-zinc-700">
+                              Actions
                             </div>
                             {engager.tweetEngagements.map((tweetEngagement, idx) => (
-                              <div key={idx} className="ml-4 text-xs text-zinc-700 space-y-0.5">
+                              <div key={idx} className="ml-2 text-xs text-zinc-700 space-y-0.5">
                                 {tweetEngagement.actions.map((action, actionIdx) => (
                                   <div key={actionIdx} className="flex items-center gap-1">
                                     <span className="text-zinc-500">• </span>
