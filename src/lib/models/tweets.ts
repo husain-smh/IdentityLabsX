@@ -57,11 +57,16 @@ export interface Engager {
   retweeted: boolean;
   quoted: boolean;
   
+  // Engagement timestamps (when each engagement occurred)
+  replied_at?: Date;
+  retweeted_at?: Date;
+  quoted_at?: Date;
+  
   // Ranking data (filled after ranking job)
   importance_score?: number;
   followed_by?: string[]; // Array of important usernames
   
-  created_at: Date;
+  created_at: Date; // When this record was created in our database
 }
 
 export interface EngagerInput {
@@ -75,6 +80,10 @@ export interface EngagerInput {
   replied: boolean;
   retweeted: boolean;
   quoted: boolean;
+  // Engagement timestamps (when each engagement occurred)
+  replied_at?: Date;
+  retweeted_at?: Date;
+  quoted_at?: Date;
 }
 
 // ===== Collection Helpers =====
@@ -139,6 +148,9 @@ export async function storeEngagers(
     replied: e.replied,
     retweeted: e.retweeted,
     quoted: e.quoted,
+    replied_at: e.replied_at,
+    retweeted_at: e.retweeted_at,
+    quoted_at: e.quoted_at,
     created_at: new Date(),
   }));
   
@@ -396,6 +408,10 @@ export async function createTweetsIndexes(): Promise<void> {
   await engagersCollection.createIndex({ followers: -1 });
   await engagersCollection.createIndex({ importance_score: -1 });
   await engagersCollection.createIndex({ username: 1 });
+  // Indexes for engagement timestamps (for time-series queries)
+  await engagersCollection.createIndex({ tweet_id: 1, replied_at: 1 });
+  await engagersCollection.createIndex({ tweet_id: 1, retweeted_at: 1 });
+  await engagersCollection.createIndex({ tweet_id: 1, quoted_at: 1 });
   
   console.log('✅ Tweets indexes created');
 }

@@ -15,6 +15,7 @@ export interface FilteredUser {
   verified: boolean;
   bio: string | null;
   location: string | null;
+  engagementCreatedAt?: Date; // When the engagement (reply/retweet/quote) was created
 }
 
 export interface PaginatedResponse<T> {
@@ -170,9 +171,22 @@ async function makeApiRequest(
 }
 
 /**
+ * Parse createdAt string to Date object
+ */
+function parseCreatedAt(createdAt: string | undefined): Date | undefined {
+  if (!createdAt) return undefined;
+  try {
+    const date = new Date(createdAt);
+    return isNaN(date.getTime()) ? undefined : date;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Transform tweet author to FilteredUser
  */
-function transformTweetAuthor(author: any): FilteredUser | null {
+function transformTweetAuthor(author: any, engagementCreatedAt?: string): FilteredUser | null {
   if (!author || !author.id) return null;
 
   const isVerified = author.isBlueVerified !== undefined
@@ -187,13 +201,14 @@ function transformTweetAuthor(author: any): FilteredUser | null {
     verified: isVerified,
     bio: author.profile_bio?.description || null,
     location: author.location || null,
+    engagementCreatedAt: engagementCreatedAt ? parseCreatedAt(engagementCreatedAt) : undefined,
   };
 }
 
 /**
  * Transform user object to FilteredUser
  */
-function transformUser(user: any): FilteredUser | null {
+function transformUser(user: any, engagementCreatedAt?: string): FilteredUser | null {
   if (!user || !user.id) return null;
 
   const isVerified = user.isBlueVerified !== undefined
@@ -208,6 +223,7 @@ function transformUser(user: any): FilteredUser | null {
     verified: isVerified,
     bio: user.description || null,
     location: user.location || null,
+    engagementCreatedAt: engagementCreatedAt ? parseCreatedAt(engagementCreatedAt) : undefined,
   };
 }
 
@@ -248,10 +264,12 @@ export async function fetchTweetReplies(
     const data = await makeApiRequest(url.toString(), config);
 
     // Transform and filter data immediately
-    if (data.tweets && Array.isArray(data.tweets)) {
-      for (const tweet of data.tweets) {
-        if (tweet.author) {
-          const user = transformTweetAuthor(tweet.author);
+    // Support both 'replies' and 'tweets' response formats
+    const replies = data.replies || data.tweets || [];
+    if (Array.isArray(replies)) {
+      for (const reply of replies) {
+        if (reply.author) {
+          const user = transformTweetAuthor(reply.author, reply.createdAt);
           if (user) {
             allUsers.push(user);
           }
@@ -261,7 +279,7 @@ export async function fetchTweetReplies(
 
     // Check if there's more data
     currentCursor = data.next_cursor;
-    hasMore = data.tweets && data.tweets.length > 0 && !!currentCursor;
+    hasMore = replies.length > 0 && !!currentCursor;
 
     pagesFetched++;
 
@@ -316,6 +334,9 @@ export async function fetchTweetRetweets(
     const data = await makeApiRequest(url.toString(), config);
 
     // Transform and filter data immediately
+    // Retweeters API returns users[] array
+    // NOTE: The user.createdAt is their account creation date, NOT when they retweeted
+    // The API doesn't provide retweet timestamp, so we can't extract when the retweet happened
     if (data.users && Array.isArray(data.users)) {
       for (const user of data.users) {
         const filteredUser = transformUser(user);
@@ -382,10 +403,12 @@ export async function fetchTweetQuotes(
     const data = await makeApiRequest(url.toString(), config);
 
     // Transform and filter data immediately
+    // Quotes API returns tweets[] array, each tweet has createdAt (when quote was created)
     if (data.tweets && Array.isArray(data.tweets)) {
-      for (const tweet of data.tweets) {
-        if (tweet.author) {
-          const user = transformTweetAuthor(tweet.author);
+      for (const quoteTweet of data.tweets) {
+        if (quoteTweet.author) {
+          // quoteTweet.createdAt is when the quote tweet was created
+          const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
           if (user) {
             allUsers.push(user);
           }

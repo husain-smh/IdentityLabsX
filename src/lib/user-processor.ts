@@ -23,6 +23,7 @@ export function extractUsersFromReplies(
     replied: true,
     retweeted: false,
     quoted: false,
+    replied_at: user.engagementCreatedAt,
   }));
 }
 
@@ -43,6 +44,7 @@ export function extractUsersFromRetweets(
     replied: false,
     retweeted: true,
     quoted: false,
+    retweeted_at: user.engagementCreatedAt,
   }));
 }
 
@@ -63,6 +65,7 @@ export function extractUsersFromQuotes(
     replied: false,
     retweeted: false,
     quoted: true,
+    quoted_at: user.engagementCreatedAt,
   }));
 }
 
@@ -99,6 +102,10 @@ export function mergeEngagementData(
     } else {
       const existing = userMap.get(user.userId)!;
       existing.replied = true;
+      // Merge timestamp if not already set (keep earliest)
+      if (!existing.replied_at || (user.replied_at && user.replied_at < existing.replied_at)) {
+        existing.replied_at = user.replied_at;
+      }
       // Merge other fields if missing
       if (!existing.bio && user.bio) existing.bio = user.bio;
       if (!existing.location && user.location) existing.location = user.location;
@@ -114,6 +121,10 @@ export function mergeEngagementData(
     } else {
       const existing = userMap.get(user.userId)!;
       existing.retweeted = true;
+      // Merge timestamp if not already set (keep earliest)
+      if (!existing.retweeted_at || (user.retweeted_at && user.retweeted_at < existing.retweeted_at)) {
+        existing.retweeted_at = user.retweeted_at;
+      }
       // Merge other fields if missing
       if (!existing.bio && user.bio) existing.bio = user.bio;
       if (!existing.location && user.location) existing.location = user.location;
@@ -129,6 +140,10 @@ export function mergeEngagementData(
     } else {
       const existing = userMap.get(user.userId)!;
       existing.quoted = true;
+      // Merge timestamp if not already set (keep earliest)
+      if (!existing.quoted_at || (user.quoted_at && user.quoted_at < existing.quoted_at)) {
+        existing.quoted_at = user.quoted_at;
+      }
       // Merge other fields if missing
       if (!existing.bio && user.bio) existing.bio = user.bio;
       if (!existing.location && user.location) existing.location = user.location;

@@ -833,13 +833,13 @@ export default function RankerAdmin() {
           <div className="max-w-6xl mx-auto px-6 text-center">
             <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-zinc-400 text-sm font-medium">Twitter Ranker Admin</span>
+              <span className="text-zinc-400 text-sm font-medium">Importance Ranker</span>
             </div>
 
             <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="gradient-text">Engager Ranking</span>
+              <span className="gradient-text">Important Accounts</span>
               <br />
-              <span className="text-white">System.</span>
+              <span className="text-white"></span>
             </h1>
 
             <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed">
@@ -1988,7 +1988,7 @@ export default function RankerAdmin() {
         <div className="mt-20 py-8 border-t border-zinc-800">
           <div className="max-w-4xl mx-auto px-6 text-center">
             <p className="text-zinc-500 text-sm">
-              Powered by Identity Labs • Twitter Engager Ranking System
+              Powered by Identity Labs • Importance Ranking System
             </p>
           </div>
         </div>

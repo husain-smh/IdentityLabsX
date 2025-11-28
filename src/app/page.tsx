@@ -30,7 +30,7 @@ export default function Home() {
       gradient: 'from-blue-500 to-cyan-500'
     },
     {
-      name: 'Engager Ranking System',
+      name: 'Importance Ranking System',
       description: 'Manage important people and rank tweet engagers by importance using inverse index lookup.',
       href: '/ranker',
       icon: (

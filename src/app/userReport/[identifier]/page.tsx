@@ -42,6 +42,15 @@ type SectionProps = {
   children: React.ReactNode;
 };
 
+type PostMetricKey =
+  | 'replies'
+  | 'retweets'
+  | 'likes'
+  | 'bookmarks'
+  | 'quotes'
+  | 'views'
+  | 'totalEngagers';
+
 function CollapsibleSection({
   title,
   description,
@@ -204,6 +213,83 @@ export default async function UserReportPage({
   const hasTimeline = report.timeline.points.length > 0;
   const hasMomentum = report.timeline.momentum.length > 0;
 
+  const postMetricConfig: {
+    key: PostMetricKey;
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      key: 'replies' as const,
+      label: 'Replies',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M3 10v8a2 2 0 0 0 2 2h3v3l4-3h7a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2Z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'retweets' as const,
+      label: 'Retweets',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="m17 2 4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M3 6h18M7 22l-4-4 4-4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M21 18H3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'likes' as const,
+      label: 'Likes',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M12 21s-6.5-4.35-9-8.4C1.2 9.6 2 6 5.5 5.1A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 6.5-1.9C22 6 22.8 9.6 21 12.6 18.5 16.65 12 21 12 21Z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'bookmarks' as const,
+      label: 'Bookmarks',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M6 3h12v18l-6-4.5L6 21Z" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'quotes' as const,
+      label: 'Quotes',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M7 7h6v6H7zM13 11h4v6h-4z" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M5 17h4M15 7h4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+    {
+      key: 'views' as const,
+      label: 'Views',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+      ),
+    },
+    {
+      key: 'totalEngagers' as const,
+      label: 'Engagers',
+      icon: (
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M16 3.13a4 4 0 0 1 0 7.75" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-black text-white">
       <Navbar />
@@ -225,6 +311,119 @@ export default async function UserReportPage({
                 Every manually analyzed tweet details.
               </p>
             </div>
+
+            {hasTimeline ? (
+              <div className="space-y-4 rounded-3xl border border-white/10 bg-white/95 p-6 text-zinc-900 shadow-2xl">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <h3 className="text-2xl font-semibold text-zinc-900">Posts</h3>
+                    <p className="text-sm text-zinc-500">Analyzed tweet details.</p>
+                  </div>
+                  <div className="hidden items-center gap-2 text-xs font-semibold text-indigo-500 sm:flex">
+                    <svg width="17" height="17" viewBox="0 0 60 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M40.9144 42.5043C41.2343 41.6144 40.9743 41.3345 40.0645 41.6244V41.6144C36.8749 42.6343 31.3456 44.0341 24.9865 42.7843C23.6567 42.5143 23.7367 41.4945 25.0865 41.4245C30.1258 41.1745 38.0047 40.0347 42.2542 35.6652C45.3503 32.4812 47.0048 27.6113 48.8466 22.1899C50.9841 15.8984 53.3739 8.86405 58.562 2.85962C58.6862 2.71513 58.8336 2.56132 58.9853 2.40288C60.031 1.3114 61.2873 0 56.6423 0C33.1845 0 24.678 18.9364 10.3822 50.7606C7.85393 56.3887 5.14463 62.42 2.13953 68.8208C1.88318 69.3646 1.62616 69.8836 1.38357 70.3734C0.689452 71.7749 0.113548 72.9377 0.00981892 73.7602C-0.0701704 74.4401 0.339775 75 1.14967 75C3.95021 74.9725 6.77916 70.0202 9.40189 65.4289C10.5902 63.3486 11.7363 61.3424 12.8181 59.902C14.2079 58.0522 15.5677 57.1924 17.2875 56.7424C18.6405 56.3819 20.1448 56.2122 21.7419 56.0319C23.5556 55.8272 25.4889 55.609 27.4562 55.0826C35.2251 53.0029 39.2446 47.2237 40.9144 42.5043ZM55.7925 67.9509C55.7925 71.8304 52.6429 74.98 48.7635 74.98C44.884 74.98 41.7344 71.8304 41.7344 67.9509C41.7344 64.0714 44.884 60.9219 48.7635 60.9219C52.6429 60.9219 55.7925 64.0714 55.7925 67.9509Z"
+                        fill="currentColor"
+                      ></path>
+                    </svg>
+                    <span>.</span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[960px]">
+                    <div className="sticky top-0 z-10 grid grid-cols-[280px_repeat(7,minmax(80px,1fr))_36px] border-b border-zinc-200 bg-white px-4 py-2 text-center text-xs font-semibold text-zinc-500 backdrop-blur">
+                      <div className="text-left text-zinc-500">Tweet</div>
+                      {postMetricConfig.map((metric) => (
+                        <div
+                          key={metric.key}
+                          className="flex items-center justify-center gap-1 text-zinc-500"
+                          title={metric.label}
+                        >
+                          <span className="text-indigo-500">{metric.icon}</span>
+                        </div>
+                      ))}
+                      <div></div>
+                    </div>
+                    <div>
+                      {[...report.timeline.points]
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map((point) => (
+                          <div
+                            key={point.tweetId}
+                            className="grid grid-cols-[280px_repeat(7,minmax(80px,1fr))_36px] items-center border-b border-zinc-200 px-4 py-4 text-center text-sm text-zinc-600"
+                          >
+                            <div className="text-left">
+                              <div className="rounded-md border border-zinc-200 bg-white p-3 shadow-sm">
+                                <div className="text-left text-sm text-zinc-700 line-clamp-2">
+                                  <span className="font-semibold text-zinc-900">Tweet {point.tweetId}</span>
+                                </div>
+                                <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-zinc-500">
+                                  <span>{formatDate(point.createdAt)}</span>
+                                  <span>•</span>
+                                  <a
+                                    href={point.tweetUrl}
+                                    className="text-indigo-500 hover:text-indigo-400 hover:underline"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    View
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                            {postMetricConfig.map((metric) => {
+                              const value =
+                                metric.key === 'totalEngagers'
+                                  ? point.totalEngagers
+                                  : metric.key === 'views'
+                                    ? point.views
+                                    : metric.key === 'likes'
+                                      ? point.likes
+                                      : metric.key === 'retweets'
+                                        ? point.retweets
+                                        : metric.key === 'replies'
+                                          ? point.replies
+                                          : metric.key === 'bookmarks'
+                                            ? point.bookmarks
+                                            : point.quotes;
+                              return (
+                                <div key={metric.key} className="text-sm font-semibold text-zinc-900">
+                                  {typeof value === 'number' ? formatCompact(value) : '—'}
+                                </div>
+                              );
+                            })}
+                            <div className="flex items-center justify-center">
+                              <Link
+                                href={`/tweets/${point.tweetId}`}
+                                className="rounded-md p-1 text-zinc-400 transition hover:bg-zinc-200 hover:text-zinc-700"
+                                aria-label="Open tweet"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <circle cx="12" cy="12" r="1"></circle>
+                                  <circle cx="19" cy="12" r="1"></circle>
+                                  <circle cx="5" cy="12" r="1"></circle>
+                                </svg>
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <CollapsibleSection
               badge="Engagement totals"
