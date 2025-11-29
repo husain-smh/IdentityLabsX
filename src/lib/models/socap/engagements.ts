@@ -76,10 +76,18 @@ export async function createEngagementIndexes(): Promise<void> {
 export async function createOrUpdateEngagement(input: EngagementInput): Promise<Engagement> {
   const collection = await getEngagementsCollection();
   
-  const engagement: Engagement = {
-    ...input,
-    last_seen_at: new Date(),
-    created_at: input.timestamp, // Use original engagement timestamp
+  // Prepare fields that should be updated on both insert and update
+  const updateFields = {
+    campaign_id: input.campaign_id,
+    tweet_id: input.tweet_id,
+    user_id: input.user_id,
+    action_type: input.action_type,
+    timestamp: input.timestamp,
+    text: input.text,
+    account_profile: input.account_profile,
+    importance_score: input.importance_score,
+    account_categories: input.account_categories,
+    last_seen_at: new Date(), // Always update last_seen_at
   };
   
   const result = await collection.findOneAndUpdate(
@@ -89,12 +97,10 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
       action_type: input.action_type,
     },
     {
-      $set: {
-        ...engagement,
-        last_seen_at: new Date(), // Update last_seen_at on existing
-      },
+      $set: updateFields,
       $setOnInsert: {
-        created_at: input.timestamp, // Only set on insert
+        // Only set created_at when creating a new document
+        created_at: input.timestamp,
       },
     },
     {
