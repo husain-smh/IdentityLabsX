@@ -6,7 +6,7 @@ import { checkAndCompleteCampaigns } from '@/lib/socap/campaign-completion';
 /**
  * POST /socap/workers/trigger
  * Trigger job processing for all active campaigns
- * Called by N8N every 30 minutes
+ * Called by N8N on schedule (default: every 30 minutes, configurable)
  */
 export async function POST(request: NextRequest) {
   try {

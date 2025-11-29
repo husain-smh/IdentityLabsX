@@ -13,7 +13,7 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
     throw new Error(`Campaign ${campaignId} not found`);
   }
   
-  // Get recent engagements (last 30 minutes worth)
+  // Get recent engagements (check all, deduplication handled by alert_history)
   const recentEngagements = await getEngagementsByCampaign(campaignId, {
     limit: 1000,
     sort: 'timestamp',
@@ -24,7 +24,13 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
   // For simplicity, we'll check all recent engagements
   // In production, you might want to track last check time
   
-  const runBatch = getCurrentRunBatch();
+  // Get interval from environment or default to 30 minutes
+  // This should match your N8N schedule interval
+  const scheduleIntervalMinutes = parseInt(
+    process.env.SOCAP_SCHEDULE_INTERVAL_MINUTES || '30',
+    10
+  );
+  const runBatch = getCurrentRunBatch(scheduleIntervalMinutes);
   const alertSpacingMinutes = campaign.alert_preferences.alert_spacing_minutes || 20;
   
   let alertsQueued = 0;
@@ -72,12 +78,13 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
 }
 
 /**
- * Get current run batch identifier (rounded to 30-minute interval)
+ * Get current run batch identifier (rounded to interval)
+ * Defaults to 30-minute intervals, but can be configured
  */
-function getCurrentRunBatch(): string {
+function getCurrentRunBatch(intervalMinutes: number = 30): string {
   const now = new Date();
   const minutes = now.getMinutes();
-  const roundedMinutes = Math.floor(minutes / 30) * 30;
+  const roundedMinutes = Math.floor(minutes / intervalMinutes) * intervalMinutes;
   const rounded = new Date(now);
   rounded.setMinutes(roundedMinutes, 0, 0);
   return rounded.toISOString();
