@@ -10,25 +10,41 @@
  */
 
 import { createIndexes } from './models/ranker';
+import { logger } from './logger';
 
 export async function initializeRankerDatabase(): Promise<void> {
+  const operationId = `init-db-${Date.now()}`;
+  
   try {
-    console.log(' Initializing Twitter Ranker database...');
+    logger.info('Initializing Twitter Ranker database', { 
+      operation: 'initializeRankerDatabase',
+      operationId 
+    });
     
-    console.log(' Creating indexes for optimal performance...');
+    logger.info('Creating indexes for optimal performance', { 
+      operation: 'createIndexes',
+      operationId 
+    });
+    
     await createIndexes();
     
-    console.log(' Database initialization complete!');
-    console.log('');
-    console.log('Indexes created:');
-    console.log('  - important_people: username, user_id, is_active');
-    console.log('  - following_index: followed_user_id, followed_username, importance_score, followed_by.user_id');
-    console.log('  - engagement_rankings: tweet_id, analyzed_at');
-    console.log('');
-    console.log(' System ready for use!');
+    logger.info('Database initialization complete', { 
+      operation: 'initializeRankerDatabase',
+      operationId,
+      indexes: {
+        important_people: ['username', 'user_id', 'is_active'],
+        following_index: ['followed_user_id', 'followed_username', 'importance_score', 'followed_by.user_id'],
+        engagement_rankings: ['tweet_id', 'analyzed_at']
+      }
+    });
+    
+    logger.info('System ready for use', { operationId });
     
   } catch (error) {
-    console.error('Error initializing database:', error);
+    logger.error('Database initialization failed', error, { 
+      operation: 'initializeRankerDatabase',
+      operationId 
+    });
     throw error;
   }
 }
