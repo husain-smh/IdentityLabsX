@@ -13,22 +13,22 @@ import { createIndexes } from './models/ranker';
 
 export async function initializeRankerDatabase(): Promise<void> {
   try {
-    console.log('🚀 Initializing Twitter Ranker database...');
+    console.log(' Initializing Twitter Ranker database...');
     
-    console.log('📊 Creating indexes for optimal performance...');
+    console.log(' Creating indexes for optimal performance...');
     await createIndexes();
     
-    console.log('✅ Database initialization complete!');
+    console.log(' Database initialization complete!');
     console.log('');
     console.log('Indexes created:');
     console.log('  - important_people: username, user_id, is_active');
     console.log('  - following_index: followed_user_id, followed_username, importance_score, followed_by.user_id');
     console.log('  - engagement_rankings: tweet_id, analyzed_at');
     console.log('');
-    console.log('🎯 System ready for use!');
+    console.log(' System ready for use!');
     
   } catch (error) {
-    console.error('❌ Error initializing database:', error);
+    console.error('Error initializing database:', error);
     throw error;
   }
 }

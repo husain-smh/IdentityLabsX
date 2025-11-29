@@ -1,0 +1,60 @@
+/**
+ * SOCAP Database Models - Index Initialization
+ * 
+ * This file exports all models and provides a function to initialize all indexes.
+ */
+
+export * from './campaigns';
+export * from './tweets';
+export * from './engagements';
+export * from './worker-state';
+export * from './alert-queue';
+export * from './alert-history';
+export * from './metric-snapshots';
+
+import {
+  createCampaignIndexes,
+  createTweetIndexes,
+  createEngagementIndexes,
+  createWorkerStateIndexes,
+  createAlertQueueIndexes,
+  createAlertHistoryIndexes,
+  createMetricSnapshotIndexes,
+} from './indexes';
+
+/**
+ * Initialize all SOCAP database indexes
+ * Call this once during application startup or database setup
+ */
+export async function initializeSocapIndexes(): Promise<void> {
+  try {
+    console.log('🚀 Initializing SOCAP database indexes...');
+    
+    await createCampaignIndexes();
+    console.log('✅ Campaign indexes created');
+    
+    await createTweetIndexes();
+    console.log('✅ Tweet indexes created');
+    
+    await createEngagementIndexes();
+    console.log('✅ Engagement indexes created');
+    
+    await createWorkerStateIndexes();
+    console.log('✅ Worker state indexes created');
+    
+    await createAlertQueueIndexes();
+    console.log('✅ Alert queue indexes created');
+    
+    await createAlertHistoryIndexes();
+    console.log('✅ Alert history indexes created');
+    
+    await createMetricSnapshotIndexes();
+    console.log('✅ Metric snapshot indexes created');
+    
+    console.log('✅ All SOCAP indexes initialized!');
+  } catch (error) {
+    console.error('❌ Error initializing SOCAP indexes:', error);
+    throw error;
+  }
+}
+

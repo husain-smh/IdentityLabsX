@@ -1,0 +1,85 @@
+import { getEngagementsByCampaign } from '../models/socap/engagements';
+import { getCampaignById } from '../models/socap/campaigns';
+import { checkRecentAlert, roundToHour } from '../models/socap/alert-history';
+import { createAlert } from '../models/socap/alert-queue';
+
+/**
+ * Detect high-importance engagements and queue alerts
+ */
+export async function detectAndQueueAlerts(campaignId: string): Promise<number> {
+  const campaign = await getCampaignById(campaignId);
+  
+  if (!campaign) {
+    throw new Error(`Campaign ${campaignId} not found`);
+  }
+  
+  // Get recent engagements (last 30 minutes worth)
+  const recentEngagements = await getEngagementsByCampaign(campaignId, {
+    limit: 1000,
+    sort: 'timestamp',
+    min_importance: campaign.alert_preferences.importance_threshold,
+  });
+  
+  // Filter to only new engagements since last check
+  // For simplicity, we'll check all recent engagements
+  // In production, you might want to track last check time
+  
+  const runBatch = getCurrentRunBatch();
+  const alertSpacingMinutes = campaign.alert_preferences.alert_spacing_minutes || 20;
+  
+  let alertsQueued = 0;
+  
+  for (const engagement of recentEngagements) {
+    // Check if we've sent an alert for this user/action recently
+    const recentAlert = await checkRecentAlert(
+      campaignId,
+      engagement.user_id,
+      engagement.action_type,
+      engagement.timestamp,
+      campaign.alert_preferences.frequency_window_minutes || 30
+    );
+    
+    if (recentAlert) {
+      // Skip - already sent alert recently
+      continue;
+    }
+    
+    // Check if importance score meets threshold
+    if (engagement.importance_score < campaign.alert_preferences.importance_threshold) {
+      continue;
+    }
+    
+    // Calculate scheduled send time (distribute over alert spacing window)
+    const baseTime = new Date();
+    const randomOffset = Math.random() * alertSpacingMinutes * 60 * 1000; // Random within window
+    const scheduledSendTime = new Date(baseTime.getTime() + randomOffset);
+    
+    // Queue alert
+    await createAlert({
+      campaign_id: campaignId,
+      engagement_id: engagement._id!,
+      user_id: engagement.user_id,
+      action_type: engagement.action_type,
+      importance_score: engagement.importance_score,
+      run_batch: runBatch,
+      scheduled_send_time: scheduledSendTime,
+    });
+    
+    alertsQueued++;
+  }
+  
+  return alertsQueued;
+}
+
+/**
+ * Get current run batch identifier (rounded to 30-minute interval)
+ */
+function getCurrentRunBatch(): string {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const roundedMinutes = Math.floor(minutes / 30) * 30;
+  const rounded = new Date(now);
+  rounded.setMinutes(roundedMinutes, 0, 0);
+  return rounded.toISOString();
+}
+
