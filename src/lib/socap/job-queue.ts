@@ -1,5 +1,6 @@
 import { Collection, ObjectId } from 'mongodb';
 import clientPromise from '../mongodb';
+import { logger } from '../logger';
 
 // ===== TypeScript Interfaces =====
 
@@ -91,6 +92,10 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
   // Use upsert to avoid duplicates
   // If job exists, reset it to pending (allows re-queuing for periodic runs)
   // If job doesn't exist, create new one
+  // 
+  // IMPORTANT: $setOnInsert only sets fields on INSERT, not on UPDATE
+  // Fields that should be set on both insert AND update go in $set
+  // Fields that should ONLY be set on insert (like created_at) go in $setOnInsert
   const result = await collection.findOneAndUpdate(
     {
       campaign_id: input.campaign_id,
@@ -98,14 +103,22 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
       job_type: input.job_type,
     },
     {
-      $setOnInsert: job,
+      $setOnInsert: {
+        // Only set these fields when creating a new document
+        campaign_id: job.campaign_id,
+        tweet_id: job.tweet_id,
+        job_type: job.job_type,
+        created_at: job.created_at,
+      },
       $set: {
+        // These fields are updated on both insert and update
         status: 'pending', // Always reset to pending when enqueuing
         priority: job.priority,
         claimed_by: null, // Release any previous claim
         claimed_at: null,
         retry_count: 0, // Reset retry count
         retry_after: null,
+        max_retries: job.max_retries,
         updated_at: new Date(),
       },
     },
@@ -194,8 +207,17 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
         enqueued++;
       } catch (error) {
         errors++;
-        // Log error details for debugging
-        console.error(`Failed to enqueue job for campaign ${campaignId}, tweet ${tweet.tweet_id}, job ${jobType}:`, error);
+        // Log error details for debugging with structured logger
+        logger.error(
+          'Failed to enqueue job',
+          error,
+          {
+            campaign_id: campaignId,
+            tweet_id: tweet.tweet_id,
+            job_type: jobType,
+            operation: 'enqueueCampaignJobs',
+          }
+        );
       }
     }
   }
