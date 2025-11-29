@@ -397,7 +397,7 @@ export default function CampaignDashboardPage() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h2 className="text-2xl font-bold mb-4 text-red-600">Delete Campaign</h2>
             <p className="mb-4">
-              Are you sure you want to delete "{data?.campaign.launch_name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{data?.campaign.launch_name}&quot;? This action cannot be undone.
             </p>
             <div className="flex gap-2 justify-end">
               <button
@@ -449,7 +449,7 @@ function EditSettingsForm({
     setFormData(prev => ({
       ...prev,
       channels: prev.channels.includes(channel)
-        ? prev.channels.filter(c => c !== channel)
+        ? prev.channels.filter((c: string) => c !== channel)
         : [...prev.channels, channel],
     }));
   }
@@ -503,7 +503,7 @@ function EditSettingsForm({
           required
         />
         <p className="text-xs text-gray-500 mt-1">
-          Don't send duplicate alerts within this window
+          Don&apos;t send duplicate alerts within this window
         </p>
       </div>
 

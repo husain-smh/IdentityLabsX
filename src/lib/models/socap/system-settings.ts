@@ -24,7 +24,7 @@ export async function getSystemSettingsCollection(): Promise<Collection<SystemSe
 export async function getSystemSettings(): Promise<SystemSettings> {
   const collection = await getSystemSettingsCollection();
   
-  let settings = await collection.findOne({ _id: SETTINGS_DOC_ID });
+  const settings = await collection.findOne({ _id: SETTINGS_DOC_ID });
   
   if (!settings) {
     // Return defaults from env var (but don't save to DB yet - will be created on first update)

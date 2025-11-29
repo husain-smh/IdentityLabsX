@@ -142,7 +142,7 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
   ];
   
   let enqueued = 0;
-  let skipped = 0;
+  const skipped = 0;
   let errors = 0;
   
   console.log(`Enqueuing jobs for campaign ${campaignId}: ${tweets.length} tweets × ${jobTypes.length} job types = ${tweets.length * jobTypes.length} total jobs`);
