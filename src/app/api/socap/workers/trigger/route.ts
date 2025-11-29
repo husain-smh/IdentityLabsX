@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import { getActiveCampaigns } from '@/lib/models/socap/campaigns';
 import { enqueueCampaignJobs } from '@/lib/socap/job-queue';
 import { checkAndCompleteCampaigns } from '@/lib/socap/campaign-completion';
@@ -36,20 +37,31 @@ export async function POST(request: NextRequest) {
     
     for (const campaign of activeCampaigns) {
       try {
-        console.log(`Processing campaign: ${campaign.launch_name} (${campaign._id})`);
-        const jobsEnqueued = await enqueueCampaignJobs(campaign._id!);
+        // Convert campaign._id to string (MongoDB returns ObjectId at runtime, but tweets store campaign_id as string)
+        // Type assertion needed: interface says string but MongoDB actually returns ObjectId
+        const rawId = campaign._id as unknown;
+        const campaignId = (rawId instanceof ObjectId ? rawId.toString() : String(campaign._id || ''));
+        
+        if (!campaignId) {
+          throw new Error('Campaign ID is missing');
+        }
+        
+        console.log(`Processing campaign: ${campaign.launch_name} (${campaignId})`);
+        const jobsEnqueued = await enqueueCampaignJobs(campaignId);
         totalJobsEnqueued += jobsEnqueued;
         results.push({
-          campaign_id: campaign._id,
+          campaign_id: campaignId,
           campaign_name: campaign.launch_name,
           jobs_enqueued: jobsEnqueued,
           status: 'success',
         });
         console.log(`✓ Campaign ${campaign.launch_name}: ${jobsEnqueued} jobs enqueued`);
       } catch (error) {
-        console.error(`✗ Error enqueuing jobs for campaign ${campaign._id}:`, error);
+        const rawId = campaign._id as unknown;
+        const campaignId = (rawId instanceof ObjectId ? rawId.toString() : String(campaign._id || ''));
+        console.error(`✗ Error enqueuing jobs for campaign ${campaignId}:`, error);
         results.push({
-          campaign_id: campaign._id,
+          campaign_id: campaignId,
           campaign_name: campaign.launch_name,
           jobs_enqueued: 0,
           status: 'error',
