@@ -711,9 +711,9 @@ useEffect(() => {
                                 <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
                                   {selectedEngagers
                                     .slice()
-                                    .sort((a, b) => b.followers - a.followers)
+                                    .sort((a: Engager, b: Engager) => b.followers - a.followers)
                                     .slice(0, displayedCount)
-                                    .map(engager => (
+                                    .map((engager: Engager) => (
                                       <div
                                         key={engager.userId}
                                         className="bg-zinc-900 rounded-md p-3 border border-zinc-800"

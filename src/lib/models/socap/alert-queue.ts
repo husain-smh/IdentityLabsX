@@ -86,7 +86,7 @@ export async function markAlertAsSent(alertId: string): Promise<boolean> {
   }
   
   const result = await collection.updateOne(
-    { _id: new ObjectId(alertId) },
+    { _id: new ObjectId(alertId) } as any,
     {
       $set: {
         status: 'sent',
@@ -106,7 +106,7 @@ export async function markAlertAsSkipped(alertId: string, reason?: string): Prom
   }
   
   const result = await collection.updateOne(
-    { _id: new ObjectId(alertId) },
+    { _id: new ObjectId(alertId) } as any,
     {
       $set: {
         status: 'skipped',

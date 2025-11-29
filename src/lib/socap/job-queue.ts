@@ -29,7 +29,7 @@ export interface EnqueueJobInput {
 
 // ===== Collection Getter =====
 
-async function getJobQueueCollection(): Promise<Collection<Job>> {
+export async function getJobQueueCollection(): Promise<Collection<Job>> {
   const client = await clientPromise;
   const db = client.db();
   return db.collection<Job>('socap_job_queue');
@@ -203,7 +203,7 @@ export async function completeJob(jobId: string): Promise<boolean> {
   }
   
   const result = await collection.updateOne(
-    { _id: new ObjectId(jobId) },
+    { _id: new ObjectId(jobId) } as any,
     {
       $set: {
         status: 'completed',
@@ -226,7 +226,7 @@ export async function failJob(jobId: string, errorMessage: string): Promise<bool
   }
   
   // Get current job to check retry count
-  const job = await collection.findOne({ _id: new ObjectId(jobId) });
+  const job = await collection.findOne({ _id: new ObjectId(jobId) } as any);
   
   if (!job) {
     return false;
@@ -243,7 +243,7 @@ export async function failJob(jobId: string, errorMessage: string): Promise<bool
     
     // Mark as retrying
     const result = await collection.updateOne(
-      { _id: new ObjectId(jobId) },
+      { _id: new ObjectId(jobId) } as any,
       {
         $set: {
           status: 'retrying',
@@ -262,7 +262,7 @@ export async function failJob(jobId: string, errorMessage: string): Promise<bool
   } else {
     // Max retries exceeded, mark as permanently failed
     const result = await collection.updateOne(
-      { _id: new ObjectId(jobId) },
+      { _id: new ObjectId(jobId) } as any,
       {
         $set: {
           status: 'failed',
@@ -289,7 +289,7 @@ export async function resetJobForRetry(jobId: string): Promise<boolean> {
   }
   
   const result = await collection.updateOne(
-    { _id: new ObjectId(jobId) },
+    { _id: new ObjectId(jobId) } as any,
     {
       $set: {
         status: 'pending',

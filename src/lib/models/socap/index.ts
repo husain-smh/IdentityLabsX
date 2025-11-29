@@ -11,6 +11,7 @@ export * from './worker-state';
 export * from './alert-queue';
 export * from './alert-history';
 export * from './metric-snapshots';
+export * from './utils';
 
 import {
   createCampaignIndexes,

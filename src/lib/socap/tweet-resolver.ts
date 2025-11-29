@@ -58,9 +58,9 @@ export async function resolveTweetUrl(url: string): Promise<ResolvedTweet> {
     return {
       tweet_id: tweetId,
       tweet_url: url,
-      author_name: tweetDetails.author?.name || 'Unknown',
-      author_username: tweetDetails.author?.username || 'unknown',
-      text: tweetDetails.text,
+      author_name: tweetDetails.authorName || 'Unknown',
+      author_username: tweetDetails.authorUsername || 'unknown',
+      text: undefined,
     };
   } catch (error) {
     if (error instanceof TwitterApiError) {

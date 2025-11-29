@@ -185,6 +185,6 @@ export async function getEngagementById(engagementId: string): Promise<Engagemen
     return null;
   }
   
-  return await collection.findOne({ _id: new ObjectId(engagementId) });
+  return await collection.findOne({ _id: new ObjectId(engagementId) } as any);
 }
 

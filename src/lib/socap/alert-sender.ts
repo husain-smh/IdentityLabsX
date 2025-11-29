@@ -102,11 +102,11 @@ async function sendSlackAlert(
     throw new Error('Slack webhook URL not configured');
   }
   
-  const actionText = {
+  const actionText = ({
     retweet: 'retweeted',
     reply: 'replied to',
     quote: 'quote-tweeted',
-  }[engagement.action_type] || 'engaged with';
+  } as Record<string, string>)[engagement.action_type] || 'engaged with';
   
   const message = {
     text: `🚨 High-importance engagement detected!`,
@@ -176,11 +176,11 @@ async function sendEmailAlert(
     throw new Error('Client email not configured');
   }
   
-  const actionText = {
+  const actionText = ({
     retweet: 'retweeted',
     reply: 'replied to',
     quote: 'quote-tweeted',
-  }[engagement.action_type] || 'engaged with';
+  } as Record<string, string>)[engagement.action_type] || 'engaged with';
   
   const subject = `🚨 High-importance engagement: @${engagement.account_profile.username}`;
   
@@ -323,18 +323,4 @@ This is an automated alert from SOCAP Campaign Monitoring System.
   console.warn(`Email service "${emailService}" not fully configured. Email not sent.`);
 }
 
-/**
- * Helper to get engagement by ID (need to add this to engagements model)
- */
-async function getEngagementById(engagementId: string): Promise<any> {
-  const { getEngagementsCollection } = await import('../models/socap/engagements');
-  const collection = await getEngagementsCollection();
-  const { ObjectId } = await import('mongodb');
-  
-  if (!ObjectId.isValid(engagementId)) {
-    return null;
-  }
-  
-  return await collection.findOne({ _id: new ObjectId(engagementId) });
-}
 

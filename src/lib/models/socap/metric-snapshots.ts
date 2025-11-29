@@ -1,5 +1,6 @@
 import { Collection, ObjectId } from 'mongodb';
 import clientPromise from '../../mongodb';
+import { roundToHour } from './utils';
 
 // ===== TypeScript Interfaces =====
 
@@ -66,14 +67,8 @@ export async function createMetricSnapshotIndexes(): Promise<void> {
 
 // ===== Helper Functions =====
 
-/**
- * Round timestamp to the nearest hour for hourly snapshots
- */
-export function roundToHour(timestamp: Date): Date {
-  const rounded = new Date(timestamp);
-  rounded.setMinutes(0, 0, 0);
-  return rounded;
-}
+// roundToHour is imported from ./utils
+export { roundToHour };
 
 /**
  * Round timestamp to the start of day for daily snapshots

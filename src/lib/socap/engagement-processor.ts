@@ -40,7 +40,10 @@ export function classifyAccount(account: {
   verified: boolean;
 }): string[] {
   // Convert FilteredUser to Engager format for categorizeEngager
+  // Note: tweet_id and created_at are required by Engager type but not used by categorizeEngager
   const engager: Engager = {
+    tweet_id: '', // Placeholder - not used by categorizeEngager
+    created_at: new Date(), // Placeholder - not used by categorizeEngager
     username: account.username || '',
     userId: account.username || '', // categorizeEngager doesn't use userId
     name: account.name || '',

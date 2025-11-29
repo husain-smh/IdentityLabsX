@@ -100,7 +100,7 @@ export async function getCampaignById(campaignId: string): Promise<Campaign | nu
     return null;
   }
   
-  return await collection.findOne({ _id: new ObjectId(campaignId) });
+  return await collection.findOne({ _id: new ObjectId(campaignId) } as any);
 }
 
 export async function getAllCampaigns(): Promise<Campaign[]> {
@@ -130,7 +130,7 @@ export async function updateCampaignStatus(
   }
   
   const result = await collection.updateOne(
-    { _id: new ObjectId(campaignId) },
+    { _id: new ObjectId(campaignId) } as any,
     {
       $set: {
         status,
@@ -153,7 +153,7 @@ export async function updateCampaign(
   }
   
   const result = await collection.updateOne(
-    { _id: new ObjectId(campaignId) },
+    { _id: new ObjectId(campaignId) } as any,
     {
       $set: {
         ...updates,
@@ -172,7 +172,7 @@ export async function deleteCampaign(campaignId: string): Promise<boolean> {
     return false;
   }
   
-  const result = await collection.deleteOne({ _id: new ObjectId(campaignId) });
+  const result = await collection.deleteOne({ _id: new ObjectId(campaignId) } as any);
   return result.deletedCount > 0;
 }
 
