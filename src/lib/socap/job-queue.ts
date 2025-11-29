@@ -126,11 +126,47 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
  * Enqueue jobs for all tweets in a campaign
  */
 export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
-  const { getTweetsByCampaign } = await import('../models/socap/tweets');
+  const { getTweetsByCampaign, getCampaignTweetsCollection } = await import('../models/socap/tweets');
+  
+  // Enhanced logging for debugging
+  console.log(`[enqueueCampaignJobs] Starting for campaign ID: ${campaignId} (type: ${typeof campaignId})`);
+  
   const tweets = await getTweetsByCampaign(campaignId);
   
+  console.log(`[enqueueCampaignJobs] Found ${tweets.length} tweets for campaign ${campaignId}`);
+  
   if (tweets.length === 0) {
-    console.log(`No tweets found for campaign ${campaignId}`);
+    // Additional diagnostic: Check if tweets exist in database
+    try {
+      const collection = await getCampaignTweetsCollection();
+      
+      // Check total tweets and sample data
+      const allTweets = await collection.find({}).limit(5).toArray();
+      const campaignTweetsExact = await collection.find({ campaign_id: campaignId }).toArray();
+      
+      console.log(`[enqueueCampaignJobs] Diagnostic: Total tweets in DB (sample): ${allTweets.length}`);
+      console.log(`[enqueueCampaignJobs] Diagnostic: Tweets with exact campaign_id match: ${campaignTweetsExact.length}`);
+      
+      if (allTweets.length > 0) {
+        const sample = allTweets[0];
+        console.log(`[enqueueCampaignJobs] Sample tweet - campaign_id: "${sample.campaign_id}" (type: ${typeof sample.campaign_id})`);
+        console.log(`[enqueueCampaignJobs] Sample tweet - tweet_id: "${sample.tweet_id}", category: "${sample.category}"`);
+      }
+      
+      // Check for partial matches (in case of ID format issues)
+      if (campaignTweetsExact.length === 0 && allTweets.length > 0) {
+        const partialMatches = allTweets.filter(t => 
+          String(t.campaign_id).includes(campaignId) || String(campaignId).includes(String(t.campaign_id))
+        );
+        if (partialMatches.length > 0) {
+          console.log(`[enqueueCampaignJobs] Warning: Found ${partialMatches.length} tweets with similar campaign_id (possible format mismatch)`);
+        }
+      }
+    } catch (diagError) {
+      console.error(`[enqueueCampaignJobs] Error during diagnostic check:`, diagError);
+    }
+    
+    console.log(`[enqueueCampaignJobs] No tweets found for campaign ${campaignId} - returning 0`);
     return 0;
   }
   
