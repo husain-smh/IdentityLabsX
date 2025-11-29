@@ -66,12 +66,20 @@ export default function SocapCampaignsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">SOCAP Campaigns</h1>
-        <Link
-          href="/socap/create"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Create Campaign
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/socap/settings"
+            className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+          >
+            System Settings
+          </Link>
+          <Link
+            href="/socap/create"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Create Campaign
+          </Link>
+        </div>
       </div>
 
       {campaigns.length === 0 ? (

@@ -40,6 +40,9 @@ export default function CampaignDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricsData, setMetricsData] = useState<any[]>([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -84,6 +87,88 @@ export default function CampaignDashboardPage() {
     }
   }
 
+  async function updateCampaignStatus(newStatus: 'active' | 'paused') {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`/api/socap/campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        await fetchDashboard(); // Refresh data
+        alert(`Campaign ${newStatus === 'paused' ? 'paused' : 'resumed'} successfully`);
+      } else {
+        alert(`Failed to update: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update campaign status');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function updateCampaignSettings(formData: {
+    importance_threshold: number;
+    alert_spacing_minutes: number;
+    frequency_window_minutes: number;
+    channels: string[];
+  }) {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`/api/socap/campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          alert_preferences: formData,
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        await fetchDashboard(); // Refresh data
+        setShowEditModal(false);
+        alert('Campaign settings updated successfully');
+      } else {
+        alert(`Failed to update: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      alert('Failed to update campaign settings');
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function deleteCampaign() {
+    setActionLoading(true);
+    try {
+      const response = await fetch(`/api/socap/campaigns/${campaignId}`, {
+        method: 'DELETE',
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        alert('Campaign deleted successfully');
+        window.location.href = '/socap'; // Redirect to campaigns list
+      } else {
+        alert(`Failed to delete: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      alert('Failed to delete campaign');
+    } finally {
+      setActionLoading(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -119,11 +204,53 @@ export default function CampaignDashboardPage() {
         <Link href="/socap" className="text-blue-600 hover:underline mb-2 inline-block">
           ← Back to Campaigns
         </Link>
-        <h1 className="text-3xl font-bold">{data.campaign.launch_name}</h1>
-        <p className="text-gray-600 mt-2">
-          Client: {data.campaign.client_info.name} | Status:{' '}
-          <span className="font-semibold">{data.campaign.status}</span>
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold">{data.campaign.launch_name}</h1>
+            <p className="text-gray-600 mt-2">
+              Client: {data.campaign.client_info.name} | Status:{' '}
+              <span className={`font-semibold ${
+                data.campaign.status === 'active' ? 'text-green-600' :
+                data.campaign.status === 'paused' ? 'text-yellow-600' :
+                'text-gray-600'
+              }`}>
+                {data.campaign.status}
+              </span>
+            </p>
+          </div>
+          <div className="flex gap-2">
+            {data.campaign.status === 'active' ? (
+              <button
+                onClick={() => updateCampaignStatus('paused')}
+                disabled={actionLoading}
+                className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Pausing...' : 'Pause Campaign'}
+              </button>
+            ) : data.campaign.status === 'paused' ? (
+              <button
+                onClick={() => updateCampaignStatus('active')}
+                disabled={actionLoading}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Resuming...' : 'Resume Campaign'}
+              </button>
+            ) : null}
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            >
+              Edit Settings
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={actionLoading}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Metrics Cards */}
@@ -248,7 +375,182 @@ export default function CampaignDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Settings Modal */}
+      {showEditModal && data && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4">Edit Campaign Settings</h2>
+            <EditSettingsForm
+              campaign={data.campaign}
+              onSave={updateCampaignSettings}
+              onCancel={() => setShowEditModal(false)}
+              loading={actionLoading}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold mb-4 text-red-600">Delete Campaign</h2>
+            <p className="mb-4">
+              Are you sure you want to delete "{data?.campaign.launch_name}"? This action cannot be undone.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={deleteCampaign}
+                disabled={actionLoading}
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+              >
+                {actionLoading ? 'Deleting...' : 'Delete Campaign'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function EditSettingsForm({ 
+  campaign, 
+  onSave, 
+  onCancel, 
+  loading 
+}: { 
+  campaign: any; 
+  onSave: (data: any) => void; 
+  onCancel: () => void;
+  loading: boolean;
+}) {
+  const [formData, setFormData] = useState({
+    importance_threshold: campaign.alert_preferences.importance_threshold || 10,
+    alert_spacing_minutes: campaign.alert_preferences.alert_spacing_minutes || 20,
+    frequency_window_minutes: campaign.alert_preferences.frequency_window_minutes || 30,
+    channels: campaign.alert_preferences.channels || ['email'],
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    onSave(formData);
+  }
+
+  function toggleChannel(channel: string) {
+    setFormData(prev => ({
+      ...prev,
+      channels: prev.channels.includes(channel)
+        ? prev.channels.filter(c => c !== channel)
+        : [...prev.channels, channel],
+    }));
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Importance Threshold
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={formData.importance_threshold}
+          onChange={(e) => setFormData(prev => ({ ...prev, importance_threshold: parseInt(e.target.value) }))}
+          className="w-full border rounded px-3 py-2"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Minimum importance score to trigger alerts
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Alert Spacing (minutes)
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={formData.alert_spacing_minutes}
+          onChange={(e) => setFormData(prev => ({ ...prev, alert_spacing_minutes: parseInt(e.target.value) }))}
+          className="w-full border rounded px-3 py-2"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Time window to spread alerts from same run (recommended: 80% of schedule interval)
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Frequency Window (minutes)
+        </label>
+        <input
+          type="number"
+          min="1"
+          value={formData.frequency_window_minutes}
+          onChange={(e) => setFormData(prev => ({ ...prev, frequency_window_minutes: parseInt(e.target.value) }))}
+          className="w-full border rounded px-3 py-2"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Don't send duplicate alerts within this window
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Alert Channels
+        </label>
+        <div className="space-y-2">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.channels.includes('email')}
+              onChange={() => toggleChannel('email')}
+              className="mr-2"
+            />
+            Email
+          </label>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={formData.channels.includes('slack')}
+              onChange={() => toggleChannel('slack')}
+              className="mr-2"
+            />
+            Slack
+          </label>
+        </div>
+      </div>
+
+      <div className="flex gap-2 justify-end pt-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 border rounded hover:bg-gray-50"
+          disabled={loading}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? 'Saving...' : 'Save Settings'}
+        </button>
+      </div>
+    </form>
   );
 }
 

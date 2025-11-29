@@ -24,14 +24,15 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
   // For simplicity, we'll check all recent engagements
   // In production, you might want to track last check time
   
-  // Get interval from environment or default to 30 minutes
+  // Get interval from database (system settings) or environment variable
   // This should match your N8N schedule interval
-  const scheduleIntervalMinutes = parseInt(
-    process.env.SOCAP_SCHEDULE_INTERVAL_MINUTES || '30',
-    10
-  );
+  const { getScheduleIntervalMinutes } = await import('../models/socap/system-settings');
+  const scheduleIntervalMinutes = await getScheduleIntervalMinutes();
   const runBatch = getCurrentRunBatch(scheduleIntervalMinutes);
-  const alertSpacingMinutes = campaign.alert_preferences.alert_spacing_minutes || 20;
+  // Default alert spacing: 80% of schedule interval (e.g., 4 min for 5-min interval, 16 min for 20-min interval)
+  // This ensures alerts from one run are sent before the next run starts
+  const defaultAlertSpacing = Math.max(2, Math.floor(scheduleIntervalMinutes * 0.8));
+  const alertSpacingMinutes = campaign.alert_preferences.alert_spacing_minutes || defaultAlertSpacing;
   
   let alertsQueued = 0;
   
@@ -79,7 +80,7 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
 
 /**
  * Get current run batch identifier (rounded to interval)
- * Defaults to 30-minute intervals, but can be configured
+ * Interval is configurable via System Settings UI (/socap/settings) or SOCAP_SCHEDULE_INTERVAL_MINUTES env var (default: 30 minutes)
  */
 function getCurrentRunBatch(intervalMinutes: number = 30): string {
   const now = new Date();

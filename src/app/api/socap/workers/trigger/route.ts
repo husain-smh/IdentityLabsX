@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
     // Get all active campaigns within monitor window
     const activeCampaigns = await getActiveCampaigns();
     
+    console.log(`Worker trigger: Found ${activeCampaigns.length} active campaigns`);
+    
     if (activeCampaigns.length === 0) {
       return NextResponse.json({
         success: true,
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
     
     for (const campaign of activeCampaigns) {
       try {
+        console.log(`Processing campaign: ${campaign.launch_name} (${campaign._id})`);
         const jobsEnqueued = await enqueueCampaignJobs(campaign._id!);
         totalJobsEnqueued += jobsEnqueued;
         results.push({
@@ -42,8 +45,9 @@ export async function POST(request: NextRequest) {
           jobs_enqueued: jobsEnqueued,
           status: 'success',
         });
+        console.log(`✓ Campaign ${campaign.launch_name}: ${jobsEnqueued} jobs enqueued`);
       } catch (error) {
-        console.error(`Error enqueuing jobs for campaign ${campaign._id}:`, error);
+        console.error(`✗ Error enqueuing jobs for campaign ${campaign._id}:`, error);
         results.push({
           campaign_id: campaign._id,
           campaign_name: campaign.launch_name,
@@ -53,6 +57,8 @@ export async function POST(request: NextRequest) {
         });
       }
     }
+    
+    console.log(`Worker trigger complete: ${totalJobsEnqueued} total jobs enqueued across ${activeCampaigns.length} campaigns`);
     
     return NextResponse.json({
       success: true,

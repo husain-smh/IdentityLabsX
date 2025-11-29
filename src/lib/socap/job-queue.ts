@@ -89,6 +89,8 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
   };
   
   // Use upsert to avoid duplicates
+  // If job exists, reset it to pending (allows re-queuing for periodic runs)
+  // If job doesn't exist, create new one
   const result = await collection.findOneAndUpdate(
     {
       campaign_id: input.campaign_id,
@@ -98,8 +100,12 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
     {
       $setOnInsert: job,
       $set: {
-        status: 'pending', // Reset status if job exists
+        status: 'pending', // Always reset to pending when enqueuing
         priority: job.priority,
+        claimed_by: null, // Release any previous claim
+        claimed_at: null,
+        retry_count: 0, // Reset retry count
+        retry_after: null,
         updated_at: new Date(),
       },
     },
@@ -108,6 +114,10 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
       returnDocument: 'after',
     }
   );
+  
+  if (!result) {
+    throw new Error('Failed to enqueue job');
+  }
   
   return result as Job;
 }
@@ -119,6 +129,11 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
   const { getTweetsByCampaign } = await import('../models/socap/tweets');
   const tweets = await getTweetsByCampaign(campaignId);
   
+  if (tweets.length === 0) {
+    console.log(`No tweets found for campaign ${campaignId}`);
+    return 0;
+  }
+  
   const jobTypes: Array<'retweets' | 'replies' | 'quotes' | 'metrics'> = [
     'retweets',
     'replies',
@@ -127,6 +142,10 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
   ];
   
   let enqueued = 0;
+  let skipped = 0;
+  let errors = 0;
+  
+  console.log(`Enqueuing jobs for campaign ${campaignId}: ${tweets.length} tweets × ${jobTypes.length} job types = ${tweets.length * jobTypes.length} total jobs`);
   
   for (const tweet of tweets) {
     for (const jobType of jobTypes) {
@@ -138,11 +157,14 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
         });
         enqueued++;
       } catch (error) {
-        // Log but continue (might be duplicate)
-        console.warn(`Failed to enqueue job for tweet ${tweet.tweet_id}, job ${jobType}:`, error);
+        errors++;
+        // Log error details for debugging
+        console.error(`Failed to enqueue job for campaign ${campaignId}, tweet ${tweet.tweet_id}, job ${jobType}:`, error);
       }
     }
   }
+  
+  console.log(`Campaign ${campaignId}: ${enqueued} jobs enqueued, ${skipped} skipped, ${errors} errors`);
   
   return enqueued;
 }
