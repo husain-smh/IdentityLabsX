@@ -38,6 +38,7 @@ export async function GET(
     let totalQuotes = 0;
     let totalReplies = 0;
     let totalViews = 0;
+    let totalQuoteViews = 0;
     
     for (const tweet of tweets) {
       totalLikes += tweet.metrics.likeCount;
@@ -45,6 +46,8 @@ export async function GET(
       totalQuotes += tweet.metrics.quoteCount;
       totalReplies += tweet.metrics.replyCount;
       totalViews += tweet.metrics.viewCount;
+      // Safe access for older documents without quoteViewsFromQuotes
+      totalQuoteViews += (tweet.metrics as any).quoteViewsFromQuotes || 0;
     }
     
     // Get engagement counts
@@ -75,6 +78,7 @@ export async function GET(
           total_quotes: totalQuotes,
           total_replies: totalReplies,
           total_views: totalViews,
+          total_quote_views: totalQuoteViews,
           total_engagements: totalEngagements,
           unique_engagers: uniqueEngagers,
         },

@@ -39,6 +39,8 @@ const CATEGORY_LABELS = {
   others: 'General Audience',
 } as const;
 
+export type ProfileCategoryKey = keyof typeof CATEGORY_LABELS;
+
 export interface MetricTotals {
   likes: number;
   retweets: number;
@@ -131,8 +133,31 @@ export interface HighImportanceEngager {
 
 export interface NetworkReachGroup {
   role: string;
-  category: keyof typeof CATEGORY_LABELS;
+  category: ProfileCategoryKey;
   engagers: HighImportanceEngager[];
+}
+
+export interface ProfileDistributionEngager {
+  userId: string;
+  username: string;
+  name: string;
+  bio?: string;
+  followers: number;
+  verified: boolean;
+  importanceScore?: number;
+}
+
+export interface ProfileDistributionCategory {
+  key: ProfileCategoryKey;
+  label: string;
+  count: number;
+  percentage: number;
+  engagers: ProfileDistributionEngager[];
+}
+
+export interface ProfileDistribution {
+  totalEngagers: number;
+  categories: ProfileDistributionCategory[];
 }
 
 export interface ReportPointer {
@@ -167,6 +192,7 @@ export interface UserReportPayload {
     totalHighImportance: number;
     groups: NetworkReachGroup[];
   };
+  profileDistribution: ProfileDistribution;
   aiReports: AIReportStatus;
 }
 
@@ -506,6 +532,76 @@ function buildNetworkReach(engagers: AggregatedEngager[]): {
   };
 }
 
+function buildProfileDistribution(engagers: AggregatedEngager[]): ProfileDistribution {
+  const totalEngagers = engagers.length;
+
+  const categoryKeys = Object.keys(CATEGORY_LABELS) as ProfileCategoryKey[];
+
+  const baseCategories: Record<ProfileCategoryKey, ProfileDistributionCategory> =
+    categoryKeys.reduce((acc, key) => {
+      acc[key] = {
+        key,
+        label: CATEGORY_LABELS[key],
+        count: 0,
+        percentage: 0,
+        engagers: [],
+      };
+      return acc;
+    }, {} as Record<ProfileCategoryKey, ProfileDistributionCategory>);
+
+  for (const engager of engagers) {
+    const categories = categorizeEngager({
+      tweet_id: '',
+      userId: engager.userId,
+      username: engager.username,
+      name: engager.name,
+      bio: engager.bio,
+      location: engager.location,
+      followers: engager.followers,
+      verified: engager.verified,
+      replied: engager.replied,
+      retweeted: engager.retweeted,
+      quoted: engager.quoted,
+      importance_score: engager.importance_score,
+      followed_by: engager.followed_by,
+      created_at: new Date(),
+    } as Engager);
+
+    for (const category of categories) {
+      const key: ProfileCategoryKey =
+        category in CATEGORY_LABELS ? (category as ProfileCategoryKey) : 'others';
+
+      const bucket = baseCategories[key];
+      bucket.count += 1;
+      bucket.engagers.push({
+        userId: engager.userId,
+        username: engager.username,
+        name: engager.name,
+        bio: engager.bio,
+        followers: engager.followers,
+        verified: engager.verified,
+        importanceScore: engager.importance_score,
+      });
+    }
+  }
+
+  const categoriesWithPercentages: ProfileDistributionCategory[] = Object.values(
+    baseCategories,
+  )
+    .filter((cat) => cat.count > 0)
+    .map((cat) => ({
+      ...cat,
+      percentage:
+        totalEngagers > 0 ? formatNumber((cat.count / totalEngagers) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    totalEngagers,
+    categories: categoriesWithPercentages,
+  };
+}
+
 function buildAIReportStatus(tweets: Tweet[]): AIReportStatus {
   const completedReports: ReportPointer[] = [];
   const backlog: ReportPointer[] = [];
@@ -605,6 +701,7 @@ export async function getUserReport(identifier: string): Promise<UserReportPaylo
 
   const { rollup, aggregated } = aggregateEngagers(engagersCursor, tweetsMap);
   const networkReach = buildNetworkReach(aggregated);
+  const profileDistribution = buildProfileDistribution(aggregated);
   const aiReports = buildAIReportStatus(tweets);
 
   return {
@@ -619,6 +716,7 @@ export async function getUserReport(identifier: string): Promise<UserReportPaylo
     },
     engagers: rollup,
     networkReach,
+    profileDistribution,
     aiReports,
   };
 }

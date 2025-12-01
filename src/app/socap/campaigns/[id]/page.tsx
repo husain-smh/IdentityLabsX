@@ -35,9 +35,11 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 
 type FilterType = 'all' | 'main_twt' | 'influencer_twt' | 'investor_twt';
 
+type MetricKey = 'likes' | 'retweets' | 'quotes' | 'replies' | 'views' | 'quoteViews';
+
 interface MetricChartProps {
   title: string;
-  metric: 'likes' | 'retweets' | 'quotes' | 'replies' | 'views';
+  metric: MetricKey;
   chartData: Array<{ time: string; [key: string]: any }>;
   color: string;
 }
@@ -265,12 +267,13 @@ export default function CampaignDashboardPage() {
     
     return {
       time: new Date(snapshot.snapshot_time).toLocaleString(),
-      // Total values
+      // Total values (include quote views)
       likes: snapshot.total_likes || 0,
       retweets: snapshot.total_retweets || 0,
       quotes: snapshot.total_quotes || 0,
       replies: snapshot.total_replies || 0,
       views: snapshot.total_views || 0,
+      quoteViews: snapshot.total_quote_views || 0,
       // Breakdown values - ensure all categories exist with proper structure
       breakdown: {
         main_twt: getCategoryBreakdown('main_twt'),
@@ -281,29 +284,32 @@ export default function CampaignDashboardPage() {
   });
 
   // Filtered chart data for each metric using global filter
-  const getFilteredChartData = (
-    metric: 'likes' | 'retweets' | 'quotes' | 'replies' | 'views'
-  ) => {
+  const getFilteredChartData = (metric: MetricKey) => {
     return baseChartData.map((item) => {
       let value: number;
       if (globalFilter === 'all') {
         value = item[metric] || 0;
       } else {
-        // Access breakdown data - ensure we're getting the right property
-        const categoryData = item.breakdown?.[globalFilter];
-        if (categoryData && typeof categoryData === 'object') {
-          // Safely access the metric value, handling both number and string types
-          const metricValue = categoryData[metric];
-          if (typeof metricValue === 'number') {
-            value = metricValue;
-          } else if (typeof metricValue === 'string') {
-            const parsed = parseFloat(metricValue);
-            value = isNaN(parsed) ? 0 : parsed;
+        // For quoteViews we don't yet have per-category breakdown, so fall back to total
+        if (metric === 'quoteViews') {
+          value = item.quoteViews || 0;
+        } else {
+          // Access breakdown data - ensure we're getting the right property
+          const categoryData = item.breakdown?.[globalFilter];
+          if (categoryData && typeof categoryData === 'object') {
+            // Safely access the metric value, handling both number and string types
+            const metricValue = (categoryData as any)[metric];
+            if (typeof metricValue === 'number') {
+              value = metricValue;
+            } else if (typeof metricValue === 'string') {
+              const parsed = parseFloat(metricValue);
+              value = isNaN(parsed) ? 0 : parsed;
+            } else {
+              value = 0;
+            }
           } else {
             value = 0;
           }
-        } else {
-          value = 0;
         }
       }
       return {
@@ -369,7 +375,7 @@ export default function CampaignDashboardPage() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <div className="bg-white border rounded-lg p-4">
           <div className="text-sm text-gray-600">Total Likes</div>
           <div className="text-2xl font-bold">{data.metrics.total_likes.toLocaleString()}</div>
@@ -381,6 +387,21 @@ export default function CampaignDashboardPage() {
         <div className="bg-white border rounded-lg p-4">
           <div className="text-sm text-gray-600">Total Views</div>
           <div className="text-2xl font-bold">{data.metrics.total_views.toLocaleString()}</div>
+        </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="text-sm text-gray-600">Total Quote Views</div>
+          <div className="text-2xl font-bold">
+            {((data.metrics as any).total_quote_views ?? 0).toLocaleString()}
+          </div>
+        </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="text-sm text-gray-600">Total Views (All)</div>
+          <div className="text-2xl font-bold">
+            {(
+              (data.metrics.total_views ?? 0) +
+              (((data.metrics as any).total_quote_views ?? 0) as number)
+            ).toLocaleString()}
+          </div>
         </div>
         <div className="bg-white border rounded-lg p-4">
           <div className="text-sm text-gray-600">Total Engagements</div>
@@ -422,6 +443,14 @@ export default function CampaignDashboardPage() {
           metric="quotes"
           chartData={getFilteredChartData('quotes')}
           color="#ffc658"
+        />
+
+        {/* Quote Views Chart */}
+        <MetricChart
+          title="Quote Views vs Time"
+          metric="quoteViews"
+          chartData={getFilteredChartData('quoteViews')}
+          color="#d81b60"
         />
 
         {/* View Count Chart */}

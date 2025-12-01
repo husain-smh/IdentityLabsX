@@ -184,9 +184,9 @@ export default function CampaignAlertsPage() {
       return { text: null as string | null, sentiment: null as AlertItem['llm_sentiment'] };
     }
 
-    const parent =
-      alert.llm_group_parent_id &&
-      data.alerts.find((candidate) => candidate._id === alert.llm_group_parent_id);
+    const parent: AlertItem | undefined = alert.llm_group_parent_id
+      ? data.alerts.find((candidate) => candidate._id === alert.llm_group_parent_id)
+      : undefined;
 
     return {
       text: alert.llm_copy || parent?.llm_copy || null,

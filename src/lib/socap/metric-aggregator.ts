@@ -14,6 +14,7 @@ export async function aggregateCampaignMetrics(campaignId: string): Promise<void
   let totalQuotes = 0;
   let totalReplies = 0;
   let totalViews = 0;
+  let totalQuoteViews = 0;
   
   // Breakdown by category
   const breakdown = {
@@ -30,6 +31,8 @@ export async function aggregateCampaignMetrics(campaignId: string): Promise<void
     totalQuotes += metrics.quoteCount;
     totalReplies += metrics.replyCount;
     totalViews += metrics.viewCount;
+    // Backward-safe: quoteViewsFromQuotes may be missing on older docs
+    totalQuoteViews += (metrics as any).quoteViewsFromQuotes || 0;
     
     // Add to category breakdown - ensure category is valid
     const category = tweet.category as keyof typeof breakdown;
@@ -56,6 +59,7 @@ export async function aggregateCampaignMetrics(campaignId: string): Promise<void
     total_quotes: totalQuotes,
     total_replies: totalReplies,
     total_views: totalViews,
+    total_quote_views: totalQuoteViews,
     tweet_breakdown: breakdown,
   });
   

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { NetworkReachSection } from '@/app/userReport/_components/NetworkReachSection';
 import { FollowerTierChart } from '@/app/userReport/_components/FollowerTierChart';
+import { ProfileTypeDistributionSection } from '@/app/userReport/_components/ProfileTypeDistributionSection';
 import { getUserReport } from '@/lib/user-report';
 
 const compactNumber = new Intl.NumberFormat('en-US', {
@@ -513,6 +514,20 @@ export default async function UserReportPage({
               <div className="mt-6">
                 <FollowerTierChart tiers={report.engagers.followerTiers} />
               </div>
+            </CollapsibleSection>
+
+            <CollapsibleSection
+              badge="Audience roles"
+              title="Profile type distribution"
+              description="Breakdown of all unique engagers across every analyzed tweet by their profile type (founders, VCs, YC alumni, etc.)."
+            >
+              {report.profileDistribution.totalEngagers === 0 ? (
+                <p className="text-sm text-zinc-400">
+                  We don&apos;t yet have enough engager data to build a profile distribution.
+                </p>
+              ) : (
+                <ProfileTypeDistributionSection distribution={report.profileDistribution} />
+              )}
             </CollapsibleSection>
 
             <CollapsibleSection

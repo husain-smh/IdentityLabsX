@@ -18,6 +18,11 @@ export interface FilteredUser {
   engagementCreatedAt?: Date; // When the engagement (reply/retweet/quote) was created
   engagementId?: string;
   engagementText?: string;
+  /**
+   * For quote tweet flows (SOCAP), this optionally carries the viewCount of the
+   * specific quote tweet that produced this engagement. Other flows ignore it.
+   */
+  quoteViewCount?: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -408,17 +413,28 @@ export async function fetchTweetQuotes(
     // Quotes API returns tweets[] array, each tweet has createdAt (when quote was created)
     if (data.tweets && Array.isArray(data.tweets)) {
       for (const quoteTweet of data.tweets) {
-        if (quoteTweet.author) {
-          // quoteTweet.createdAt is when the quote tweet was created
-          const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
-          if (user) {
-            allUsers.push({
-              ...user,
-              engagementId: quoteTweet.id,
-              engagementText: quoteTweet.text || undefined,
-            });
-          }
+        if (!quoteTweet.author) continue;
+
+        // quoteTweet.createdAt is when the quote tweet was created
+        const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
+        if (!user) continue;
+
+        // quoteTweet.viewCount may be number or string (per twitterapi.io examples)
+        let quoteViewCount = 0;
+        const rawViewCount = (quoteTweet as any).viewCount;
+        if (typeof rawViewCount === 'number') {
+          quoteViewCount = rawViewCount;
+        } else if (typeof rawViewCount === 'string') {
+          const parsed = parseInt(rawViewCount, 10);
+          quoteViewCount = Number.isNaN(parsed) ? 0 : parsed;
         }
+
+        allUsers.push({
+          ...user,
+          engagementId: quoteTweet.id,
+          engagementText: quoteTweet.text || undefined,
+          quoteViewCount,
+        });
       }
     }
 

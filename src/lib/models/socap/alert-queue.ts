@@ -96,10 +96,12 @@ export async function createAlert(input: CreateAlertInput): Promise<AlertQueue> 
         importance_score: input.importance_score,
         run_batch: input.run_batch,
         scheduled_send_time: input.scheduled_send_time,
-        llm_copy: null,
-        llm_sentiment: null,
         llm_group_parent_id: null,
-        llm_generated_at: null,
+      },
+      $unset: {
+        llm_copy: '',
+        llm_sentiment: '',
+        llm_generated_at: '',
       },
     },
     {
@@ -230,24 +232,50 @@ export async function updateAlertLlmFields(
     return false;
   }
 
-  const update: Record<string, unknown> = {};
+  const setUpdate: Record<string, unknown> = {};
+  const unsetUpdate: Record<string, string> = {};
 
   if ('llm_copy' in fields) {
-    update.llm_copy = fields.llm_copy ?? null;
+    if (fields.llm_copy === null || fields.llm_copy === undefined) {
+      unsetUpdate.llm_copy = '';
+    } else {
+      setUpdate.llm_copy = fields.llm_copy;
+    }
   }
   if ('llm_sentiment' in fields) {
-    update.llm_sentiment = fields.llm_sentiment ?? null;
+    if (fields.llm_sentiment === null || fields.llm_sentiment === undefined) {
+      unsetUpdate.llm_sentiment = '';
+    } else {
+      setUpdate.llm_sentiment = fields.llm_sentiment;
+    }
   }
   if ('llm_group_parent_id' in fields) {
-    update.llm_group_parent_id = fields.llm_group_parent_id ?? null;
+    // This field allows null explicitly
+    setUpdate.llm_group_parent_id = fields.llm_group_parent_id ?? null;
   }
   if ('llm_generated_at' in fields) {
-    update.llm_generated_at = fields.llm_generated_at ?? null;
+    if (fields.llm_generated_at === null || fields.llm_generated_at === undefined) {
+      unsetUpdate.llm_generated_at = '';
+    } else {
+      setUpdate.llm_generated_at = fields.llm_generated_at;
+    }
+  }
+
+  const updateOp: Record<string, unknown> = {};
+  if (Object.keys(setUpdate).length > 0) {
+    updateOp.$set = setUpdate;
+  }
+  if (Object.keys(unsetUpdate).length > 0) {
+    updateOp.$unset = unsetUpdate;
+  }
+
+  if (Object.keys(updateOp).length === 0) {
+    return false;
   }
 
   const result = await collection.updateOne(
     { _id: new ObjectId(alertId) } as any,
-    { $set: update }
+    updateOp
   );
 
   return result.modifiedCount > 0;

@@ -216,8 +216,8 @@ async function processQuoteAlertContexts(
           }
 
           await updateAlertLlmFields(ctx.alertId, {
-            llm_copy: null,
-            llm_sentiment: null,
+            llm_copy: undefined,
+            llm_sentiment: undefined,
             llm_group_parent_id: parentCtx.alertId,
             llm_generated_at: new Date(),
           });

@@ -18,6 +18,11 @@ export interface CampaignTweet {
     quoteCount: number;
     replyCount: number;
     viewCount: number;
+    /**
+     * Total views accumulated from all quote tweets of this tweet
+     * (sum of viewCount of each quote tweet fetched via quotes endpoint)
+     */
+    quoteViewsFromQuotes: number;
     bookmarkCount: number;
     last_updated: Date | null;
   };
@@ -78,6 +83,7 @@ export async function createCampaignTweet(
       quoteCount: 0,
       replyCount: 0,
       viewCount: 0,
+      quoteViewsFromQuotes: 0,
       bookmarkCount: 0,
       last_updated: null,
     },
@@ -134,6 +140,38 @@ export async function updateTweetMetrics(
 
 export async function getTweetMetrics(tweetId: string): Promise<TweetMetrics | null> {
   const tweet = await getTweetByTweetId(tweetId);
-  return tweet ? tweet.metrics : null;
+  if (!tweet) return null;
+
+  const metrics = tweet.metrics;
+
+  // Backward compatibility: older documents might not have quoteViewsFromQuotes
+  if (typeof (metrics as any).quoteViewsFromQuotes !== 'number') {
+    (metrics as any).quoteViewsFromQuotes = 0;
+  }
+
+  return metrics;
+}
+
+/**
+ * Update only the quoteViewsFromQuotes metric for a tweet.
+ * This is used by the QuotesWorker after processing quote tweets.
+ */
+export async function updateTweetQuoteViewsFromQuotes(
+  tweetId: string,
+  quoteViewsFromQuotes: number
+): Promise<boolean> {
+  const collection = await getCampaignTweetsCollection();
+
+  const result = await collection.updateOne(
+    { tweet_id: tweetId },
+    {
+      $set: {
+        'metrics.quoteViewsFromQuotes': quoteViewsFromQuotes,
+        'metrics.last_updated': new Date(),
+      },
+    }
+  );
+
+  return result.modifiedCount > 0;
 }
 
