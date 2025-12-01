@@ -14,13 +14,51 @@ import {
   resolveTweetUrls,
 } from '@/lib/socap/tweet-resolver';
 
+// Retry helper for MongoDB operations
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries = 3,
+  delayMs = 1000
+): Promise<T> {
+  let lastError: Error | undefined;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check if it's a MongoDB connection error
+      const isConnectionError = errorMessage.includes('MongoServerSelectionError') || 
+                                errorMessage.includes('timeout') ||
+                                errorMessage.includes('ECONNRESET') ||
+                                errorMessage.includes('connection') ||
+                                errorMessage.includes('MongoError');
+      
+      if (isConnectionError && attempt < maxRetries) {
+        const waitTime = delayMs * Math.pow(2, attempt - 1); // Exponential backoff
+        console.log(`⚠️ Attempt ${attempt}/${maxRetries} failed with connection error. Retrying in ${waitTime}ms...`);
+        console.log(`   Error: ${errorMessage}`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // If not a connection error or last attempt, throw
+      throw error;
+    }
+  }
+  
+  throw lastError || new Error('Operation failed after retries');
+}
+
 /**
  * GET /socap/campaigns
  * List all campaigns
  */
 export async function GET(request: NextRequest) {
   try {
-    const campaigns = await getAllCampaigns();
+    const campaigns = await withRetry(() => getAllCampaigns(), 3, 1000);
     
     return NextResponse.json({
       success: true,
@@ -28,10 +66,19 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching campaigns:', error);
+    
+    // Provide more helpful error messages
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isConnectionError = errorMessage.includes('MongoServerSelectionError') || 
+                              errorMessage.includes('timeout');
+    
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch campaigns',
+        error: isConnectionError 
+          ? 'Failed to connect to MongoDB. Please check your network connection and MongoDB Atlas IP whitelist settings.'
+          : 'Failed to fetch campaigns',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
       },
       { status: 500 }
     );

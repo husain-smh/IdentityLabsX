@@ -19,18 +19,21 @@ export interface MetricSnapshot {
       retweets: number;
       quotes: number;
       replies: number;
+      views: number;
     };
     influencer_twt: {
       likes: number;
       retweets: number;
       quotes: number;
       replies: number;
+      views: number;
     };
     investor_twt: {
       likes: number;
       retweets: number;
       quotes: number;
       replies: number;
+      views: number;
     };
   };
   created_at: Date;

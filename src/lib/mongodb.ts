@@ -8,36 +8,104 @@ const uri = process.env.MONGODB_URI;
 const options = {
   tls: true,
   tlsAllowInvalidCertificates: false,
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000, // Increased from 5000ms to 10000ms
   socketTimeoutMS: 45000,
+  connectTimeoutMS: 10000, // Added explicit connection timeout
   maxPoolSize: 10,
-  minPoolSize: 2,
+  minPoolSize: 1, // Reduced from 2 to 1 for better serverless compatibility
+  maxIdleTimeMS: 30000, // Close idle connections after 30s to prevent stale connections
   retryWrites: true,
   retryReads: true,
 };
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
+let connectionTimestamp = 0;
+const CONNECTION_MAX_AGE = 5 * 60 * 1000; // 5 minutes
+
+// Helper function to check if connection is stale
+function isConnectionStale(): boolean {
+  return Date.now() - connectionTimestamp > CONNECTION_MAX_AGE;
+}
+
+// Helper function to create fresh connection
+function createConnection(): void {
+  console.log('🔄 Creating fresh MongoDB connection...');
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
+  connectionTimestamp = Date.now();
+}
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
   const globalWithMongo = global as typeof globalThis & {
     _mongoClientPromise?: Promise<MongoClient>;
+    _mongoConnectionTimestamp?: number;
   };
 
-  if (!globalWithMongo._mongoClientPromise) {
+  if (!globalWithMongo._mongoClientPromise || !globalWithMongo._mongoConnectionTimestamp || 
+      Date.now() - globalWithMongo._mongoConnectionTimestamp > CONNECTION_MAX_AGE) {
+    console.log('🔄 Refreshing stale MongoDB connection in development...');
     client = new MongoClient(uri, options);
     globalWithMongo._mongoClientPromise = client.connect();
+    globalWithMongo._mongoConnectionTimestamp = Date.now();
   }
   clientPromise = globalWithMongo._mongoClientPromise;
+  connectionTimestamp = globalWithMongo._mongoConnectionTimestamp || Date.now();
 } else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  // In production mode, create new connection with pooling
+  createConnection();
+}
+
+// Wrapper function to get client with automatic stale connection refresh
+async function getClient(): Promise<MongoClient> {
+  // Check for stale connection in both dev and production
+  if (isConnectionStale()) {
+    console.log('⚠️ Connection is stale, refreshing...');
+    if (process.env.NODE_ENV === 'development') {
+      // In development, update the global connection
+      const globalWithMongo = global as typeof globalThis & {
+        _mongoClientPromise?: Promise<MongoClient>;
+        _mongoConnectionTimestamp?: number;
+      };
+      client = new MongoClient(uri, options);
+      globalWithMongo._mongoClientPromise = client.connect();
+      globalWithMongo._mongoConnectionTimestamp = Date.now();
+      clientPromise = globalWithMongo._mongoClientPromise;
+      connectionTimestamp = Date.now();
+    } else {
+      createConnection();
+    }
+  }
+  
+  try {
+    return await clientPromise;
+  } catch (error) {
+    console.error('❌ MongoDB connection failed, retrying...', error);
+    // Recreate connection on failure
+    if (process.env.NODE_ENV === 'development') {
+      const globalWithMongo = global as typeof globalThis & {
+        _mongoClientPromise?: Promise<MongoClient>;
+        _mongoConnectionTimestamp?: number;
+      };
+      client = new MongoClient(uri, options);
+      globalWithMongo._mongoClientPromise = client.connect();
+      globalWithMongo._mongoConnectionTimestamp = Date.now();
+      clientPromise = globalWithMongo._mongoClientPromise;
+      connectionTimestamp = Date.now();
+    } else {
+      createConnection();
+    }
+    return await clientPromise;
+  }
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a
 // separate module, the client can be shared across functions.
+// This maintains backward compatibility while providing better connection management
 export default clientPromise;
+
+// Export the smart client getter for better connection management
+export { getClient };
 

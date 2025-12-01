@@ -196,6 +196,7 @@ export default function CampaignDashboardPage() {
     retweets: snapshot.total_retweets,
     quotes: snapshot.total_quotes,
     replies: snapshot.total_replies,
+    views: snapshot.total_views,
   }));
 
   return (
@@ -254,7 +255,7 @@ export default function CampaignDashboardPage() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
         <div className="bg-white border rounded-lg p-4">
           <div className="text-sm text-gray-600">Total Likes</div>
           <div className="text-2xl font-bold">{data.metrics.total_likes.toLocaleString()}</div>
@@ -262,6 +263,10 @@ export default function CampaignDashboardPage() {
         <div className="bg-white border rounded-lg p-4">
           <div className="text-sm text-gray-600">Total Retweets</div>
           <div className="text-2xl font-bold">{data.metrics.total_retweets.toLocaleString()}</div>
+        </div>
+        <div className="bg-white border rounded-lg p-4">
+          <div className="text-sm text-gray-600">Total Views</div>
+          <div className="text-2xl font-bold">{data.metrics.total_views.toLocaleString()}</div>
         </div>
         <div className="bg-white border rounded-lg p-4">
           <div className="text-sm text-gray-600">Total Engagements</div>
@@ -274,7 +279,7 @@ export default function CampaignDashboardPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="space-y-6 mb-8">
         {/* Metrics Chart */}
         <div className="bg-white border rounded-lg p-4">
           <h2 className="text-xl font-semibold mb-4">Metrics Over Time</h2>
@@ -290,6 +295,7 @@ export default function CampaignDashboardPage() {
                 <Line type="monotone" dataKey="retweets" stroke="#82ca9d" />
                 <Line type="monotone" dataKey="quotes" stroke="#ffc658" />
                 <Line type="monotone" dataKey="replies" stroke="#ff7300" />
+                <Line type="monotone" dataKey="views" stroke="#9c27b0" />
               </LineChart>
             </ResponsiveContainer>
           ) : (

@@ -17,9 +17,9 @@ export async function aggregateCampaignMetrics(campaignId: string): Promise<void
   
   // Breakdown by category
   const breakdown = {
-    main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0 },
-    influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0 },
-    investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0 },
+    main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+    influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+    investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
   };
   
   for (const tweet of tweets) {
@@ -37,6 +37,7 @@ export async function aggregateCampaignMetrics(campaignId: string): Promise<void
     catBreakdown.retweets += metrics.retweetCount;
     catBreakdown.quotes += metrics.quoteCount;
     catBreakdown.replies += metrics.replyCount;
+    catBreakdown.views += metrics.viewCount;
   }
   
   // Create snapshot (hourly)
