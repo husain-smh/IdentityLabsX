@@ -240,6 +240,30 @@ export default function CampaignDashboardPage() {
       investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
     };
     
+    // Helper to safely get category breakdown with defaults
+    const getCategoryBreakdown = (category: 'main_twt' | 'influencer_twt' | 'investor_twt') => {
+      const catData = breakdown[category];
+      if (!catData || typeof catData !== 'object') {
+        return { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 };
+      }
+      // Handle both number and string (from MongoDB serialization)
+      const toNumber = (val: any): number => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') {
+          const parsed = parseFloat(val);
+          return isNaN(parsed) ? 0 : parsed;
+        }
+        return 0;
+      };
+      return {
+        likes: toNumber(catData.likes),
+        retweets: toNumber(catData.retweets),
+        quotes: toNumber(catData.quotes),
+        replies: toNumber(catData.replies),
+        views: toNumber(catData.views),
+      };
+    };
+    
     return {
       time: new Date(snapshot.snapshot_time).toLocaleString(),
       // Total values
@@ -248,11 +272,11 @@ export default function CampaignDashboardPage() {
       quotes: snapshot.total_quotes || 0,
       replies: snapshot.total_replies || 0,
       views: snapshot.total_views || 0,
-      // Breakdown values - ensure all categories exist
+      // Breakdown values - ensure all categories exist with proper structure
       breakdown: {
-        main_twt: breakdown.main_twt || { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-        influencer_twt: breakdown.influencer_twt || { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-        investor_twt: breakdown.investor_twt || { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+        main_twt: getCategoryBreakdown('main_twt'),
+        influencer_twt: getCategoryBreakdown('influencer_twt'),
+        investor_twt: getCategoryBreakdown('investor_twt'),
       },
     };
   });
@@ -269,7 +293,16 @@ export default function CampaignDashboardPage() {
         // Access breakdown data - ensure we're getting the right property
         const categoryData = item.breakdown?.[globalFilter];
         if (categoryData && typeof categoryData === 'object') {
-          value = categoryData[metric] ?? 0;
+          // Safely access the metric value, handling both number and string types
+          const metricValue = categoryData[metric];
+          if (typeof metricValue === 'number') {
+            value = metricValue;
+          } else if (typeof metricValue === 'string') {
+            const parsed = parseFloat(metricValue);
+            value = isNaN(parsed) ? 0 : parsed;
+          } else {
+            value = 0;
+          }
         } else {
           value = 0;
         }

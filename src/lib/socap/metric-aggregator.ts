@@ -31,13 +31,18 @@ export async function aggregateCampaignMetrics(campaignId: string): Promise<void
     totalReplies += metrics.replyCount;
     totalViews += metrics.viewCount;
     
-    // Add to category breakdown
-    const catBreakdown = breakdown[tweet.category];
-    catBreakdown.likes += metrics.likeCount;
-    catBreakdown.retweets += metrics.retweetCount;
-    catBreakdown.quotes += metrics.quoteCount;
-    catBreakdown.replies += metrics.replyCount;
-    catBreakdown.views += metrics.viewCount;
+    // Add to category breakdown - ensure category is valid
+    const category = tweet.category as keyof typeof breakdown;
+    if (category && breakdown[category]) {
+      const catBreakdown = breakdown[category];
+      catBreakdown.likes += metrics.likeCount;
+      catBreakdown.retweets += metrics.retweetCount;
+      catBreakdown.quotes += metrics.quoteCount;
+      catBreakdown.replies += metrics.replyCount;
+      catBreakdown.views += metrics.viewCount;
+    } else {
+      console.warn(`Invalid or missing category for tweet ${tweet.tweet_id}: ${tweet.category}`);
+    }
   }
   
   // Create snapshot (hourly)
