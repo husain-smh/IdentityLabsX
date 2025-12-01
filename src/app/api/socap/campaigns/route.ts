@@ -186,7 +186,8 @@ export async function POST(request: NextRequest) {
         resolvedTweet.tweet_url,
         tweetInfo.category,
         resolvedTweet.author_name,
-        resolvedTweet.author_username
+        resolvedTweet.author_username,
+        resolvedTweet.text
       );
       
       // Create worker states for each job type

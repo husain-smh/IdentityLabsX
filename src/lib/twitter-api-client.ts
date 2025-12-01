@@ -16,6 +16,8 @@ export interface FilteredUser {
   bio: string | null;
   location: string | null;
   engagementCreatedAt?: Date; // When the engagement (reply/retweet/quote) was created
+  engagementId?: string;
+  engagementText?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -410,7 +412,11 @@ export async function fetchTweetQuotes(
           // quoteTweet.createdAt is when the quote tweet was created
           const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
           if (user) {
-            allUsers.push(user);
+            allUsers.push({
+              ...user,
+              engagementId: quoteTweet.id,
+              engagementText: quoteTweet.text || undefined,
+            });
           }
         }
       }

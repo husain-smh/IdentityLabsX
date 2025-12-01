@@ -15,6 +15,10 @@ export interface AlertQueue {
   status: 'pending' | 'sent' | 'skipped';
   sent_at: Date | null;
   created_at: Date;
+  llm_copy?: string;
+  llm_sentiment?: 'positive' | 'neutral' | 'critical';
+  llm_group_parent_id?: string | null;
+  llm_generated_at?: Date;
 }
 
 export interface CreateAlertInput {
@@ -92,6 +96,10 @@ export async function createAlert(input: CreateAlertInput): Promise<AlertQueue> 
         importance_score: input.importance_score,
         run_batch: input.run_batch,
         scheduled_send_time: input.scheduled_send_time,
+        llm_copy: null,
+        llm_sentiment: null,
+        llm_group_parent_id: null,
+        llm_generated_at: null,
       },
     },
     {
@@ -210,5 +218,38 @@ export async function getAlertById(alertId: string): Promise<AlertQueue | null> 
   }
 
   return await collection.findOne({ _id: new ObjectId(alertId) } as any);
+}
+
+export async function updateAlertLlmFields(
+  alertId: string,
+  fields: Partial<Pick<AlertQueue, 'llm_copy' | 'llm_sentiment' | 'llm_group_parent_id' | 'llm_generated_at'>>
+): Promise<boolean> {
+  const collection = await getAlertQueueCollection();
+
+  if (!ObjectId.isValid(alertId)) {
+    return false;
+  }
+
+  const update: Record<string, unknown> = {};
+
+  if ('llm_copy' in fields) {
+    update.llm_copy = fields.llm_copy ?? null;
+  }
+  if ('llm_sentiment' in fields) {
+    update.llm_sentiment = fields.llm_sentiment ?? null;
+  }
+  if ('llm_group_parent_id' in fields) {
+    update.llm_group_parent_id = fields.llm_group_parent_id ?? null;
+  }
+  if ('llm_generated_at' in fields) {
+    update.llm_generated_at = fields.llm_generated_at ?? null;
+  }
+
+  const result = await collection.updateOne(
+    { _id: new ObjectId(alertId) } as any,
+    { $set: update }
+  );
+
+  return result.modifiedCount > 0;
 }
 

@@ -8,6 +8,7 @@ export interface CampaignTweet {
   campaign_id: string;
   tweet_id: string;
   tweet_url: string;
+  text?: string;
   category: 'main_twt' | 'influencer_twt' | 'investor_twt';
   author_name: string;
   author_username: string;
@@ -58,7 +59,8 @@ export async function createCampaignTweet(
   tweetUrl: string,
   category: CampaignTweet['category'],
   authorName: string,
-  authorUsername: string
+  authorUsername: string,
+  text?: string
 ): Promise<CampaignTweet> {
   const collection = await getCampaignTweetsCollection();
   
@@ -66,6 +68,7 @@ export async function createCampaignTweet(
     campaign_id: campaignId,
     tweet_id: tweetId,
     tweet_url: tweetUrl,
+    text,
     category,
     author_name: authorName,
     author_username: authorUsername,

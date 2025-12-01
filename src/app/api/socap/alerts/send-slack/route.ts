@@ -48,12 +48,22 @@ export async function POST(request: NextRequest) {
         quote: 'quote-tweeted',
       } as Record<string, string>)[engagement.action_type] || 'engaged with';
 
-    const profile = engagement.account_profile || {};
-    const name = profile.name || profile.username || 'Someone';
-    const username = profile.username || '';
-    const campaignName = campaign.launch_name || 'your campaign';
-    // Client-facing notification sentence (no importance score)
-    const notificationText = `${name}${username ? ` (@${username})` : ''} ${actionText} your post for "${campaignName}".`;
+    let notificationText = alert.llm_copy || null;
+
+    if (!notificationText && alert.llm_group_parent_id) {
+      const parentAlert = await getAlertById(alert.llm_group_parent_id);
+      if (parentAlert?.llm_copy) {
+        notificationText = parentAlert.llm_copy;
+      }
+    }
+
+    if (!notificationText) {
+      const profile = engagement.account_profile || {};
+      const name = profile.name || profile.username || 'Someone';
+      const username = profile.username || '';
+      const campaignName = campaign.launch_name || 'your campaign';
+      notificationText = `${name}${username ? ` (@${username})` : ''} ${actionText} your post for "${campaignName}".`;
+    }
 
     const slackPayload = {
       text: notificationText,

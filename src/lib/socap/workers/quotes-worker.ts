@@ -55,8 +55,8 @@ export class QuotesWorker extends BaseWorker {
           tweetId,
           user,
           'quote',
-          timestamp
-          // Note: We don't have quote text from FilteredUser, would need to fetch separately
+          timestamp,
+          user.engagementText
         );
         
         await createOrUpdateEngagement(engagementInput);
@@ -127,7 +127,8 @@ export class QuotesWorker extends BaseWorker {
         tweetId,
         user,
         'quote',
-        timestamp
+        timestamp,
+        user.engagementText
       );
       
       await createOrUpdateEngagement(engagementInput);

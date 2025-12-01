@@ -37,6 +37,7 @@ export interface TweetDetails {
   id: string;
   authorName: string;
   authorUsername?: string;
+  text?: string;
   metrics: TweetMetrics;
 }
 
@@ -318,6 +319,7 @@ export async function fetchTweetDetails(
         id: tweet.id,
         authorName: author?.name || 'Unknown',
         authorUsername: author?.userName || author?.screen_name,
+        text: tweet.text,
         metrics: {
           likeCount: tweet.likeCount || 0,
           retweetCount: tweet.retweetCount || 0,

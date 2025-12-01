@@ -38,9 +38,9 @@ export function extractTweetIdFromUrl(url: string): string | null {
 export interface ResolvedTweet {
   tweet_id: string;
   tweet_url: string;
+  text?: string;
   author_name: string;
   author_username: string;
-  text?: string;
 }
 
 export async function resolveTweetUrl(url: string): Promise<ResolvedTweet> {
@@ -58,9 +58,9 @@ export async function resolveTweetUrl(url: string): Promise<ResolvedTweet> {
     return {
       tweet_id: tweetId,
       tweet_url: url,
+      text: tweetDetails.text,
       author_name: tweetDetails.authorName || 'Unknown',
       author_username: tweetDetails.authorUsername || 'unknown',
-      text: undefined,
     };
   } catch (error) {
     if (error instanceof TwitterApiError) {

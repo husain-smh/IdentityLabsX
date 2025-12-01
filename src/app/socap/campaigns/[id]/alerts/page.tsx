@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -33,6 +33,9 @@ interface AlertItem {
   sent_at: string | null;
   created_at: string;
   engagement: AlertEngagement | null;
+  llm_copy?: string | null;
+  llm_sentiment?: 'positive' | 'neutral' | 'critical' | null;
+  llm_group_parent_id?: string | null;
 }
 
 interface AlertHistoryItem {
@@ -59,31 +62,31 @@ export default function CampaignAlertsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sendingAlertId, setSendingAlertId] = useState<string | null>(null);
   const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
+  const [dedupeLoading, setDedupeLoading] = useState(false);
 
-  useEffect(() => {
-    async function fetchAlerts() {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/socap/campaigns/${campaignId}/alerts`);
-        const result = await response.json();
+  const fetchAlerts = useCallback(async () => {
+    if (!campaignId) return;
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/socap/campaigns/${campaignId}/alerts`);
+      const result = await response.json();
 
-        if (result.success) {
-          setData(result.data);
-        } else {
-          setError(result.error || 'Failed to load alerts');
-        }
-      } catch (err) {
-        console.error('Error loading alerts:', err);
-        setError('Failed to load alerts');
-      } finally {
-        setLoading(false);
+      if (result.success) {
+        setData(result.data);
+      } else {
+        setError(result.error || 'Failed to load alerts');
       }
-    }
-
-    if (campaignId) {
-      fetchAlerts();
+    } catch (err) {
+      console.error('Error loading alerts:', err);
+      setError('Failed to load alerts');
+    } finally {
+      setLoading(false);
     }
   }, [campaignId]);
+
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
 
   async function handleSendSlack(alertId: string) {
     try {
@@ -107,6 +110,35 @@ export default function CampaignAlertsPage() {
       alert('Failed to generate Slack preview');
     } finally {
       setSendingAlertId(null);
+    }
+  }
+
+  async function handleDeduplicate() {
+    if (!campaignId) return;
+    try {
+      setDedupeLoading(true);
+      const response = await fetch(
+        `/api/socap/campaigns/${campaignId}/alerts/dedupe`,
+        { method: 'POST' }
+      );
+      const result = await response.json();
+
+      if (!result.success) {
+        alert(`Failed to deduplicate alerts: ${result.error || 'Unknown error'}`);
+        return;
+      }
+
+      await fetchAlerts();
+      alert(
+        `Deduplication complete. Kept ${result.data?.kept ?? 0}, deleted ${
+          result.data?.deleted ?? 0
+        }.`
+      );
+    } catch (err) {
+      console.error('Error deduplicating alerts:', err);
+      alert('Failed to deduplicate alerts');
+    } finally {
+      setDedupeLoading(false);
     }
   }
 
@@ -147,6 +179,38 @@ export default function CampaignAlertsPage() {
     return `${name}${username ? ` (@${username})` : ''} ${actionText} your post.`;
   }
 
+  function resolveNotificationDetails(alert: AlertItem) {
+    if (!data) {
+      return { text: null as string | null, sentiment: null as AlertItem['llm_sentiment'] };
+    }
+
+    const parent =
+      alert.llm_group_parent_id &&
+      data.alerts.find((candidate) => candidate._id === alert.llm_group_parent_id);
+
+    return {
+      text: alert.llm_copy || parent?.llm_copy || null,
+      sentiment: alert.llm_sentiment || parent?.llm_sentiment || null,
+      isGrouped: Boolean(alert.llm_group_parent_id),
+    };
+  }
+
+  function renderSentimentBadge(sentiment: AlertItem['llm_sentiment']) {
+    if (!sentiment) return null;
+
+    const styles: Record<NonNullable<AlertItem['llm_sentiment']>, string> = {
+      positive: 'bg-green-50 text-green-700 border border-green-200',
+      neutral: 'bg-gray-100 text-gray-700 border border-gray-200',
+      critical: 'bg-red-50 text-red-700 border border-red-200',
+    };
+
+    return (
+      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${styles[sentiment]}`}>
+        {sentiment.toUpperCase()}
+      </span>
+    );
+  }
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -176,7 +240,7 @@ export default function CampaignAlertsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <Link href={`/socap/campaigns/${campaignId}`} className="text-blue-600 hover:underline">
             ← Back to Campaign Dashboard
@@ -186,6 +250,14 @@ export default function CampaignAlertsPage() {
             Visualize how notifications are formed, when they are generated, and how they are spaced.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={handleDeduplicate}
+          disabled={dedupeLoading}
+          className="px-4 py-2 bg-white border border-gray-300 text-gray-900 rounded shadow-sm hover:bg-gray-50 disabled:opacity-50"
+        >
+          {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
+        </button>
       </div>
 
       {/* Pending alerts (not yet sent) */}
@@ -202,7 +274,8 @@ export default function CampaignAlertsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {pendingAlerts.map((alert) => {
               const engagement = alert.engagement;
-              const preview = buildNotificationPreview(alert);
+              const { text: llmCopy, sentiment, isGrouped } = resolveNotificationDetails(alert);
+              const preview = llmCopy || buildNotificationPreview(alert);
               return (
                 <div
                   key={alert._id}
@@ -244,11 +317,17 @@ export default function CampaignAlertsPage() {
                       {preview && (
                         <div className="mb-2">
                           <div className="text-sm font-medium text-gray-700 mb-0.5">
-                            Notification
+                            Notification{' '}
+                            {renderSentimentBadge(sentiment)}
                           </div>
                           <div className="text-base text-gray-900">
                             {preview}
                           </div>
+                          {isGrouped && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Bundled with another quote highlight.
+                            </div>
+                          )}
                         </div>
                       )}
                       <button
