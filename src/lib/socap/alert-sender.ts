@@ -127,8 +127,21 @@ async function sendSlackAlert(
     quote: 'quote-tweeted',
   } as Record<string, string>)[engagement.action_type] || 'engaged with';
 
-  const notificationText = buildNotificationText(campaign, engagement, alert, actionText);
-  
+  // Use LLM-generated notification if available, otherwise fall back to basic template
+  const notificationText = alert.llm_copy 
+    ? alert.llm_copy 
+    : buildNotificationText(campaign, engagement, alert, actionText);
+
+  // Add sentiment emoji if LLM-generated
+  const sentimentEmoji = alert.llm_sentiment === 'positive' ? '✅' 
+    : alert.llm_sentiment === 'critical' ? '⚠️' 
+    : alert.llm_sentiment === 'neutral' ? 'ℹ️' 
+    : '🚨';
+
+  const headerText = alert.llm_copy 
+    ? `${sentimentEmoji} ${alert.llm_sentiment ? alert.llm_sentiment.toUpperCase() : 'High-importance'} Engagement`
+    : '🚨 High-importance Engagement';
+
   const message = {
     // This is what the client will primarily see in Slack
     text: notificationText,
@@ -137,7 +150,7 @@ async function sendSlackAlert(
         type: 'header',
         text: {
           type: 'plain_text',
-          text: '🚨 High-importance Engagement',
+          text: headerText,
         },
       },
       {
@@ -210,8 +223,24 @@ async function sendEmailAlert(
     reply: 'replied to',
     quote: 'quote-tweeted',
   } as Record<string, string>)[engagement.action_type] || 'engaged with';
-  
-  const subject = `🚨 High-importance engagement: @${engagement.account_profile.username}`;
+
+  // Use LLM-generated notification if available
+  const notificationText = alert.llm_copy 
+    ? alert.llm_copy 
+    : buildNotificationText(campaign, engagement, alert, actionText);
+
+  const sentimentEmoji = alert.llm_sentiment === 'positive' ? '✅' 
+    : alert.llm_sentiment === 'critical' ? '⚠️' 
+    : alert.llm_sentiment === 'neutral' ? 'ℹ️' 
+    : '🚨';
+
+  const headerText = alert.llm_copy 
+    ? `${sentimentEmoji} ${alert.llm_sentiment ? alert.llm_sentiment.toUpperCase() : 'High-importance'} Engagement`
+    : '🚨 High-importance Engagement Detected';
+
+  const subject = alert.llm_copy 
+    ? `${sentimentEmoji} ${alert.llm_sentiment ? alert.llm_sentiment.toUpperCase() : 'Engagement'}: @${engagement.account_profile.username}`
+    : `🚨 High-importance engagement: @${engagement.account_profile.username}`;
   
   const htmlBody = `
     <!DOCTYPE html>
@@ -231,9 +260,13 @@ async function sendEmailAlert(
     <body>
       <div class="container">
         <div class="header">
-          <h2>🚨 High-importance Engagement Detected</h2>
+          <h2>${headerText}</h2>
         </div>
         <div class="content">
+          <div class="field">
+            <span class="label">Notification:</span>
+            <span class="value">${notificationText}</span>
+          </div>
           <div class="field">
             <span class="label">Campaign:</span>
             <span class="value">${campaign.launch_name}</span>
@@ -268,7 +301,9 @@ async function sendEmailAlert(
   `;
   
   const textBody = `
-High-importance Engagement Detected
+${headerText}
+
+Notification: ${notificationText}
 
 Campaign: ${campaign.launch_name}
 Account: @${engagement.account_profile.username} (${engagement.account_profile.name})

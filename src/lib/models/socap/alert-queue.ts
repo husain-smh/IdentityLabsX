@@ -96,13 +96,11 @@ export async function createAlert(input: CreateAlertInput): Promise<AlertQueue> 
         importance_score: input.importance_score,
         run_batch: input.run_batch,
         scheduled_send_time: input.scheduled_send_time,
+        // Only reset llm_group_parent_id on update, preserve LLM fields if they exist
         llm_group_parent_id: null,
       },
-      $unset: {
-        llm_copy: '',
-        llm_sentiment: '',
-        llm_generated_at: '',
-      },
+      // Note: We no longer unset LLM fields here to preserve them when alerts are reprocessed.
+      // LLM fields are only set/cleared explicitly via updateAlertLlmFields().
     },
     {
       upsert: true,
