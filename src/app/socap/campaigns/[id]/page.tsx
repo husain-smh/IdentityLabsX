@@ -280,9 +280,9 @@ export default function CampaignDashboardPage() {
 
       {/* Charts */}
       <div className="space-y-6 mb-8">
-        {/* Metrics Chart */}
+        {/* Quote Count Chart */}
         <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">Metrics Over Time</h2>
+          <h2 className="text-xl font-semibold mb-4">Quote Count vs Time</h2>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
@@ -290,12 +290,87 @@ export default function CampaignDashboardPage() {
                 <XAxis dataKey="time" />
                 <YAxis />
                 <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="likes" stroke="#8884d8" />
-                <Line type="monotone" dataKey="retweets" stroke="#82ca9d" />
-                <Line type="monotone" dataKey="quotes" stroke="#ffc658" />
-                <Line type="monotone" dataKey="replies" stroke="#ff7300" />
-                <Line type="monotone" dataKey="views" stroke="#9c27b0" />
+                <Line type="monotone" dataKey="quotes" stroke="#ffc658" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center text-gray-500 py-12">
+              No metrics data yet
+            </div>
+          )}
+        </div>
+
+        {/* View Count Chart */}
+        <div className="bg-white border rounded-lg p-4">
+          <h2 className="text-xl font-semibold mb-4">View Count vs Time</h2>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="views" stroke="#9c27b0" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center text-gray-500 py-12">
+              No metrics data yet
+            </div>
+          )}
+        </div>
+
+        {/* Retweet Count Chart */}
+        <div className="bg-white border rounded-lg p-4">
+          <h2 className="text-xl font-semibold mb-4">Retweet Count vs Time</h2>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="retweets" stroke="#82ca9d" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center text-gray-500 py-12">
+              No metrics data yet
+            </div>
+          )}
+        </div>
+
+        {/* Reply Count Chart */}
+        <div className="bg-white border rounded-lg p-4">
+          <h2 className="text-xl font-semibold mb-4">Reply Count vs Time</h2>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="replies" stroke="#ff7300" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="text-center text-gray-500 py-12">
+              No metrics data yet
+            </div>
+          )}
+        </div>
+
+        {/* Like Count Chart */}
+        <div className="bg-white border rounded-lg p-4">
+          <h2 className="text-xl font-semibold mb-4">Like Count vs Time</h2>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="likes" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
