@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 interface AlertEngagementProfile {
   username: string;
@@ -257,13 +258,13 @@ export default function CampaignAlertsPage() {
     if (!sentiment) return null;
 
     const styles: Record<NonNullable<AlertItem['llm_sentiment']>, string> = {
-      positive: 'bg-green-50 text-green-700 border border-green-200',
-      neutral: 'bg-gray-100 text-gray-700 border border-gray-200',
-      critical: 'bg-red-50 text-red-700 border border-red-200',
+      positive: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+      neutral: 'bg-zinc-500/20 text-zinc-400 border border-zinc-500/30',
+      critical: 'bg-red-500/20 text-red-400 border border-red-500/30',
     };
 
     return (
-      <span className={`text-xs font-semibold px-2 py-0.5 rounded ${styles[sentiment]}`}>
+      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${styles[sentiment]}`}>
         {sentiment.toUpperCase()}
       </span>
     );
@@ -271,24 +272,49 @@ export default function CampaignAlertsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">Loading alerts...</div>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent mx-auto"></div>
+            <p className="mt-4 text-zinc-400">Loading alerts...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center text-red-600">{error}</div>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-400 text-lg">{error}</p>
+            <Link href={`/socap/campaigns/${campaignId}`} className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              Back to Campaign
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">No alert data available for this campaign.</div>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-zinc-400 text-lg">No alert data available for this campaign.</p>
+            <Link href={`/socap/campaigns/${campaignId}`} className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+              Back to Campaign
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -297,337 +323,372 @@ export default function CampaignAlertsPage() {
   const sentOrSkippedAlerts = data.alerts.filter((a) => a.status !== 'pending');
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <Link href={`/socap/campaigns/${campaignId}`} className="text-blue-600 hover:underline">
-            ← Back to Campaign Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold mt-2">Campaign Alerts</h1>
-          <p className="text-gray-600 mt-1">
-            Visualize how notifications are formed, when they are generated, and how they are spaced.
-          </p>
+    <div className="min-h-screen bg-black">
+      <Navbar />
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      
+      <div className="relative z-10">
+        {/* Header Section */}
+        <div className="pt-24 pb-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <Link href={`/socap/campaigns/${campaignId}`} className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm mb-6 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Campaign Dashboard
+            </Link>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={handleBackfillLlm}
-            disabled={backfillLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 disabled:opacity-50"
-          >
-            {backfillLoading ? 'Backfilling...' : 'Generate LLM Notifications for Existing Alerts'}
-          </button>
-          <button
-            type="button"
-            onClick={handleDeduplicate}
-            disabled={dedupeLoading}
-            className="px-4 py-2 bg-white border border-gray-300 text-gray-900 rounded shadow-sm hover:bg-gray-50 disabled:opacity-50"
-          >
-            {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
-          </button>
-        </div>
-      </div>
 
-      {/* Pending alerts (not yet sent) */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-3">Pending Alerts (Queued Notifications)</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          These alerts have been generated but not yet processed by the sender. Each card shows:
-          the high-importance engager, when the alert was generated, and when it is scheduled to be sent.
-        </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-8">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-white mb-2">Campaign Alerts</h1>
+              <p className="text-sm text-zinc-400">
+                Visualize how notifications are formed, when they are generated, and how they are spaced.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleBackfillLlm}
+                disabled={backfillLoading}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              >
+                {backfillLoading ? 'Backfilling...' : 'Generate LLM Notifications'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeduplicate}
+                disabled={dedupeLoading}
+                className="px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-lg hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+              >
+                {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
+              </button>
+            </div>
+          </div>
 
-        {pendingAlerts.length === 0 ? (
-          <div className="text-gray-500">No pending alerts for this campaign.</div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {pendingAlerts.map((alert) => {
-              const engagement = alert.engagement;
-              const { text: llmCopy, sentiment, isGrouped } = resolveNotificationDetails(alert);
-              const preview = llmCopy || buildNotificationPreview(alert);
-              return (
-                <div
-                  key={alert._id}
-                  className="border rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="text-xs font-semibold uppercase text-gray-500 mb-1">
-                      {humanActionLabel(alert.action_type)} • Importance {alert.importance_score}
-                    </div>
-                    <div className="flex items-center justify-between mb-2">
+          {/* Pending alerts (not yet sent) */}
+          <section>
+            <div className="glass rounded-2xl p-6 mb-6">
+              <h2 className="text-xl font-semibold text-white mb-2">Pending Alerts (Queued Notifications)</h2>
+              <p className="text-sm text-zinc-400">
+                These alerts have been generated but not yet processed by the sender. Each card shows:
+                the high-importance engager, when the alert was generated, and when it is scheduled to be sent.
+              </p>
+            </div>
+
+            {pendingAlerts.length === 0 ? (
+              <div className="text-zinc-400 text-center py-8">No pending alerts for this campaign.</div>
+            ) : (
+              <div className="space-y-4">
+                {pendingAlerts.map((alert) => {
+                  const engagement = alert.engagement;
+                  const { text: llmCopy, sentiment, isGrouped } = resolveNotificationDetails(alert);
+                  const preview = llmCopy || buildNotificationPreview(alert);
+                  return (
+                    <div
+                      key={alert._id}
+                      className="glass rounded-2xl p-6 flex flex-col justify-between transition-all hover:border-zinc-700"
+                    >
                       <div>
-                        <div className="font-semibold text-lg">
-                          {engagement
-                            ? `@${engagement.account_profile.username}`
-                            : 'Unknown account'}
+                        <div className="text-xs font-semibold uppercase text-zinc-400 mb-3">
+                          {humanActionLabel(alert.action_type)} • Importance{' '}
+                          <span className="text-emerald-400 font-bold">{alert.importance_score}</span>
                         </div>
-                        {engagement && (
-                          <div className="text-sm text-gray-600">
-                            {engagement.account_profile.name}{' '}
-                            {engagement.account_profile.verified && (
-                              <span className="ml-1 text-xs text-blue-600 border border-blue-200 rounded px-1">
-                                Verified
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      {engagement && (
-                        <div className="text-right text-sm text-gray-600">
-                          <div>{engagement.account_profile.followers.toLocaleString()} followers</div>
-                          <div className="text-xs text-gray-500">
-                            Categories: {engagement.account_categories.join(', ') || 'N/A'}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 space-y-1 text-sm">
-                      {preview && (
-                        <div className="mb-2">
-                          <div className="text-sm font-medium text-gray-700 mb-0.5">
-                            Notification{' '}
-                            {renderSentimentBadge(sentiment)}
-                          </div>
-                          <div className="text-base text-gray-900">
-                            {preview}
-                          </div>
-                          {isGrouped && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Bundled with another quote highlight.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {engagement && (
-                        <div className="mt-2 space-y-1">
-                          {/* Link to the engagement (quote/reply/retweet) */}
-                          {buildEngagementUrl(engagement) && (
-                            <a
-                              href={buildEngagementUrl(engagement)!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                            >
-                              <span>
-                                {engagement.action_type === 'quote' && 'View quote tweet'}
-                                {engagement.action_type === 'reply' && 'View reply'}
-                                {engagement.action_type === 'retweet' && 'View original tweet'}
-                              </span>
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                />
-                              </svg>
-                            </a>
-                          )}
-                          {/* Link to the original code tweet */}
-                          {buildOriginalTweetUrl(engagement) && (
-                            <div>
-                              <a
-                                href={buildOriginalTweetUrl(engagement)!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 hover:underline"
-                              >
-                                <span>View original tweet (ID: {engagement.tweet_id})</span>
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <div className="font-semibold text-lg text-white flex items-center gap-2">
+                              {engagement
+                                ? `@${engagement.account_profile.username}`
+                                : 'Unknown account'}
+                              {engagement?.account_profile.verified && (
                                 <svg
-                                  className="w-4 h-4"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                                  className="w-4 h-4 text-indigo-400"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
                                 >
                                   <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                    fillRule="evenodd"
+                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
                                   />
                                 </svg>
-                              </a>
+                              )}
+                            </div>
+                            {engagement && (
+                              <div className="text-sm text-zinc-400 mt-1">
+                                {engagement.account_profile.name}
+                              </div>
+                            )}
+                          </div>
+                          {engagement && (
+                            <div className="text-right text-sm">
+                              <div className="text-white font-medium">{engagement.account_profile.followers.toLocaleString()} followers</div>
+                              <div className="text-xs text-zinc-400 mt-1">
+                                Categories: {engagement.account_categories.join(', ') || 'N/A'}
+                              </div>
                             </div>
                           )}
                         </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedAlertId((current) =>
-                            current === alert._id ? null : alert._id
-                          )
-                        }
-                        className="mt-1 text-xs text-blue-600 hover:underline"
-                      >
-                        {expandedAlertId === alert._id ? 'Hide details' : 'Show details'}
-                      </button>
-                      {expandedAlertId === alert._id && (
-                        <div className="mt-2 space-y-1 border-t pt-2">
-                          <div>
-                            <span className="font-medium text-gray-700">Code Tweet ID:</span>{' '}
-                            <span className="text-gray-700 font-mono text-xs">
-                              {engagement?.tweet_id || '-'}
-                            </span>
-                            {engagement?.tweet_id && (
-                              <a
-                                href={buildOriginalTweetUrl(engagement)!}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="ml-2 text-blue-600 hover:underline text-xs"
-                              >
-                                (view)
-                              </a>
-                            )}
-                          </div>
-                          {engagement?.engagement_tweet_id && (
-                            <div>
-                              <span className="font-medium text-gray-700">
-                                {engagement.action_type === 'quote' ? 'Quote Tweet ID' : 'Reply Tweet ID'}:
-                              </span>{' '}
-                              <span className="text-gray-700 font-mono text-xs">
-                                {engagement.engagement_tweet_id}
-                              </span>
+
+                        <div className="mt-4 space-y-3">
+                          {preview && (
+                            <div className="bg-zinc-900/50 rounded-lg p-4 border border-zinc-800">
+                              <div className="text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2">
+                                Notification{' '}
+                                {renderSentimentBadge(sentiment)}
+                              </div>
+                              <div className="text-base text-white">
+                                {preview}
+                              </div>
+                              {isGrouped && (
+                                <div className="text-xs text-zinc-500 mt-2">
+                                  Bundled with another quote highlight.
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {engagement && (
+                            <div className="space-y-2">
+                              {/* Link to the engagement (quote/reply/retweet) */}
                               {buildEngagementUrl(engagement) && (
                                 <a
                                   href={buildEngagementUrl(engagement)!}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="ml-2 text-blue-600 hover:underline text-xs"
+                                  className="inline-flex items-center gap-1 text-sm text-indigo-400 hover:text-indigo-300 hover:underline transition-colors"
                                 >
-                                  (view)
+                                  <span>
+                                    {engagement.action_type === 'quote' && 'View quote tweet'}
+                                    {engagement.action_type === 'reply' && 'View reply'}
+                                    {engagement.action_type === 'retweet' && 'View original tweet'}
+                                  </span>
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                    />
+                                  </svg>
                                 </a>
+                              )}
+                              {/* Link to the original code tweet */}
+                              {buildOriginalTweetUrl(engagement) && (
+                                <div>
+                                  <a
+                                    href={buildOriginalTweetUrl(engagement)!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-300 hover:underline transition-colors"
+                                  >
+                                    <span>View original tweet (ID: {engagement.tweet_id})</span>
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                      />
+                                    </svg>
+                                  </a>
+                                </div>
                               )}
                             </div>
                           )}
-                          <div>
-                            <span className="font-medium text-gray-700">Engagement Time:</span>{' '}
-                            <span className="text-gray-700">
-                              {engagement ? formatDate(engagement.timestamp) : '-'}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Notification Generated At:</span>{' '}
-                            <span className="text-gray-700">{formatDate(alert.created_at)}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Scheduled Send Time:</span>{' '}
-                            <span className="text-gray-700">{formatDate(alert.scheduled_send_time)}</span>
-                          </div>
-                          <div>
-                            <span className="font-medium text-gray-700">Run Batch:</span>{' '}
-                            <span className="text-gray-700">{formatDate(alert.run_batch)}</span>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedAlertId((current) =>
+                                current === alert._id ? null : alert._id
+                              )
+                            }
+                            className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 hover:underline transition-colors"
+                          >
+                            {expandedAlertId === alert._id ? 'Hide details' : 'Show details'}
+                          </button>
+                          {expandedAlertId === alert._id && (
+                            <div className="mt-3 space-y-2 border-t border-zinc-800 pt-3">
+                              <div>
+                                <span className="font-medium text-zinc-300">Code Tweet ID:</span>{' '}
+                                <span className="text-zinc-400 font-mono text-xs">
+                                  {engagement?.tweet_id || '-'}
+                                </span>
+                                {engagement?.tweet_id && (
+                                  <a
+                                    href={buildOriginalTweetUrl(engagement)!}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="ml-2 text-indigo-400 hover:text-indigo-300 hover:underline text-xs transition-colors"
+                                  >
+                                    (view)
+                                  </a>
+                                )}
+                              </div>
+                              {engagement?.engagement_tweet_id && (
+                                <div>
+                                  <span className="font-medium text-zinc-300">
+                                    {engagement.action_type === 'quote' ? 'Quote Tweet ID' : 'Reply Tweet ID'}:
+                                  </span>{' '}
+                                  <span className="text-zinc-400 font-mono text-xs">
+                                    {engagement.engagement_tweet_id}
+                                  </span>
+                                  {buildEngagementUrl(engagement) && (
+                                    <a
+                                      href={buildEngagementUrl(engagement)!}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="ml-2 text-indigo-400 hover:text-indigo-300 hover:underline text-xs transition-colors"
+                                    >
+                                      (view)
+                                    </a>
+                                  )}
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-medium text-zinc-300">Engagement Time:</span>{' '}
+                                <span className="text-zinc-400">
+                                  {engagement ? formatDate(engagement.timestamp) : '-'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-zinc-300">Notification Generated At:</span>{' '}
+                                <span className="text-zinc-400">{formatDate(alert.created_at)}</span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-zinc-300">Scheduled Send Time:</span>{' '}
+                                <span className="text-zinc-400">{formatDate(alert.scheduled_send_time)}</span>
+                              </div>
+                              <div>
+                                <span className="font-medium text-zinc-300">Run Batch:</span>{' '}
+                                <span className="text-zinc-400">{formatDate(alert.run_batch)}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
+                      </div>
 
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="text-xs text-gray-500">
-                      Status: <span className="font-semibold text-yellow-600">Pending</span>
+                      <div className="mt-4 flex items-center justify-between pt-4 border-t border-zinc-800">
+                        <div className="text-xs">
+                          Status: <span className="font-semibold text-yellow-400">Pending</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSendSlack(alert._id)}
+                          disabled={sendingAlertId === alert._id}
+                          className="px-3 py-1.5 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {sendingAlertId === alert._id ? 'Previewing…' : 'Send on Slack (Preview)'}
+                        </button>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleSendSlack(alert._id)}
-                      disabled={sendingAlertId === alert._id}
-                      className="px-3 py-1.5 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
-                    >
-                      {sendingAlertId === alert._id ? 'Previewing…' : 'Send on Slack (Preview)'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
           </div>
         )}
       </section>
 
-      {/* Already processed alerts from queue */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-3">Processed Alerts (From Queue)</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          These alerts were generated earlier and have already been marked as sent or skipped by the
-          sender process. Useful to understand historical spacing and generation times.
-        </p>
+          {/* Already processed alerts from queue */}
+          <section>
+            <div className="glass rounded-2xl p-6 mb-6">
+              <h2 className="text-xl font-semibold text-white mb-2">Processed Alerts (From Queue)</h2>
+              <p className="text-sm text-zinc-400">
+                These alerts were generated earlier and have already been marked as sent or skipped by the
+                sender process. Useful to understand historical spacing and generation times.
+              </p>
+            </div>
 
-        {sentOrSkippedAlerts.length === 0 ? (
-          <div className="text-gray-500">No processed alerts in the queue for this campaign.</div>
-        ) : (
-          <div className="space-y-2 text-sm">
-            {sentOrSkippedAlerts.map((alert) => (
-              <div
-                key={alert._id}
-                className="flex items-center justify-between border rounded px-3 py-2 bg-gray-50"
-              >
-                <div>
-                  <div className="font-medium text-gray-800">
-                    {humanActionLabel(alert.action_type)} • Importance {alert.importance_score}
+            {sentOrSkippedAlerts.length === 0 ? (
+              <div className="text-zinc-400 text-center py-8">No processed alerts in the queue for this campaign.</div>
+            ) : (
+              <div className="space-y-2">
+                {sentOrSkippedAlerts.map((alert) => (
+                  <div
+                    key={alert._id}
+                    className="glass rounded-xl p-4 flex items-center justify-between transition-all hover:border-zinc-700"
+                  >
+                    <div>
+                      <div className="font-medium text-white">
+                        {humanActionLabel(alert.action_type)} • Importance{' '}
+                        <span className="text-emerald-400">{alert.importance_score}</span>
+                      </div>
+                      <div className="text-xs text-zinc-400 mt-1">
+                        Generated: {formatDate(alert.created_at)} • Scheduled:{' '}
+                        {formatDate(alert.scheduled_send_time)} • Sent:{' '}
+                        {formatDate(alert.sent_at)}
+                      </div>
+                    </div>
+                    <div className="text-xs font-semibold">
+                      {alert.status === 'sent' && <span className="text-emerald-400">Sent</span>}
+                      {alert.status === 'skipped' && <span className="text-zinc-500">Skipped</span>}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-600">
-                    Generated: {formatDate(alert.created_at)} • Scheduled:{' '}
-                    {formatDate(alert.scheduled_send_time)} • Sent:{' '}
-                    {formatDate(alert.sent_at)}
-                  </div>
-                </div>
-                <div className="text-xs font-semibold">
-                  {alert.status === 'sent' && <span className="text-green-600">Sent</span>}
-                  {alert.status === 'skipped' && <span className="text-gray-500">Skipped</span>}
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Alert history (dedup + channels) */}
+          <section>
+            <div className="glass rounded-2xl p-6 mb-6">
+              <h2 className="text-xl font-semibold text-white mb-2">Alert History (Per Channel)</h2>
+              <p className="text-sm text-zinc-400">
+                This is the canonical history used for deduplication. It shows, per channel, when alerts
+                were actually sent to the outside world.
+              </p>
+            </div>
+
+            {data.history.length === 0 ? (
+              <div className="text-zinc-400 text-center py-8">No alert history for this campaign yet.</div>
+            ) : (
+              <div className="glass rounded-2xl overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-zinc-800">
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">User ID</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Action</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Channel</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Hour Bucket</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Sent At</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800">
+                      {data.history.map((item) => (
+                        <tr key={item._id} className="hover:bg-zinc-900/50 transition-colors">
+                          <td className="px-6 py-4 font-mono text-xs text-zinc-300">
+                            {item.user_id}
+                          </td>
+                          <td className="px-6 py-4 text-white">{humanActionLabel(item.action_type)}</td>
+                          <td className="px-6 py-4 text-zinc-300 capitalize">{item.channel}</td>
+                          <td className="px-6 py-4 text-xs text-zinc-400">
+                            {formatDate(item.timestamp_hour)}
+                          </td>
+                          <td className="px-6 py-4 text-xs text-zinc-400">
+                            {formatDate(item.sent_at)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Alert history (dedup + channels) */}
-      <section>
-        <h2 className="text-2xl font-semibold mb-3">Alert History (Per Channel)</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          This is the canonical history used for deduplication. It shows, per channel, when alerts
-          were actually sent to the outside world.
-        </p>
-
-        {data.history.length === 0 ? (
-          <div className="text-gray-500">No alert history for this campaign yet.</div>
-        ) : (
-          <div className="border rounded-lg overflow-hidden bg-white">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="text-left px-3 py-2">User ID</th>
-                  <th className="text-left px-3 py-2">Action</th>
-                  <th className="text-left px-3 py-2">Channel</th>
-                  <th className="text-left px-3 py-2">Hour Bucket</th>
-                  <th className="text-left px-3 py-2">Sent At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.history.map((item) => (
-                  <tr key={item._id} className="border-t">
-                    <td className="px-3 py-2 font-mono text-xs text-gray-700">
-                      {item.user_id}
-                    </td>
-                    <td className="px-3 py-2">{humanActionLabel(item.action_type)}</td>
-                    <td className="px-3 py-2 capitalize">{item.channel}</td>
-                    <td className="px-3 py-2 text-xs text-gray-700">
-                      {formatDate(item.timestamp_hour)}
-                    </td>
-                    <td className="px-3 py-2 text-xs text-gray-700">
-                      {formatDate(item.sent_at)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 }
