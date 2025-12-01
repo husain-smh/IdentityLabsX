@@ -239,7 +239,9 @@ async function processQuoteAlertContexts(
     return;
   }
 
-  const chunks = chunk(contexts, 5);
+  // Process all contexts together to give LLM full context, but ensure each gets unique notification
+  // We can still batch them for efficiency, but each will get its own notification
+  const chunks = chunk(contexts, 10); // Increased batch size since we're not combining
 
   for (const group of chunks) {
     const promptPayload = {
@@ -271,38 +273,45 @@ async function processQuoteAlertContexts(
 
       const ctxByEngagement = new Map(group.map((ctx) => [ctx.engagementId, ctx]));
 
+      // Process each suggestion - each should have exactly one engagement_id
       for (const suggestion of suggestions) {
-        const matchedContexts = suggestion.engagementIds
-          .map((id) => ctxByEngagement.get(id))
-          .filter((ctx): ctx is QuoteAlertContext => Boolean(ctx));
-
-        if (matchedContexts.length === 0) {
-          continue;
+        // Warn if LLM combined multiple engagements (shouldn't happen with new prompt)
+        if (suggestion.engagementIds.length > 1) {
+          console.warn(
+            `[QuoteNotifications] LLM returned multiple engagement_ids in one notification for tweet ${tweetId}. This should not happen with the updated prompt.`
+          );
         }
 
-        const parentCtx = matchedContexts.reduce((prev, current) =>
-          current.importanceScore > prev.importanceScore ? current : prev
-        );
-
-        await updateAlertLlmFields(parentCtx.alertId, {
-          llm_copy: suggestion.notification,
-          llm_sentiment: suggestion.sentiment,
-          llm_group_parent_id: null,
-          llm_generated_at: new Date(),
-        });
-
-        for (const ctx of matchedContexts) {
-          if (ctx.alertId === parentCtx.alertId) {
+        // Each suggestion should now have exactly one engagement_id (no combining)
+        for (const engagementId of suggestion.engagementIds) {
+          const matchedContext = ctxByEngagement.get(engagementId);
+          
+          if (!matchedContext) {
             continue;
           }
 
-          await updateAlertLlmFields(ctx.alertId, {
-            llm_copy: undefined,
-            llm_sentiment: undefined,
-            llm_group_parent_id: parentCtx.alertId,
+          // Each engagement gets its own unique notification - no grouping
+          await updateAlertLlmFields(matchedContext.alertId, {
+            llm_copy: suggestion.notification,
+            llm_sentiment: suggestion.sentiment,
+            llm_group_parent_id: null,
             llm_generated_at: new Date(),
           });
         }
+      }
+
+      // Verify all engagements got notifications - if not, log warning
+      const processedEngagementIds = new Set(
+        suggestions.flatMap((s) => s.engagementIds)
+      );
+      const missingEngagements = group.filter(
+        (ctx) => !processedEngagementIds.has(ctx.engagementId)
+      );
+      
+      if (missingEngagements.length > 0) {
+        console.warn(
+          `[QuoteNotifications] ${missingEngagements.length} engagements did not receive notifications for tweet ${tweetId}`
+        );
       }
     } catch (error) {
       console.error(

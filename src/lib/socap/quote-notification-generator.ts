@@ -48,19 +48,40 @@ INPUT (JSON):
 ${JSON.stringify(payload, null, 2)}
 
 REQUIREMENTS:
-1. Read the main tweet context and each quote.
+1. Read the main tweet context and each quote carefully.
 2. Return JSON ONLY. Do not include explanations.
-3. Output format (array of 1-5 objects):
+3. CRITICAL: Generate EXACTLY ONE unique notification per quote/engagement. DO NOT combine multiple quotes into one notification.
+4. Output format (array with one object per quote - each object must have exactly ONE engagement_id):
 [
   {
-    "engagement_ids": ["id1", "id2"],
-    "notification": "Concise human-friendly sentence mentioning the relevant accounts and what they said.",
+    "engagement_ids": ["id1"],
+    "notification": "Specific, unique notification mentioning the account name/username and key details from their quote text.",
+    "sentiment": "positive|neutral|critical"
+  },
+  {
+    "engagement_ids": ["id2"],
+    "notification": "Different specific notification for the second account with their unique quote details.",
     "sentiment": "positive|neutral|critical"
   }
 ]
-4. You may combine multiple quotes into one notification if it reads better (list all relevant usernames). Otherwise, create separate notifications.
-5. Include key specifics (topic or stance) when possible. Stay under 240 characters per notification.
-6. Sentiment should reflect the quote tone toward the original tweet.
+5. IMPORTANT: Each "engagement_ids" array must contain EXACTLY ONE ID. Never put multiple engagement IDs in a single notification object.
+6. Each notification MUST be unique and specific to that engager:
+   - Mention the account's name or username
+   - Include specific details from their quote text (what they said, their stance, key points)
+   - Highlight unique aspects of their response (agreement, criticism, questions, insights, etc.)
+   - Reference specific topics or themes from their quote
+7. Make notifications highly specific and contextual - avoid generic templates. Each should reflect what that particular engager actually said.
+8. Stay under 240 characters per notification.
+9. Sentiment should reflect the quote tone toward the original tweet (positive = supportive/enthusiastic, critical = questioning/negative, neutral = factual/informational).
+10. If multiple accounts quote the same tweet, each must have a distinctly different notification highlighting their unique perspective or comment.
+
+EXAMPLE:
+If Account A says "This is revolutionary!" and Account B says "Interesting but needs more data", generate:
+- "Account A (@usernameA) quote-tweeted your post, calling it revolutionary and highlighting its impact."
+- "Account B (@usernameB) quote-tweeted your post, noting it's interesting but requesting more supporting data."
+
+NOT:
+- "Account A and Account B quote-tweeted your post." (too generic, combines accounts)
 `;
 
   return instructions.trim();
@@ -94,7 +115,7 @@ export async function generateQuoteNotifications(
       {
         role: 'system',
         content:
-          'You turn raw tweet engagement data into short, celebratory notifications. Always respond with JSON.',
+          'You generate unique, specific notifications for each quote tweet engagement. Each notification must be distinct and highlight what that particular engager said. Always respond with JSON array containing one notification object per engagement.',
       },
       {
         role: 'user',
