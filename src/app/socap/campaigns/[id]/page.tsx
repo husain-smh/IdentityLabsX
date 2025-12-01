@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -13,7 +13,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -85,20 +84,7 @@ export default function CampaignDashboardPage() {
   // Single global filter state for all charts
   const [globalFilter, setGlobalFilter] = useState<'all' | 'main_twt' | 'influencer_twt' | 'investor_twt'>('all');
 
-  useEffect(() => {
-    fetchDashboard();
-    fetchMetrics();
-    
-    // Auto-refresh every minute
-    const interval = setInterval(() => {
-      fetchDashboard();
-      fetchMetrics();
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, [campaignId]);
-
-  async function fetchDashboard() {
+  const fetchDashboard = useCallback(async () => {
     try {
       const response = await fetch(`/api/socap/campaigns/${campaignId}/dashboard`);
       const result = await response.json();
@@ -111,9 +97,9 @@ export default function CampaignDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [campaignId]);
 
-  async function fetchMetrics() {
+  const fetchMetrics = useCallback(async () => {
     try {
       const response = await fetch(
         `/api/socap/campaigns/${campaignId}/metrics?granularity=hour`
@@ -126,7 +112,20 @@ export default function CampaignDashboardPage() {
     } catch (error) {
       console.error('Error fetching metrics:', error);
     }
-  }
+  }, [campaignId]);
+
+  useEffect(() => {
+    fetchDashboard();
+    fetchMetrics();
+    
+    // Auto-refresh every minute
+    const interval = setInterval(() => {
+      fetchDashboard();
+      fetchMetrics();
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [campaignId, fetchDashboard, fetchMetrics]);
 
   async function updateCampaignStatus(newStatus: 'active' | 'paused') {
     setActionLoading(true);

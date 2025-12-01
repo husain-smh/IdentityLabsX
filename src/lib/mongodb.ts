@@ -19,7 +19,6 @@ const options = {
 };
 
 let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
 let connectionTimestamp = 0;
 const CONNECTION_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
@@ -29,33 +28,37 @@ function isConnectionStale(): boolean {
 }
 
 // Helper function to create fresh connection
-function createConnection(): void {
+function createConnection(): Promise<MongoClient> {
   console.log('🔄 Creating fresh MongoDB connection...');
   client = new MongoClient(uri, options);
-  clientPromise = client.connect();
   connectionTimestamp = Date.now();
+  return client.connect();
 }
+
+// Initialize clientPromise based on environment
+const globalWithMongo = global as typeof globalThis & {
+  _mongoClientPromise?: Promise<MongoClient>;
+  _mongoConnectionTimestamp?: number;
+};
+
+let clientPromise: Promise<MongoClient>;
 
 if (process.env.NODE_ENV === 'development') {
   // In development mode, use a global variable so that the value
   // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-    _mongoConnectionTimestamp?: number;
-  };
-
   if (!globalWithMongo._mongoClientPromise || !globalWithMongo._mongoConnectionTimestamp || 
-      Date.now() - globalWithMongo._mongoConnectionTimestamp > CONNECTION_MAX_AGE) {
+      Date.now() - (globalWithMongo._mongoConnectionTimestamp || 0) > CONNECTION_MAX_AGE) {
     console.log('🔄 Refreshing stale MongoDB connection in development...');
     client = new MongoClient(uri, options);
     globalWithMongo._mongoClientPromise = client.connect();
     globalWithMongo._mongoConnectionTimestamp = Date.now();
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
+  // At this point, _mongoClientPromise is guaranteed to exist
+  clientPromise = globalWithMongo._mongoClientPromise || createConnection();
   connectionTimestamp = globalWithMongo._mongoConnectionTimestamp || Date.now();
 } else {
   // In production mode, create new connection with pooling
-  createConnection();
+  clientPromise = createConnection();
 }
 
 // Wrapper function to get client with automatic stale connection refresh
@@ -75,7 +78,7 @@ async function getClient(): Promise<MongoClient> {
       clientPromise = globalWithMongo._mongoClientPromise;
       connectionTimestamp = Date.now();
     } else {
-      createConnection();
+      clientPromise = createConnection();
     }
   }
   
@@ -95,7 +98,7 @@ async function getClient(): Promise<MongoClient> {
       clientPromise = globalWithMongo._mongoClientPromise;
       connectionTimestamp = Date.now();
     } else {
-      createConnection();
+      clientPromise = createConnection();
     }
     return await clientPromise;
   }

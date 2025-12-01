@@ -1,4 +1,4 @@
-import { Collection, ObjectId } from 'mongodb';
+import { Collection } from 'mongodb';
 import clientPromise from '../../mongodb';
 import { roundToHour } from './utils';
 

@@ -1,5 +1,3 @@
-import { getJobQueueStats } from './job-queue';
-import { getTweetsByCampaign } from '../models/socap/tweets';
 import { aggregateCampaignMetrics } from './metric-aggregator';
 
 /**

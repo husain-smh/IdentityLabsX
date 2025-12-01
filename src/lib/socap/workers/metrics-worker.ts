@@ -10,7 +10,7 @@ import { updateWorkerState } from '../../models/socap/worker-state';
  * Fetches tweet metrics and calculates deltas
  */
 export class MetricsWorker extends BaseWorker {
-  protected async processJob(job: Job, state: WorkerState): Promise<void> {
+  protected async processJob(job: Job, _state: WorkerState): Promise<void> {
     const tweetId = job.tweet_id;
     
     try {
@@ -64,7 +64,7 @@ export class MetricsWorker extends BaseWorker {
             viewCount: currentMetrics.viewCount,
             bookmarkCount: currentMetrics.bookmarkCount,
           });
-        } catch (e) {
+        } catch {
           // If we can't fetch, that's okay - we'll retry later
         }
       }

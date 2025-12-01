@@ -56,7 +56,7 @@ async function withRetry<T>(
  * GET /socap/campaigns
  * List all campaigns
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const campaigns = await withRetry(() => getAllCampaigns(), 3, 1000);
     

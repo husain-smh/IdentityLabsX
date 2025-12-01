@@ -89,6 +89,25 @@ export async function sendAlerts(limit: number = 50): Promise<{
 }
 
 /**
+ * Build a client-facing, single-sentence notification summary.
+ * Example: "Robert Scoble (@Scobleizer) retweeted your post for \"SOCAP Launch\"."
+ */
+function buildNotificationText(
+  campaign: any,
+  engagement: any,
+  alert: any,
+  actionText: string
+): string {
+  const profile = engagement.account_profile || {};
+  const name = profile.name || profile.username || 'Someone';
+  const username = profile.username || '';
+  const campaignName = campaign.launch_name || 'your campaign';
+
+  // Client-facing: no importance score, just a clear human sentence
+  return `${name}${username ? ` (@${username})` : ''} ${actionText} your post for "${campaignName}".`;
+}
+
+/**
  * Send Slack alert
  */
 async function sendSlackAlert(
@@ -107,15 +126,25 @@ async function sendSlackAlert(
     reply: 'replied to',
     quote: 'quote-tweeted',
   } as Record<string, string>)[engagement.action_type] || 'engaged with';
+
+  const notificationText = buildNotificationText(campaign, engagement, alert, actionText);
   
   const message = {
-    text: `🚨 High-importance engagement detected!`,
+    // This is what the client will primarily see in Slack
+    text: notificationText,
     blocks: [
       {
         type: 'header',
         text: {
           type: 'plain_text',
           text: '🚨 High-importance Engagement',
+        },
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: notificationText,
         },
       },
       {

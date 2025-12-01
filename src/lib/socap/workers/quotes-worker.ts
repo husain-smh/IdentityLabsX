@@ -34,7 +34,7 @@ export class QuotesWorker extends BaseWorker {
   private async backfillQuotes(
     campaignId: string,
     tweetId: string,
-    state: WorkerState
+    _state: WorkerState
   ): Promise<void> {
     let cursor: string | null = null;
     let allProcessed = 0;

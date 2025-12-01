@@ -1,6 +1,6 @@
 import { getEngagementsByCampaign } from '../models/socap/engagements';
 import { getCampaignById } from '../models/socap/campaigns';
-import { checkRecentAlert, roundToHour } from '../models/socap/alert-history';
+import { checkRecentAlert } from '../models/socap/alert-history';
 import { createAlert } from '../models/socap/alert-queue';
 
 /**
@@ -61,10 +61,11 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
     const randomOffset = Math.random() * alertSpacingMinutes * 60 * 1000; // Random within window
     const scheduledSendTime = new Date(baseTime.getTime() + randomOffset);
     
-    // Queue alert
+    // Queue alert - normalize engagement_id to string to ensure
+    // consistent deduplication and unique index behavior
     await createAlert({
       campaign_id: campaignId,
-      engagement_id: engagement._id!,
+      engagement_id: String(engagement._id!),
       user_id: engagement.user_id,
       action_type: engagement.action_type,
       importance_score: engagement.importance_score,

@@ -44,24 +44,63 @@ export async function createAlertQueueIndexes(): Promise<void> {
   await collection.createIndex({ campaign_id: 1, run_batch: 1 });
   await collection.createIndex({ engagement_id: 1 });
   await collection.createIndex({ created_at: -1 });
+  // Ensure one alert per (campaign, engagement)
+  await collection.createIndex(
+    { campaign_id: 1, engagement_id: 1 },
+    { unique: true }
+  );
 }
 
 // ===== CRUD Operations =====
 
 export async function createAlert(input: CreateAlertInput): Promise<AlertQueue> {
   const collection = await getAlertQueueCollection();
-  
-  const alert: AlertQueue = {
-    ...input,
-    status: 'pending',
-    sent_at: null,
-    created_at: new Date(),
-  };
-  
-  const result = await collection.insertOne(alert);
-  alert._id = result.insertedId.toString();
-  
-  return alert;
+  const now = new Date();
+
+  // Normalize engagement_id to string for consistency
+  const engagementIdStr = String(input.engagement_id);
+
+  // Idempotent creation: one alert per (campaign_id, engagement_id).
+  // If an alert already exists for this engagement, we update key fields
+  // (e.g. importance_score, run_batch, scheduled_send_time) but do not
+  // create a second alert row.
+  const result = await collection.findOneAndUpdate(
+    {
+      campaign_id: input.campaign_id,
+      // Match both string and legacy ObjectId forms of engagement_id
+      $or: [
+        { engagement_id: engagementIdStr },
+        // Some older alerts may have stored engagement_id as ObjectId
+        ...(ObjectId.isValid(engagementIdStr)
+          ? [{ engagement_id: new ObjectId(engagementIdStr) } as any]
+          : []),
+      ],
+    },
+    {
+      $setOnInsert: {
+        campaign_id: input.campaign_id,
+        engagement_id: engagementIdStr,
+        user_id: input.user_id,
+        action_type: input.action_type,
+        status: 'pending',
+        sent_at: null,
+        created_at: now,
+      },
+      $set: {
+        // Always enforce string form going forward
+        engagement_id: engagementIdStr,
+        importance_score: input.importance_score,
+        run_batch: input.run_batch,
+        scheduled_send_time: input.scheduled_send_time,
+      },
+    },
+    {
+      upsert: true,
+      returnDocument: 'after',
+    }
+  );
+
+  return result as AlertQueue;
 }
 
 export async function getPendingAlerts(limit: number = 50): Promise<AlertQueue[]> {
@@ -98,7 +137,7 @@ export async function markAlertAsSent(alertId: string): Promise<boolean> {
   return result.modifiedCount > 0;
 }
 
-export async function markAlertAsSkipped(alertId: string, reason?: string): Promise<boolean> {
+export async function markAlertAsSkipped(alertId: string, _reason?: string): Promise<boolean> {
   const collection = await getAlertQueueCollection();
   
   if (!ObjectId.isValid(alertId)) {
@@ -123,7 +162,7 @@ export async function getAlertsByCampaignAndBatch(
   runBatch: string
 ): Promise<AlertQueue[]> {
   const collection = await getAlertQueueCollection();
-  
+
   return await collection
     .find({
       campaign_id: campaignId,
@@ -131,5 +170,45 @@ export async function getAlertsByCampaignAndBatch(
     })
     .sort({ scheduled_send_time: 1 })
     .toArray();
+}
+
+/**
+ * Get alerts for a campaign (optionally filtered by status)
+ * Used by UI to visualize which alerts were generated and how they are spaced.
+ */
+export async function getAlertsByCampaign(
+  campaignId: string,
+  options?: { status?: AlertQueue['status']; limit?: number }
+): Promise<AlertQueue[]> {
+  const collection = await getAlertQueueCollection();
+
+  const query: any = { campaign_id: campaignId };
+  if (options?.status) {
+    query.status = options.status;
+  }
+
+  let cursor = collection
+    .find(query)
+    .sort({ scheduled_send_time: 1 });
+
+  if (options?.limit) {
+    cursor = cursor.limit(options.limit);
+  }
+
+  return await cursor.toArray();
+}
+
+/**
+ * Get a single alert by ID
+ * Helpful for one-off actions like manual “Send on Slack” from the UI.
+ */
+export async function getAlertById(alertId: string): Promise<AlertQueue | null> {
+  const collection = await getAlertQueueCollection();
+
+  if (!ObjectId.isValid(alertId)) {
+    return null;
+  }
+
+  return await collection.findOne({ _id: new ObjectId(alertId) } as any);
 }
 

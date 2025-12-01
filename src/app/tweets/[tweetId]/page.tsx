@@ -617,7 +617,6 @@ useEffect(() => {
                     
                     // Check if we're using full data or fallback (current page only)
                     const isUsingFullData = !!aiReport?.structured_stats?.categorized_engagers;
-                    const displayedCount = selectedEngagers.length;
                     const isLimited = !isUsingFullData && displayedCount < totalCountForCategory;
 
                     return pieData.length > 0 ? (

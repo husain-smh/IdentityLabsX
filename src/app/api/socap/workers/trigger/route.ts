@@ -9,7 +9,7 @@ import { checkAndCompleteCampaigns } from '@/lib/socap/campaign-completion';
  * Trigger job processing for all active campaigns
  * Called by N8N on schedule (default: every 30 minutes, configurable)
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     // First, check and complete campaigns that have ended
     const completionStats = await checkAndCompleteCampaigns();
