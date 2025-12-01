@@ -63,6 +63,7 @@ export default function CampaignAlertsPage() {
   const [sendingAlertId, setSendingAlertId] = useState<string | null>(null);
   const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
   const [dedupeLoading, setDedupeLoading] = useState(false);
+  const [backfillLoading, setBackfillLoading] = useState(false);
 
   const fetchAlerts = useCallback(async () => {
     if (!campaignId) return;
@@ -139,6 +140,36 @@ export default function CampaignAlertsPage() {
       alert('Failed to deduplicate alerts');
     } finally {
       setDedupeLoading(false);
+    }
+  }
+
+  async function handleBackfillLlm() {
+    if (!campaignId) return;
+    try {
+      setBackfillLoading(true);
+      const response = await fetch(
+        `/api/socap/campaigns/${campaignId}/alerts/backfill-llm`,
+        { method: 'POST' }
+      );
+      const result = await response.json();
+
+      if (!result.success) {
+        alert(`Failed to backfill LLM notifications: ${result.error || 'Unknown error'}`);
+        return;
+      }
+
+      await fetchAlerts();
+      alert(
+        result.message ||
+        `Backfill complete. Processed ${result.data?.processed ?? 0} alerts, generated ${
+          result.data?.generated ?? 0
+        } notifications.`
+      );
+    } catch (err) {
+      console.error('Error backfilling LLM notifications:', err);
+      alert('Failed to backfill LLM notifications');
+    } finally {
+      setBackfillLoading(false);
     }
   }
 
@@ -250,14 +281,24 @@ export default function CampaignAlertsPage() {
             Visualize how notifications are formed, when they are generated, and how they are spaced.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleDeduplicate}
-          disabled={dedupeLoading}
-          className="px-4 py-2 bg-white border border-gray-300 text-gray-900 rounded shadow-sm hover:bg-gray-50 disabled:opacity-50"
-        >
-          {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleBackfillLlm}
+            disabled={backfillLoading}
+            className="px-4 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 disabled:opacity-50"
+          >
+            {backfillLoading ? 'Backfilling...' : 'Generate LLM Notifications for Existing Alerts'}
+          </button>
+          <button
+            type="button"
+            onClick={handleDeduplicate}
+            disabled={dedupeLoading}
+            className="px-4 py-2 bg-white border border-gray-300 text-gray-900 rounded shadow-sm hover:bg-gray-50 disabled:opacity-50"
+          >
+            {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
+          </button>
+        </div>
       </div>
 
       {/* Pending alerts (not yet sent) */}

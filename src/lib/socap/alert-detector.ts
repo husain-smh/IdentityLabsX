@@ -6,6 +6,87 @@ import { getTweetByTweetId } from '../models/socap/tweets';
 import { generateQuoteNotifications } from './quote-notification-generator';
 
 /**
+ * Backfill LLM-generated notifications for existing quote tweet alerts that don't have them yet.
+ * This is useful when LLM generation is added to an existing campaign.
+ */
+export async function backfillQuoteNotifications(campaignId: string): Promise<{
+  processed: number;
+  generated: number;
+  errors: number;
+}> {
+  const campaign = await getCampaignById(campaignId);
+  
+  if (!campaign) {
+    throw new Error(`Campaign ${campaignId} not found`);
+  }
+
+  const { getAlertsByCampaign } = await import('../models/socap/alert-queue');
+  const { getEngagementById } = await import('../models/socap/engagements');
+  
+  // Get all pending quote tweet alerts that don't have LLM copy yet
+  const allAlerts = await getAlertsByCampaign(campaignId, { limit: 1000 });
+  const quoteAlertsWithoutLlm = allAlerts.filter(
+    (alert) => alert.action_type === 'quote' && !alert.llm_copy && alert.status === 'pending'
+  );
+
+  if (quoteAlertsWithoutLlm.length === 0) {
+    return { processed: 0, generated: 0, errors: 0 };
+  }
+
+  // Group alerts by tweet_id and build contexts
+  const quoteAlertContexts = new Map<string, QuoteAlertContext[]>();
+
+  for (const alert of quoteAlertsWithoutLlm) {
+    const engagement = await getEngagementById(alert.engagement_id);
+    if (!engagement || engagement.action_type !== 'quote') {
+      continue;
+    }
+
+    const tweetContexts = quoteAlertContexts.get(engagement.tweet_id) || [];
+    const account = engagement.account_profile;
+    tweetContexts.push({
+      alertId: String(alert._id!),
+      engagementId: String(engagement._id!),
+      tweetId: engagement.tweet_id,
+      importanceScore: engagement.importance_score,
+      accountProfile: {
+        username: account.username,
+        name: account.name,
+        followers: account.followers,
+        verified: account.verified,
+        bio: account.bio,
+      },
+      quoteText: engagement.text,
+      timestamp: engagement.timestamp,
+    });
+    quoteAlertContexts.set(engagement.tweet_id, tweetContexts);
+  }
+
+  let generated = 0;
+  let errors = 0;
+
+  // Process each tweet's quote contexts
+  for (const [tweetId, contexts] of quoteAlertContexts.entries()) {
+    try {
+      await processQuoteAlertContexts(campaign, tweetId, contexts);
+      generated += contexts.length;
+    } catch (error) {
+      console.error(
+        `[QuoteNotifications] Backfill failed for campaign ${campaignId} tweet ${tweetId}:`,
+        error
+      );
+      errors += contexts.length;
+    }
+  }
+
+  return {
+    processed: quoteAlertsWithoutLlm.length,
+    generated,
+    errors,
+  };
+}
+
+/**
  * Detect high-importance engagements and queue alerts
  */
 export async function detectAndQueueAlerts(campaignId: string): Promise<number> {

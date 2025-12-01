@@ -91,8 +91,8 @@ export async function createAlert(input: CreateAlertInput): Promise<AlertQueue> 
         created_at: now,
       },
       $set: {
-        // Always enforce string form going forward
-        engagement_id: engagementIdStr,
+        // Note: engagement_id is only set on insert via $setOnInsert
+        // On updates, we don't modify engagement_id as it's part of the unique key
         importance_score: input.importance_score,
         run_batch: input.run_batch,
         scheduled_send_time: input.scheduled_send_time,
