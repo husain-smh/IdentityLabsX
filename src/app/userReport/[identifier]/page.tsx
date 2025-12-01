@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
 import Navbar from '@/components/Navbar';
-import { NetworkReachSection } from '@/app/userReport/_components/NetworkReachSection';
 import { FollowerTierChart } from '@/app/userReport/_components/FollowerTierChart';
 import { ProfileTypeDistributionSection } from '@/app/userReport/_components/ProfileTypeDistributionSection';
 import { getUserReport } from '@/lib/user-report';
@@ -527,20 +526,6 @@ export default async function UserReportPage({
                 </p>
               ) : (
                 <ProfileTypeDistributionSection distribution={report.profileDistribution} />
-              )}
-            </CollapsibleSection>
-
-            <CollapsibleSection
-              badge="Network reach"
-              title="High-importance engagers by role"
-              description="Pie slice shows each role's share. Click to inspect the accounts."
-            >
-              {report.networkReach.totalHighImportance === 0 ? (
-                <p className="text-sm text-zinc-400">
-                  None of the deduped engagers have an importance score yet.
-                </p>
-              ) : (
-                <NetworkReachSection groups={report.networkReach.groups} />
               )}
             </CollapsibleSection>
 

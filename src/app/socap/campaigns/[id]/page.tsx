@@ -505,7 +505,16 @@ export default function CampaignDashboardPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb', // tailwind gray-200
+                    borderRadius: 6,
+                    color: '#111827', // tailwind gray-900
+                  }}
+                  labelStyle={{ color: '#6b7280' }} // tailwind gray-500
+                  itemStyle={{ color: '#111827' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (

@@ -146,10 +146,16 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
                     ];
                   }}
                   contentStyle={{
-                    backgroundColor: '#0b1120',
+                    backgroundColor: '#ffffff',
                     borderRadius: '0.5rem',
-                    border: '1px solid #1f2937',
-                    color: '#e5e7eb',
+                    border: '1px solid #e5e7eb',
+                    color: '#111827',
+                  }}
+                  labelStyle={{
+                    color: '#4b5563',
+                  }}
+                  itemStyle={{
+                    color: '#111827',
                   }}
                 />
               </PieChart>
