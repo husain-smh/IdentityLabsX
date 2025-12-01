@@ -278,7 +278,12 @@ export async function fetchTweetReplies(
         if (reply.author) {
           const user = transformTweetAuthor(reply.author, reply.createdAt);
           if (user) {
-            allUsers.push(user);
+            // Store the reply tweet ID as engagementId
+            allUsers.push({
+              ...user,
+              engagementId: reply.id,
+              engagementText: reply.text || undefined,
+            });
           }
         }
       }

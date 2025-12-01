@@ -90,6 +90,8 @@ export async function processEngagement(
     action_type: actionType,
     timestamp,
     text,
+    // Store engagement tweet ID if available (for quotes and replies)
+    engagement_tweet_id: user.engagementId,
     account_profile: {
       username: user.username || '',
       name: user.name || '',

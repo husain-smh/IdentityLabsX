@@ -16,6 +16,8 @@ interface AlertEngagement {
   action_type: 'retweet' | 'reply' | 'quote';
   timestamp: string;
   importance_score: number;
+  tweet_id: string; // Original tweet being engaged with
+  engagement_tweet_id?: string; // ID of the actual quote/reply tweet
   account_profile: AlertEngagementProfile;
   account_categories: string[];
 }
@@ -187,6 +189,26 @@ export default function CampaignAlertsPage() {
     if (action === 'reply') return 'Replied';
     if (action === 'quote') return 'Quote-tweeted';
     return action;
+  }
+
+  function buildEngagementUrl(engagement: AlertEngagement | null): string | null {
+    if (!engagement) return null;
+
+    const username = engagement.account_profile.username;
+    if (!username) return null;
+
+    // For quotes and replies, link to the actual engagement tweet if we have the ID
+    if ((engagement.action_type === 'quote' || engagement.action_type === 'reply') && engagement.engagement_tweet_id) {
+      return `https://twitter.com/${username}/status/${engagement.engagement_tweet_id}`;
+    }
+
+    // For retweets, link to the original tweet (retweets don't have their own tweet ID)
+    if (engagement.action_type === 'retweet' && engagement.tweet_id) {
+      return `https://twitter.com/i/status/${engagement.tweet_id}`;
+    }
+
+    // Fallback: link to user's profile
+    return `https://twitter.com/${username}`;
   }
 
   function buildNotificationPreview(alert: AlertItem): string | null {
@@ -369,6 +391,35 @@ export default function CampaignAlertsPage() {
                               Bundled with another quote highlight.
                             </div>
                           )}
+                        </div>
+                      )}
+                      {engagement && buildEngagementUrl(engagement) && (
+                        <div className="mt-2">
+                          <a
+                            href={buildEngagementUrl(engagement)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            <span>
+                              {engagement.action_type === 'quote' && 'View quote tweet'}
+                              {engagement.action_type === 'reply' && 'View reply'}
+                              {engagement.action_type === 'retweet' && 'View original tweet'}
+                            </span>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                              />
+                            </svg>
+                          </a>
                         </div>
                       )}
                       <button

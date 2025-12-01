@@ -6,11 +6,12 @@ import clientPromise from '../../mongodb';
 export interface Engagement {
   _id?: string;
   campaign_id: string;
-  tweet_id: string;
+  tweet_id: string; // Original tweet being engaged with
   user_id: string;
   action_type: 'retweet' | 'reply' | 'quote';
   timestamp: Date;
   text?: string; // for replies/quotes
+  engagement_tweet_id?: string; // ID of the actual quote/reply tweet (for quotes and replies)
   account_profile: {
     username: string;
     name: string;
@@ -32,6 +33,7 @@ export interface EngagementInput {
   action_type: 'retweet' | 'reply' | 'quote';
   timestamp: Date;
   text?: string;
+  engagement_tweet_id?: string; // ID of the actual quote/reply tweet
   account_profile: {
     username: string;
     name: string;
@@ -84,6 +86,7 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
     action_type: input.action_type,
     timestamp: input.timestamp,
     text: input.text,
+    engagement_tweet_id: input.engagement_tweet_id,
     account_profile: input.account_profile,
     importance_score: input.importance_score,
     account_categories: input.account_categories,
