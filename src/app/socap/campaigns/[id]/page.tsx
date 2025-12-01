@@ -34,6 +34,44 @@ interface DashboardData {
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
+type FilterType = 'all' | 'main_twt' | 'influencer_twt' | 'investor_twt';
+
+interface MetricChartProps {
+  title: string;
+  metric: 'likes' | 'retweets' | 'quotes' | 'replies' | 'views';
+  chartData: Array<{ time: string; [key: string]: any }>;
+  color: string;
+}
+
+function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps, 'filter' | 'onFilterChange'>) {
+  return (
+    <div className="bg-white border rounded-lg p-4">
+      <h2 className="text-xl font-semibold mb-4">{title}</h2>
+      {chartData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="time" />
+            <YAxis />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey={metric}
+              stroke={color}
+              strokeWidth={2}
+              dot={{ r: 4 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="text-center text-gray-500 py-12">
+          No metrics data yet
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CampaignDashboardPage() {
   const params = useParams();
   const campaignId = params.id as string;
@@ -43,6 +81,9 @@ export default function CampaignDashboardPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  
+  // Single global filter state for all charts
+  const [globalFilter, setGlobalFilter] = useState<'all' | 'main_twt' | 'influencer_twt' | 'investor_twt'>('all');
 
   useEffect(() => {
     fetchDashboard();
@@ -190,14 +231,55 @@ export default function CampaignDashboardPage() {
     value,
   }));
 
-  const chartData = metricsData.map((snapshot) => ({
-    time: new Date(snapshot.snapshot_time).toLocaleString(),
-    likes: snapshot.total_likes,
-    retweets: snapshot.total_retweets,
-    quotes: snapshot.total_quotes,
-    replies: snapshot.total_replies,
-    views: snapshot.total_views,
-  }));
+  // Base chart data with all breakdown info
+  const baseChartData = metricsData.map((snapshot) => {
+    // Ensure tweet_breakdown exists and has proper structure
+    const breakdown = snapshot.tweet_breakdown || {
+      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+    };
+    
+    return {
+      time: new Date(snapshot.snapshot_time).toLocaleString(),
+      // Total values
+      likes: snapshot.total_likes || 0,
+      retweets: snapshot.total_retweets || 0,
+      quotes: snapshot.total_quotes || 0,
+      replies: snapshot.total_replies || 0,
+      views: snapshot.total_views || 0,
+      // Breakdown values - ensure all categories exist
+      breakdown: {
+        main_twt: breakdown.main_twt || { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+        influencer_twt: breakdown.influencer_twt || { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+        investor_twt: breakdown.investor_twt || { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      },
+    };
+  });
+
+  // Filtered chart data for each metric using global filter
+  const getFilteredChartData = (
+    metric: 'likes' | 'retweets' | 'quotes' | 'replies' | 'views'
+  ) => {
+    return baseChartData.map((item) => {
+      let value: number;
+      if (globalFilter === 'all') {
+        value = item[metric] || 0;
+      } else {
+        // Access breakdown data - ensure we're getting the right property
+        const categoryData = item.breakdown?.[globalFilter];
+        if (categoryData && typeof categoryData === 'object') {
+          value = categoryData[metric] ?? 0;
+        } else {
+          value = 0;
+        }
+      }
+      return {
+        time: item.time,
+        [metric]: value,
+      };
+    });
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -278,107 +360,69 @@ export default function CampaignDashboardPage() {
         </div>
       </div>
 
+      {/* Global Filter Toggle */}
+      <div className="bg-white border rounded-lg p-4 mb-6">
+        <div className="flex justify-end items-center">
+          <div className="flex items-center gap-3">
+            <label htmlFor="metric-filter" className="text-sm font-medium text-gray-700">
+              Filter Metrics By:
+            </label>
+            <select
+              id="metric-filter"
+              value={globalFilter}
+              onChange={(e) => setGlobalFilter(e.target.value as FilterType)}
+              className="px-4 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer min-w-[200px]"
+            >
+              <option value="all">All (Combined)</option>
+              <option value="main_twt">Main Tweet</option>
+              <option value="influencer_twt">Influencer Tweets</option>
+              <option value="investor_twt">Investor Tweets</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {/* Charts */}
       <div className="space-y-6 mb-8">
         {/* Quote Count Chart */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">Quote Count vs Time</h2>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="quotes" stroke="#ffc658" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center text-gray-500 py-12">
-              No metrics data yet
-            </div>
-          )}
-        </div>
+        <MetricChart
+          title="Quote Count vs Time"
+          metric="quotes"
+          chartData={getFilteredChartData('quotes')}
+          color="#ffc658"
+        />
 
         {/* View Count Chart */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">View Count vs Time</h2>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="views" stroke="#9c27b0" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center text-gray-500 py-12">
-              No metrics data yet
-            </div>
-          )}
-        </div>
+        <MetricChart
+          title="View Count vs Time"
+          metric="views"
+          chartData={getFilteredChartData('views')}
+          color="#9c27b0"
+        />
 
         {/* Retweet Count Chart */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">Retweet Count vs Time</h2>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="retweets" stroke="#82ca9d" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center text-gray-500 py-12">
-              No metrics data yet
-            </div>
-          )}
-        </div>
+        <MetricChart
+          title="Retweet Count vs Time"
+          metric="retweets"
+          chartData={getFilteredChartData('retweets')}
+          color="#82ca9d"
+        />
 
         {/* Reply Count Chart */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">Reply Count vs Time</h2>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="replies" stroke="#ff7300" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center text-gray-500 py-12">
-              No metrics data yet
-            </div>
-          )}
-        </div>
+        <MetricChart
+          title="Reply Count vs Time"
+          metric="replies"
+          chartData={getFilteredChartData('replies')}
+          color="#ff7300"
+        />
 
         {/* Like Count Chart */}
-        <div className="bg-white border rounded-lg p-4">
-          <h2 className="text-xl font-semibold mb-4">Like Count vs Time</h2>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="likes" stroke="#8884d8" strokeWidth={2} dot={{ r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="text-center text-gray-500 py-12">
-              No metrics data yet
-            </div>
-          )}
-        </div>
+        <MetricChart
+          title="Like Count vs Time"
+          metric="likes"
+          chartData={getFilteredChartData('likes')}
+          color="#8884d8"
+        />
 
         {/* Category Breakdown */}
         <div className="bg-white border rounded-lg p-4">
