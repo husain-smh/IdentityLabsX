@@ -211,6 +211,11 @@ export default function CampaignAlertsPage() {
     return `https://twitter.com/${username}`;
   }
 
+  function buildOriginalTweetUrl(engagement: AlertEngagement | null): string | null {
+    if (!engagement || !engagement.tweet_id) return null;
+    return `https://twitter.com/i/status/${engagement.tweet_id}`;
+  }
+
   function buildNotificationPreview(alert: AlertItem): string | null {
     const engagement = alert.engagement;
     if (!engagement) return null;
@@ -393,33 +398,62 @@ export default function CampaignAlertsPage() {
                           )}
                         </div>
                       )}
-                      {engagement && buildEngagementUrl(engagement) && (
-                        <div className="mt-2">
-                          <a
-                            href={buildEngagementUrl(engagement)!}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            <span>
-                              {engagement.action_type === 'quote' && 'View quote tweet'}
-                              {engagement.action_type === 'reply' && 'View reply'}
-                              {engagement.action_type === 'retweet' && 'View original tweet'}
-                            </span>
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                      {engagement && (
+                        <div className="mt-2 space-y-1">
+                          {/* Link to the engagement (quote/reply/retweet) */}
+                          {buildEngagementUrl(engagement) && (
+                            <a
+                              href={buildEngagementUrl(engagement)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 hover:underline"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                              />
-                            </svg>
-                          </a>
+                              <span>
+                                {engagement.action_type === 'quote' && 'View quote tweet'}
+                                {engagement.action_type === 'reply' && 'View reply'}
+                                {engagement.action_type === 'retweet' && 'View original tweet'}
+                              </span>
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                />
+                              </svg>
+                            </a>
+                          )}
+                          {/* Link to the original code tweet */}
+                          {buildOriginalTweetUrl(engagement) && (
+                            <div>
+                              <a
+                                href={buildOriginalTweetUrl(engagement)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 hover:underline"
+                              >
+                                <span>View original tweet (ID: {engagement.tweet_id})</span>
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
+                                </svg>
+                              </a>
+                            </div>
+                          )}
                         </div>
                       )}
                       <button
@@ -435,6 +469,42 @@ export default function CampaignAlertsPage() {
                       </button>
                       {expandedAlertId === alert._id && (
                         <div className="mt-2 space-y-1 border-t pt-2">
+                          <div>
+                            <span className="font-medium text-gray-700">Code Tweet ID:</span>{' '}
+                            <span className="text-gray-700 font-mono text-xs">
+                              {engagement?.tweet_id || '-'}
+                            </span>
+                            {engagement?.tweet_id && (
+                              <a
+                                href={buildOriginalTweetUrl(engagement)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-2 text-blue-600 hover:underline text-xs"
+                              >
+                                (view)
+                              </a>
+                            )}
+                          </div>
+                          {engagement?.engagement_tweet_id && (
+                            <div>
+                              <span className="font-medium text-gray-700">
+                                {engagement.action_type === 'quote' ? 'Quote Tweet ID' : 'Reply Tweet ID'}:
+                              </span>{' '}
+                              <span className="text-gray-700 font-mono text-xs">
+                                {engagement.engagement_tweet_id}
+                              </span>
+                              {buildEngagementUrl(engagement) && (
+                                <a
+                                  href={buildEngagementUrl(engagement)!}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="ml-2 text-blue-600 hover:underline text-xs"
+                                >
+                                  (view)
+                                </a>
+                              )}
+                            </div>
+                          )}
                           <div>
                             <span className="font-medium text-gray-700">Engagement Time:</span>{' '}
                             <span className="text-gray-700">
