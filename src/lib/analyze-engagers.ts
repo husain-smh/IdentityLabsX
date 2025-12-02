@@ -85,6 +85,7 @@ export interface EngagerAnalysis {
   follower_tiers: FollowerTier[];
   high_profile_engagers: HighProfileEngager[];
   vc_firms: VCFirm[];
+  hardcoded_vc_firms: VCFirm[]; // Hardcoded VCs/investors from important_people database
   quality_metrics: {
     verified_percentage: number;
     top_10_followers_sum: number;
@@ -439,6 +440,123 @@ export function extractVCFirms(vcEngagers: Engager[]): VCFirm[] {
 }
 
 /**
+ * Hardcoded firm mapping for VCs/investors
+ * Maps usernames or patterns to firm names
+ * Can be extended with more mappings
+ */
+const HARDCODED_VC_FIRM_MAPPING: Map<string, string> = new Map([
+  // Add hardcoded mappings here
+  // Example: ['username', 'Firm Name']
+  // The mapping can also use patterns or be extended via database
+]);
+
+/**
+ * Get firm name for a hardcoded VC/investor
+ * First checks hardcoded mapping, then tries to extract from bio
+ */
+function getHardcodedVCFirm(engager: Engager, importantPerson?: any): string | null {
+  // Check hardcoded mapping first
+  const usernameLower = engager.username.toLowerCase();
+  if (HARDCODED_VC_FIRM_MAPPING.has(usernameLower)) {
+    return HARDCODED_VC_FIRM_MAPPING.get(usernameLower)!;
+  }
+
+  // Check if important person has a firm tag
+  if (importantPerson?.tags) {
+    const firmTags = importantPerson.tags.filter((tag: string) => 
+      tag.toLowerCase().includes('firm:') || tag.toLowerCase().includes('vc:')
+    );
+    if (firmTags.length > 0) {
+      // Extract firm name from tag like "firm:a16z" or "vc:sequoia"
+      const firmTag = firmTags[0];
+      const firmName = firmTag.split(':')[1]?.trim();
+      if (firmName) {
+        return firmName.charAt(0).toUpperCase() + firmName.slice(1);
+      }
+    }
+  }
+
+  // Fallback: try to extract from bio
+  if (engager.bio) {
+    return extractVCFirm(engager.bio);
+  }
+
+  return null;
+}
+
+/**
+ * Extract hardcoded VCs/investors by firm affiliation
+ * Uses important_people database filtered by VC/investor tags
+ */
+export async function extractHardcodedVCFirms(
+  engagers: Engager[]
+): Promise<VCFirm[]> {
+  // Get all important people (fetch in batches)
+  const allImportantPeople: any[] = [];
+  let page = 1;
+  const pageSize = 1000;
+  let hasMore = true;
+
+  while (hasMore) {
+    const { people, total } = await getImportantPeople(page, pageSize);
+    allImportantPeople.push(...people);
+    hasMore = page * pageSize < total;
+    page++;
+  }
+
+  // Filter for VCs/investors by tags
+  const vcInvestorTags = ['vc', 'investor', 'vc investor', 'venture capital', 'angel investor', 'yc founder'];
+  const vcInvestorPeople = allImportantPeople.filter((person) => {
+    const tags = (person.tags || []).map((t: string) => t.toLowerCase());
+    return vcInvestorTags.some(tag => tags.includes(tag));
+  });
+
+  // Create lookup maps
+  const usernameMap = new Map<string, any>();
+  const userIdMap = new Map<string, any>();
+
+  for (const ip of vcInvestorPeople) {
+    if (ip.username) {
+      usernameMap.set(ip.username.toLowerCase(), ip);
+    }
+    if (ip.user_id) {
+      userIdMap.set(ip.user_id, ip);
+    }
+  }
+
+  // Group engagers who are in the hardcoded list by firm
+  const firmMap = new Map<string, VCFirm>();
+
+  for (const engager of engagers) {
+    const importantPerson = 
+      userIdMap.get(engager.userId) ||
+      usernameMap.get(engager.username.toLowerCase());
+
+    if (importantPerson) {
+      const firmName = getHardcodedVCFirm(engager, importantPerson);
+      if (firmName) {
+        if (!firmMap.has(firmName)) {
+          firmMap.set(firmName, {
+            firm_name: firmName,
+            partners: [],
+          });
+        }
+
+        const firm = firmMap.get(firmName)!;
+        firm.partners.push({
+          username: engager.username,
+          name: engager.name,
+          followers: engager.followers,
+          bio: engager.bio,
+        });
+      }
+    }
+  }
+
+  return Array.from(firmMap.values());
+}
+
+/**
  * Main analysis function - processes all engagers
  */
 export async function analyzeEngagers(tweetId: string): Promise<EngagerAnalysis> {
@@ -504,8 +622,11 @@ export async function analyzeEngagers(tweetId: string): Promise<EngagerAnalysis>
   // Get high profile engagers (top 20 by importance_score)
   const high_profile_engagers = getHighProfileEngagers(allEngagers, 20);
 
-  // Extract VC firms
+  // Extract VC firms (from bio-based extraction)
   const vc_firms = extractVCFirms(categories.vcs);
+
+  // Extract hardcoded VC firms (from important_people database)
+  const hardcoded_vc_firms = await extractHardcodedVCFirms(allEngagers);
 
   // Calculate quality metrics
   const verified_count = allEngagers.filter(e => e.verified).length;
@@ -527,6 +648,7 @@ export async function analyzeEngagers(tweetId: string): Promise<EngagerAnalysis>
     follower_tiers,
     high_profile_engagers,
     vc_firms,
+    hardcoded_vc_firms,
     quality_metrics: {
       verified_percentage,
       top_10_followers_sum,

@@ -60,6 +60,15 @@ export interface AIReport {
         bio?: string;
       }>;
     }>;
+    hardcoded_vc_firms: Array<{
+      firm_name: string;
+      partners: Array<{
+        username: string;
+        name: string;
+        followers: number;
+        bio?: string;
+      }>;
+    }>;
     quality_metrics: {
       verified_percentage: number;
       top_10_followers_sum: number;
@@ -130,11 +139,6 @@ Breakdown of Profiles:
 Follower Count Tiers:
 ${follower_tiers.map(t => `- ${t.count} users with ${t.tier} followers`).join('\n')}
 
-${vc_firms.length > 0 ? `VCs by Firm Affiliation:\n${vc_firms.map(f => 
-  `- ${f.firm_name}: ${f.partners.length} partner(s) engaged${f.partners.map(p => 
-    ` (${p.name} @${p.username}, ${(p.followers / 1000).toFixed(1)}K followers)`
-  ).join(', ')}`
-).join('\n')}\n\n` : ''}
 
 Quality Metrics:
 - Verified accounts: ${quality_metrics.verified_percentage}%
@@ -171,7 +175,6 @@ Generate a report in this EXACT format:
 
 [List investors with format: Name (@username) – XK followers – Role/Description]
 
-${vc_firms.length > 0 ? `**VCs by Firm Affiliation:**\n\n[List each firm with partners]\n\n` : ''}
 
 **Quality Metrics:**
 
@@ -289,6 +292,7 @@ export async function generateAIReport(analysis: EngagerAnalysis): Promise<AIRep
         })),
         high_profile_engagers: analysis.high_profile_engagers,
         vc_firms: analysis.vc_firms,
+        hardcoded_vc_firms: analysis.hardcoded_vc_firms,
         quality_metrics: analysis.quality_metrics,
         // Include categorized engagers for interactive pie chart
         categorized_engagers: {

@@ -67,7 +67,11 @@ export default function TweetDetailPage() {
   const [isNarrativeOpen, setIsNarrativeOpen] = useState(true);
   const [isChartsOpen, setIsChartsOpen] = useState(true);
   const [isVCFirmsOpen, setIsVCFirmsOpen] = useState(true);
+  const [isHardcodedVCFirmsOpen, setIsHardcodedVCFirmsOpen] = useState(true);
   const [isQualityMetricsOpen, setIsQualityMetricsOpen] = useState(true);
+  
+  // Selected firm for hardcoded VC firms pie chart
+  const [selectedVCFirm, setSelectedVCFirm] = useState<string | null>(null);
   
   // Filters
   const [minFollowers, setMinFollowers] = useState<string>('');
@@ -607,8 +611,18 @@ useEffect(() => {
                       });
                     };
 
-                    const selectedEngagers =
-                      activeCategory ? categorizedEngagers[activeCategory] ?? [] : [];
+                    // Get engagers for selected category and deduplicate by userId
+                    const rawSelectedEngagers = activeCategory ? categorizedEngagers[activeCategory] ?? [] : [];
+                    
+                    // Deduplicate engagers by userId (in case same person appears multiple times)
+                    const seenUserIds = new Set<string>();
+                    const selectedEngagers = rawSelectedEngagers.filter((engager: Engager) => {
+                      if (seenUserIds.has(engager.userId)) {
+                        return false;
+                      }
+                      seenUserIds.add(engager.userId);
+                      return true;
+                    });
                     
                     // Get total count from pie chart data (all engagers)
                     const totalCountForCategory = activeCategory
@@ -712,9 +726,9 @@ useEffect(() => {
                                     .slice()
                                     .sort((a: Engager, b: Engager) => b.followers - a.followers)
                                     .slice(0, displayedCount)
-                                    .map((engager: Engager) => (
+                                    .map((engager: Engager, index: number) => (
                                       <div
-                                        key={engager.userId}
+                                        key={`${activeCategory}-${engager.userId}-${index}`}
                                         className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
                                       >
                                         <div className="flex items-center justify-between">
@@ -844,6 +858,153 @@ useEffect(() => {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Hardcoded VC Firms by Firm Affiliation */}
+                {aiReport.structured_stats.hardcoded_vc_firms && aiReport.structured_stats.hardcoded_vc_firms.length > 0 && (
+                  <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                    <button
+                      onClick={() => setIsHardcodedVCFirmsOpen(!isHardcodedVCFirmsOpen)}
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                    >
+                      <h4 className="text-lg font-semibold text-white">VCs by Firm Affiliation (Hardcoded)</h4>
+                      <svg
+                        className={`w-5 h-5 text-zinc-400 transition-transform ${isHardcodedVCFirmsOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {isHardcodedVCFirmsOpen && (
+                      <div className="p-6">
+                        {(() => {
+                          const firms = aiReport.structured_stats.hardcoded_vc_firms || [];
+                          const pieData = firms.map((firm: any) => ({
+                            name: firm.firm_name,
+                            value: firm.partners.length,
+                            firmName: firm.firm_name,
+                          }));
+
+                          const selectedFirmData = selectedVCFirm
+                            ? firms.find((f: any) => f.firm_name === selectedVCFirm)
+                            : null;
+
+                          const COLORS = ['#a78bfa', '#60a5fa', '#34d399', '#f472b6', '#fbbf24', '#fb923c', '#3b82f6'];
+
+                          return pieData.length > 0 ? (
+                            <div
+                              className={`bg-zinc-900/50 rounded-lg p-6 transition-all duration-200 ${
+                                selectedVCFirm ? 'lg:flex lg:items-start lg:gap-6' : ''
+                              }`}
+                            >
+                              <div className={selectedVCFirm ? 'lg:w-1/2' : ''}>
+                                <div className="flex items-center justify-between mb-2 gap-2">
+                                  <h5 className="text-lg font-semibold text-white">
+                                    Firm Distribution
+                                  </h5>
+                                </div>
+                                <p className="text-xs text-zinc-400 mb-4">
+                                  Click a segment to see the VCs/investors from that firm.
+                                </p>
+                                <ResponsiveContainer width="100%" height={300}>
+                                  <PieChart>
+                                    <Pie
+                                      data={pieData}
+                                      cx="50%"
+                                      cy="50%"
+                                      labelLine={false}
+                                      label={({ name, percent }) =>
+                                        `${name}: ${(percent * 100).toFixed(0)}%`
+                                      }
+                                      outerRadius={100}
+                                      fill="#8884d8"
+                                      dataKey="value"
+                                      onClick={(_: any, index: number) => {
+                                        const clicked = pieData[index];
+                                        if (!clicked) return;
+                                        setSelectedVCFirm(prev => 
+                                          prev === clicked.firmName ? null : clicked.firmName
+                                        );
+                                      }}
+                                    >
+                                      {pieData.map((entry: any, index: number) => {
+                                        const isActive = selectedVCFirm === entry.firmName;
+                                        return (
+                                          <Cell
+                                            key={`cell-${index}`}
+                                            fill={COLORS[index % COLORS.length]}
+                                            stroke={isActive ? '#e5e7eb' : '#000000'}
+                                            strokeWidth={isActive ? 2 : 1}
+                                            className="cursor-pointer"
+                                          />
+                                        );
+                                      })}
+                                    </Pie>
+                                    <Tooltip />
+                                  </PieChart>
+                                </ResponsiveContainer>
+                              </div>
+
+                              {selectedVCFirm && selectedFirmData && (
+                                <div className="mt-6 lg:mt-0 lg:w-1/2">
+                                  <h5 className="text-sm font-semibold text-white mb-2 flex items-center justify-between">
+                                    <span>
+                                      {selectedFirmData.firm_name} ({selectedFirmData.partners.length} VC{selectedFirmData.partners.length !== 1 ? 's' : ''})
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedVCFirm(null)}
+                                      className="text-xs text-zinc-400 hover:text-zinc-200 underline"
+                                    >
+                                      Clear
+                                    </button>
+                                  </h5>
+                                  {selectedFirmData.partners.length === 0 ? (
+                                    <p className="text-xs text-zinc-500">
+                                      No VCs/investors found in this firm.
+                                    </p>
+                                  ) : (
+                                    <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
+                                      {selectedFirmData.partners
+                                        .slice()
+                                        .sort((a: any, b: any) => b.followers - a.followers)
+                                        .map((partner: any, pIdx: number) => (
+                                          <div
+                                            key={`${selectedVCFirm}-${partner.username}-${pIdx}`}
+                                            className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
+                                          >
+                                            <div className="flex items-center justify-between">
+                                              <div>
+                                                <div className="text-sm font-medium text-white flex items-center gap-1">
+                                                  {partner.name}
+                                                </div>
+                                                <div className="text-xs text-zinc-400">
+                                                  @{partner.username}
+                                                </div>
+                                              </div>
+                                              <div className="text-xs text-zinc-300 font-medium ml-4 whitespace-nowrap">
+                                                {partner.followers.toLocaleString()} followers
+                                              </div>
+                                            </div>
+                                            {partner.bio && (
+                                              <p className="text-xs text-zinc-500 mt-2 line-clamp-2">
+                                                {partner.bio}
+                                              </p>
+                                            )}
+                                          </div>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </div>
