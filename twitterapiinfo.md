@@ -19,6 +19,86 @@ QPS Limit respectively
 
 API ENDPOINTS 
 
+- to get information about an account 
+const url = 'https://api.twitterapi.io/twitter/user/info';
+const options = {method: 'GET', headers: {'X-API-Key': '<api-key>'}, body: undefined};
+
+try {
+  const response = await fetch(url, options);
+  const data = await response.json();
+  console.log(data);
+} catch (error) {
+  console.error(error);
+}
+response on 200 - {
+  "data": {
+    "type": "user",
+    "userName": "<string>",
+    "url": "<string>",
+    "id": "<string>",
+    "name": "<string>",
+    "isBlueVerified": true,
+    "verifiedType": "<string>",
+    "profilePicture": "<string>",
+    "coverPicture": "<string>",
+    "description": "<string>",
+    "location": "<string>",
+    "followers": 123,
+    "following": 123,
+    "canDm": true,
+    "createdAt": "<string>",
+    "favouritesCount": 123,
+    "hasCustomTimelines": true,
+    "isTranslator": true,
+    "mediaCount": 123,
+    "statusesCount": 123,
+    "withheldInCountries": [
+      "<string>"
+    ],
+    "affiliatesHighlightedLabel": {},
+    "possiblySensitive": true,
+    "pinnedTweetIds": [
+      "<string>"
+    ],
+    "isAutomated": true,
+    "automatedBy": "<string>",
+    "unavailable": true,
+    "message": "<string>",
+    "unavailableReason": "<string>",
+    "profile_bio": {
+      "description": "<string>",
+      "entities": {
+        "description": {
+          "urls": [
+            {
+              "display_url": "<string>",
+              "expanded_url": "<string>",
+              "indices": [
+                123
+              ],
+              "url": "<string>"
+            }
+          ]
+        },
+        "url": {
+          "urls": [
+            {
+              "display_url": "<string>",
+              "expanded_url": "<string>",
+              "indices": [
+                123
+              ],
+              "url": "<string>"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "status": "success",
+  "msg": "<string>"
+}
+
 1  - to get information about a tweet 
  const url = 'https://api.twitterapi.io/twitter/tweets';
 const options = {method: 'GET', headers: {'X-API-Key': '<api-key>'}, body: undefined};

@@ -1,9 +1,6 @@
 import { resolveTweetUrls } from './tweet-resolver';
 import { getCampaignTweetsCollection, CampaignTweet } from '../models/socap/tweets';
-import { getWorkerStateCollection } from '../models/socap/worker-state';
-import { getJobQueueCollection } from '../socap/job-queue';
-import { getEngagementsCollection } from '../models/socap/engagements';
-import { getMetricSnapshotsCollection } from '../models/socap/metric-snapshots';
+import { getOrCreateWorkerState } from '../models/socap/worker-state';
 
 type TweetCategory = 'main_twt' | 'influencer_twt' | 'investor_twt';
 
@@ -19,18 +16,14 @@ export interface SyncCampaignTweetsInput {
 }
 
 /**
- * Sync campaign tweets (main/influencer/investor) with a new set of URLs.
+ * Sync campaign tweets (main/influencer/investor) by APPENDING from a set of URLs.
  *
- * - Adds new tweets (resolves URL → tweet_id, creates CampaignTweet)
- * - Removes tweets that are no longer present:
- *   - Deletes from socap_tweets
- *   - Deletes worker_state rows for that (campaign,tweet)
- *   - Deletes pending/retrying jobs for that (campaign,tweet)
- *   - Deletes engagements for that (campaign,tweet)
- *   - Deletes all metric snapshots for the campaign (so charts no longer include old tweets)
+ * - Adds new tweets (resolves URL → tweet_id, creates CampaignTweet + worker_state)
+ * - If a tweet already exists for the campaign, we optionally update its category.
+ * - We NEVER delete existing tweets, worker state, jobs, engagements, or snapshots here.
  *
- * NOTE: Metric snapshots are aggregated; to guarantee removed tweets don't show up
- * in historical charts, we currently clear all snapshots for the campaign.
+ * This makes the edit-campaign flow safe even when URLs are edited or some lines are removed
+ * in the UI: existing monitored tweets and their historical data are always preserved.
  */
 export async function syncCampaignTweets(input: SyncCampaignTweetsInput): Promise<{
   added: number;
@@ -39,7 +32,7 @@ export async function syncCampaignTweets(input: SyncCampaignTweetsInput): Promis
 }> {
   const { campaignId, maintweets, influencer_twts, investor_twts } = input;
 
-  // 1) Build desired map: tweet_url -> category
+  // 1) Build desired map: tweet_url -> category (temporary, before resolving IDs)
   const desiredUrlMap = new Map<string, TweetCategory>();
 
   const addUrlsToMap = (entries: UrlEntry[], category: TweetCategory) => {
@@ -60,89 +53,45 @@ export async function syncCampaignTweets(input: SyncCampaignTweetsInput): Promis
 
   const tweetCollection = await getCampaignTweetsCollection();
 
-  // 2) Load current tweets for campaign
+  // 2) Resolve all desired URLs to tweet IDs
+  const desiredUrls = Array.from(desiredUrlMap.keys());
+  const resolved = await resolveTweetUrls(desiredUrls);
+
+  // Map of tweet_id -> { category, resolved data }
+  const desiredById = new Map<
+    string,
+    {
+      category: TweetCategory;
+      resolved: (typeof resolved)[number];
+    }
+  >();
+
+  for (const r of resolved) {
+    const category = desiredUrlMap.get(r.tweet_url);
+    if (!category) continue;
+    desiredById.set(r.tweet_id, { category, resolved: r });
+  }
+
+  if (desiredById.size === 0) {
+    throw new Error('None of the provided tweet URLs could be resolved');
+  }
+
+  // 3) Load current tweets for campaign and index by tweet_id
   const currentTweets = await tweetCollection
     .find({ campaign_id: campaignId })
     .toArray();
 
-  const currentByUrl = new Map<string, CampaignTweet>();
+  const currentById = new Map<string, CampaignTweet>();
   for (const t of currentTweets) {
-    if (t.tweet_url) {
-      currentByUrl.set(t.tweet_url, t);
-    }
-  }
-
-  // 3) Resolve all desired URLs to tweet IDs (for adds)
-  const desiredUrls = Array.from(desiredUrlMap.keys());
-  const resolved = await resolveTweetUrls(desiredUrls);
-
-  const resolvedByUrl = new Map<string, typeof resolved[0]>();
-  for (const r of resolved) {
-    resolvedByUrl.set(r.tweet_url, r);
+    currentById.set(t.tweet_id, t);
   }
 
   let added = 0;
-  let removed = 0;
   let updatedCategory = 0;
-
-  // 4) Handle removals: tweets present in DB but not in desiredUrlMap
-  const tweetsToRemove: CampaignTweet[] = [];
-  for (const t of currentTweets) {
-    if (!desiredUrlMap.has(t.tweet_url)) {
-      tweetsToRemove.push(t);
-    }
-  }
-
-  if (tweetsToRemove.length > 0) {
-    const tweetIds = tweetsToRemove.map((t) => t.tweet_id);
-
-    const workerStateCollection = await getWorkerStateCollection();
-    const jobQueueCollection = await getJobQueueCollection();
-    const engagementsCollection = await getEngagementsCollection();
-    const metricSnapshotsCollection = await getMetricSnapshotsCollection();
-
-    // Delete tweets
-    await tweetCollection.deleteMany({
-      campaign_id: campaignId,
-      tweet_id: { $in: tweetIds },
-    });
-
-    // Delete worker state rows for these tweets
-    await workerStateCollection.deleteMany({
-      campaign_id: campaignId,
-      tweet_id: { $in: tweetIds },
-    });
-
-    // Delete jobs for these tweets (any status)
-    await jobQueueCollection.deleteMany({
-      campaign_id: campaignId,
-      tweet_id: { $in: tweetIds },
-    });
-
-    // Delete engagements tied to these tweets
-    await engagementsCollection.deleteMany({
-      campaign_id: campaignId,
-      tweet_id: { $in: tweetIds },
-    });
-
-    // Delete all metric snapshots for this campaign to remove historical contribution
-    await metricSnapshotsCollection.deleteMany({
-      campaign_id: campaignId,
-    });
-
-    removed = tweetsToRemove.length;
-  }
-
-  // 5) Handle additions and category updates
-  for (const [url, category] of desiredUrlMap.entries()) {
-    const existing = currentByUrl.get(url);
-    const resolvedTweet = resolvedByUrl.get(url);
-
-    if (!resolvedTweet) {
-      // If URL failed to resolve (invalid or API error), skip it
-      // Caller can decide how to surface this later if needed
-      continue;
-    }
+  
+  // 4) Handle additions and category updates (by tweet_id) — APPEND-ONLY
+  for (const [tweetId, { category, resolved: resolvedTweet }] of desiredById.entries()) {
+    const existing = currentById.get(tweetId);
 
     if (!existing) {
       // New tweet: insert into socap_tweets
@@ -167,7 +116,25 @@ export async function syncCampaignTweets(input: SyncCampaignTweetsInput): Promis
         created_at: new Date(),
       };
 
-      await tweetCollection.insertOne(newTweet);
+      const insertResult = await tweetCollection.insertOne(newTweet);
+      const createdTweetId = resolvedTweet.tweet_id;
+
+      // Create worker state rows for each job type so workers can pick this tweet up
+      const jobTypes: Array<'retweets' | 'replies' | 'quotes' | 'metrics'> = [
+        'retweets',
+        'replies',
+        'quotes',
+        'metrics',
+      ];
+
+      for (const jobType of jobTypes) {
+        await getOrCreateWorkerState({
+          campaign_id: campaignId,
+          tweet_id: createdTweetId,
+          job_type: jobType,
+        });
+      }
+
       added += 1;
     } else if (existing.category !== category) {
       // Category changed: update in-place
@@ -179,7 +146,7 @@ export async function syncCampaignTweets(input: SyncCampaignTweetsInput): Promis
     }
   }
 
-  return { added, removed, updatedCategory };
+  return { added, removed: 0, updatedCategory };
 }
 
 
