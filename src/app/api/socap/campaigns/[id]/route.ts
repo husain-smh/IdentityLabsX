@@ -5,6 +5,7 @@ import {
   updateCampaign,
   deleteCampaign,
 } from '@/lib/models/socap/campaigns';
+import { syncCampaignTweets } from '@/lib/socap/campaign-tweet-sync';
 
 /**
  * GET /socap/campaigns/:id
@@ -76,7 +77,66 @@ export async function PATCH(
       });
     }
     
-    // Handle other updates
+    // Handle tweet set updates (maintweets / influencer_twts / investor_twts)
+    if (
+      Array.isArray(body.maintweets) ||
+      Array.isArray(body.influencer_twts) ||
+      Array.isArray(body.investor_twts)
+    ) {
+      const maintweets = Array.isArray(body.maintweets) ? body.maintweets : [];
+      const influencer_twts = Array.isArray(body.influencer_twts) ? body.influencer_twts : [];
+      const investor_twts = Array.isArray(body.investor_twts) ? body.investor_twts : [];
+
+      const totalUrls =
+        (maintweets?.length || 0) +
+        (influencer_twts?.length || 0) +
+        (investor_twts?.length || 0);
+
+      if (totalUrls === 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'At least one tweet URL is required',
+          },
+          { status: 400 }
+        );
+      }
+
+      // First, apply any non-tweet campaign field updates (e.g., alert_preferences)
+      const campaignFieldUpdates: any = { ...body };
+      delete campaignFieldUpdates.maintweets;
+      delete campaignFieldUpdates.influencer_twts;
+      delete campaignFieldUpdates.investor_twts;
+
+      if (Object.keys(campaignFieldUpdates).length > 0) {
+        const updated = await updateCampaign(id, campaignFieldUpdates);
+        if (!updated) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Campaign not found or update failed',
+            },
+            { status: 404 }
+          );
+        }
+      }
+
+      // Then sync tweets
+      const syncResult = await syncCampaignTweets({
+        campaignId: id,
+        maintweets,
+        influencer_twts,
+        investor_twts,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Campaign tweets synced',
+        data: syncResult,
+      });
+    }
+    
+    // Handle other updates (non-status, non-tweet fields)
     const success = await updateCampaign(id, body);
     
     if (!success) {

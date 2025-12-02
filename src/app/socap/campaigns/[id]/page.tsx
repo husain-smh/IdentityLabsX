@@ -312,7 +312,14 @@ export default function CampaignDashboardPage() {
     return baseChartData.map((item) => {
       let value: number;
       if (globalFilter === 'all') {
-        value = item[metric] || 0;
+        // For total views in "All (Combined)" view, include both base tweet views and quote tweet views
+        if (metric === 'views') {
+          const baseViews = item.views || 0;
+          const quoteViews = item.quoteViews || 0;
+          value = baseViews + quoteViews;
+        } else {
+          value = item[metric] || 0;
+        }
       } else {
         // For quoteViews we don't yet have per-category breakdown, so fall back to total
         if (metric === 'quoteViews') {
@@ -435,6 +442,12 @@ export default function CampaignDashboardPage() {
               </p>
             </div>
             <div className="glass rounded-xl p-4">
+              <p className="text-sm text-zinc-400">Total Quote Tweets</p>
+              <p className="text-2xl font-bold text-white mt-1">
+                {data.metrics.total_quotes.toLocaleString()}
+              </p>
+            </div>
+            <div className="glass rounded-xl p-4">
               <p className="text-sm text-zinc-400">Total Views</p>
               <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_views.toLocaleString()}</p>
             </div>
@@ -487,9 +500,9 @@ export default function CampaignDashboardPage() {
 
           {/* Charts */}
           <div className="space-y-6 mb-6">
-        {/* Quote Count Chart */}
+          {/* Quote Tweets Chart */}
         <MetricChart
-          title="Quote Count vs Time"
+          title="Quote Tweets"
           metric="quotes"
           chartData={getFilteredChartData('quotes')}
           color="#fbbf24"
@@ -497,7 +510,7 @@ export default function CampaignDashboardPage() {
 
         {/* Quote Views Chart */}
         <MetricChart
-          title="Quote Views vs Time"
+          title="Views from Quote Tweets"
           metric="quoteViews"
           chartData={getFilteredChartData('quoteViews')}
           color="#f472b6"
@@ -505,7 +518,7 @@ export default function CampaignDashboardPage() {
 
         {/* View Count Chart */}
         <MetricChart
-          title="View Count vs Time"
+          title="Total Views"
           metric="views"
           chartData={getFilteredChartData('views')}
           color="#a78bfa"
@@ -513,7 +526,7 @@ export default function CampaignDashboardPage() {
 
         {/* Retweet Count Chart */}
         <MetricChart
-          title="Retweet Count vs Time"
+          title="Retweets"
           metric="retweets"
           chartData={getFilteredChartData('retweets')}
           color="#34d399"
@@ -521,7 +534,7 @@ export default function CampaignDashboardPage() {
 
         {/* Reply Count Chart */}
         <MetricChart
-          title="Reply Count vs Time"
+          title="Replies"
           metric="replies"
           chartData={getFilteredChartData('replies')}
           color="#fb923c"
@@ -529,7 +542,7 @@ export default function CampaignDashboardPage() {
 
         {/* Like Count Chart */}
         <MetricChart
-          title="Like Count vs Time"
+          title="Likes"
           metric="likes"
           chartData={getFilteredChartData('likes')}
           color="#6366f1"
