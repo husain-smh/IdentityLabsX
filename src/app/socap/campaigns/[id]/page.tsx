@@ -92,6 +92,15 @@ export default function CampaignDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricsData, setMetricsData] = useState<any[]>([]);
+  const [engagementSeries, setEngagementSeries] = useState<
+    Array<{
+      time: string;
+      retweets: number;
+      replies: number;
+      quotes: number;
+      total: number;
+    }>
+  >([]);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -129,18 +138,51 @@ export default function CampaignDashboardPage() {
     }
   }, [campaignId]);
 
+  const fetchEngagementSeries = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `/api/socap/campaigns/${campaignId}/engagements/timeseries?granularity=hour`
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        const points = (result.data?.points || []) as Array<{
+          time: string | Date;
+          retweets?: number;
+          replies?: number;
+          quotes?: number;
+          total?: number;
+        }>;
+
+        const mapped = points.map((p) => ({
+          time: new Date(p.time).toLocaleString(),
+          retweets: p.retweets ?? 0,
+          replies: p.replies ?? 0,
+          quotes: p.quotes ?? 0,
+          total: p.total ?? 0,
+        }));
+
+        setEngagementSeries(mapped);
+      }
+    } catch (error) {
+      console.error('Error fetching engagement time series:', error);
+    }
+  }, [campaignId]);
+
   useEffect(() => {
     fetchDashboard();
     fetchMetrics();
+    fetchEngagementSeries();
     
     // Auto-refresh every minute
     const interval = setInterval(() => {
       fetchDashboard();
       fetchMetrics();
+      fetchEngagementSeries();
     }, 60000);
     
     return () => clearInterval(interval);
-  }, [campaignId, fetchDashboard, fetchMetrics]);
+  }, [campaignId, fetchDashboard, fetchMetrics, fetchEngagementSeries]);
 
   async function updateCampaignStatus(newStatus: 'active' | 'paused') {
     setActionLoading(true);
@@ -307,6 +349,15 @@ export default function CampaignDashboardPage() {
 
   // Filtered chart data for each metric using global filter
   const getFilteredChartData = (metric: MetricKey) => {
+    // For engagement metrics (retweets / replies / quotes), prefer the
+    // per-engagement time series based on actual engagement timestamps.
+    if (metric === 'retweets' || metric === 'replies' || metric === 'quotes') {
+      return engagementSeries.map((point) => ({
+        time: point.time,
+        [metric]: point[metric],
+      }));
+    }
+
     return baseChartData.map((item) => {
       let value: number;
       if (globalFilter === 'all') {

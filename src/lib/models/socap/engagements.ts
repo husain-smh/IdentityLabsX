@@ -186,6 +186,124 @@ export async function getUniqueEngagersByCampaign(campaignId: string): Promise<n
   return result.length;
 }
 
+/**
+ * Get time-bucketed engagement counts for a campaign.
+ *
+ * This is the core of the "robust chart vs time" system:
+ * we bucket by the actual engagement timestamp coming from the
+ * Twitter API (or best approximation), not by when workers ran.
+ */
+export async function getEngagementTimeSeriesByCampaign(
+  campaignId: string,
+  options?: {
+    startDate?: Date;
+    endDate?: Date;
+    granularity?: 'hour' | 'day';
+    action_type?: 'retweet' | 'reply' | 'quote';
+    category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
+  }
+): Promise<
+  Array<{
+    bucket_start: Date;
+    retweets: number;
+    replies: number;
+    quotes: number;
+    total: number;
+  }>
+> {
+  const collection = await getEngagementsCollection();
+
+  const match: any = {
+    campaign_id: campaignId,
+  };
+
+  if (options?.startDate || options?.endDate) {
+    match.timestamp = {};
+    if (options.startDate) {
+      match.timestamp.$gte = options.startDate;
+    }
+    if (options.endDate) {
+      match.timestamp.$lte = options.endDate;
+    }
+  }
+
+  if (options?.action_type) {
+    match.action_type = options.action_type;
+  }
+
+  const pipeline: any[] = [
+    { $match: match },
+  ];
+
+  // Optional join with tweets collection for category filtering
+  if (options?.category) {
+    pipeline.push(
+      {
+        $lookup: {
+          from: 'socap_tweets',
+          localField: 'tweet_id',
+          foreignField: 'tweet_id',
+          as: 'tweet',
+        },
+      },
+      { $unwind: '$tweet' },
+      {
+        $match: {
+          'tweet.category': options.category,
+        },
+      }
+    );
+  }
+
+  const unit = options?.granularity === 'day' ? 'day' : 'hour';
+
+  pipeline.push(
+    {
+      $group: {
+        _id: {
+          bucket_start: {
+            $dateTrunc: {
+              date: '$timestamp',
+              unit,
+            },
+          },
+        },
+        retweets: {
+          $sum: {
+            $cond: [{ $eq: ['$action_type', 'retweet'] }, 1, 0],
+          },
+        },
+        replies: {
+          $sum: {
+            $cond: [{ $eq: ['$action_type', 'reply'] }, 1, 0],
+          },
+        },
+        quotes: {
+          $sum: {
+            $cond: [{ $eq: ['$action_type', 'quote'] }, 1, 0],
+          },
+        },
+        total: { $sum: 1 },
+      },
+    },
+    {
+      $sort: {
+        '_id.bucket_start': 1,
+      },
+    }
+  );
+
+  const results = await collection.aggregate(pipeline).toArray();
+
+  return results.map((r: any) => ({
+    bucket_start: r._id.bucket_start,
+    retweets: r.retweets ?? 0,
+    replies: r.replies ?? 0,
+    quotes: r.quotes ?? 0,
+    total: r.total ?? 0,
+  }));
+}
+
 export async function getEngagementById(engagementId: string): Promise<Engagement | null> {
   const collection = await getEngagementsCollection();
   const { ObjectId } = await import('mongodb');
