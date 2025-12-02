@@ -19,35 +19,37 @@ export default function CreateCampaignPage() {
     channels: ['email'] as string[],
     start_date: '',
     end_date: '',
-    maintweets: [''] as string[],
-    influencer_twts: [''] as string[],
-    investor_twts: [''] as string[],
+    // Raw textarea inputs where users can paste many URLs with commas, spaces, or newlines
+    maintweets_raw: '',
+    influencer_twts_raw: '',
+    investor_twts_raw: '',
   });
 
   function handleInputChange(field: string, value: any) {
     setFormData((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleArrayChange(field: 'maintweets' | 'influencer_twts' | 'investor_twts', index: number, value: string) {
-    setFormData((prev) => {
-      const newArray = [...prev[field]];
-      newArray[index] = value;
-      return { ...prev, [field]: newArray };
-    });
-  }
+  /**
+   * Extract tweet URLs from a free-form textarea string.
+   *
+   * Rules:
+   * - Treat every occurrence of http:// or https:// as the start of a new URL
+   * - Allow commas, spaces, and newlines before the URL
+   * - Stop the URL at whitespace or a common delimiter like comma/semicolon/paren
+   */
+  function extractTweetUrls(input: string): string[] {
+    if (!input) return [];
 
-  function addTweetField(field: 'maintweets' | 'influencer_twts' | 'investor_twts') {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: [...prev[field], ''],
-    }));
-  }
+    const matches = input.match(/https?:\/\/\S+/g) || [];
 
-  function removeTweetField(field: 'maintweets' | 'influencer_twts' | 'investor_twts', index: number) {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: prev[field].filter((_, i) => i !== index),
-    }));
+    return matches
+      .map((raw) => {
+        // Trim common trailing punctuation that might be attached in CSV/notes
+        let url = raw.trim();
+        url = url.replace(/[),;]+$/g, '');
+        return url;
+      })
+      .filter((url) => url.length > 0);
   }
 
   function handleChannelToggle(channel: string) {
@@ -65,16 +67,16 @@ export default function CreateCampaignPage() {
     setError(null);
 
     try {
-      // Filter out empty tweet URLs
-      const maintweets = formData.maintweets
-        .filter((url) => url.trim())
-        .map((url) => ({ url: url.trim() }));
-      const influencer_twts = formData.influencer_twts
-        .filter((url) => url.trim())
-        .map((url) => ({ url: url.trim() }));
-      const investor_twts = formData.investor_twts
-        .filter((url) => url.trim())
-        .map((url) => ({ url: url.trim() }));
+      // Extract tweet URLs from the raw textarea fields
+      const maintweets = extractTweetUrls(formData.maintweets_raw).map((url) => ({
+        url,
+      }));
+      const influencer_twts = extractTweetUrls(formData.influencer_twts_raw).map((url) => ({
+        url,
+      }));
+      const investor_twts = extractTweetUrls(formData.investor_twts_raw).map((url) => ({
+        url,
+      }));
 
       const payload = {
         launch_name: formData.launch_name,
@@ -234,99 +236,46 @@ export default function CreateCampaignPage() {
               <label className="block text-sm font-medium mb-2">
                 Main Tweets
               </label>
-              {formData.maintweets.map((url, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => handleArrayChange('maintweets', index, e.target.value)}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="https://twitter.com/user/status/123456"
-                  />
-                  {formData.maintweets.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTweetField('maintweets', index)}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addTweetField('maintweets')}
-                className="text-blue-600 hover:underline text-sm"
-              >
-                + Add Main Tweet
-              </button>
+              <textarea
+                value={formData.maintweets_raw}
+                onChange={(e) => handleInputChange('maintweets_raw', e.target.value)}
+                className="w-full border rounded px-3 py-2 min-h-[80px]"
+                placeholder={`Paste one or more tweet URLs.\nExamples:\nhttps://x.com/user/status/123\nhttps://twitter.com/user2/status/456, https://x.com/user3/status/789`}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                You can separate URLs with newlines, spaces, or commas. Each
+                occurrence of an http(s) URL will be treated as a separate tweet.
+              </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">
                 Influencer Tweets
               </label>
-              {formData.influencer_twts.map((url, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => handleArrayChange('influencer_twts', index, e.target.value)}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="https://twitter.com/user/status/123456"
-                  />
-                  {formData.influencer_twts.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTweetField('influencer_twts', index)}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addTweetField('influencer_twts')}
-                className="text-blue-600 hover:underline text-sm"
-              >
-                + Add Influencer Tweet
-              </button>
+              <textarea
+                value={formData.influencer_twts_raw}
+                onChange={(e) => handleInputChange('influencer_twts_raw', e.target.value)}
+                className="w-full border rounded px-3 py-2 min-h-[80px]"
+                placeholder={`Paste influencer tweet URLs. Any text is fine as long as the URLs start with http(s)://`}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Same rules: every http(s) URL is parsed as a separate influencer tweet.
+              </p>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">
                 Investor Tweets
               </label>
-              {formData.investor_twts.map((url, index) => (
-                <div key={index} className="flex gap-2 mb-2">
-                  <input
-                    type="url"
-                    value={url}
-                    onChange={(e) => handleArrayChange('investor_twts', index, e.target.value)}
-                    className="flex-1 border rounded px-3 py-2"
-                    placeholder="https://twitter.com/user/status/123456"
-                  />
-                  {formData.investor_twts.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeTweetField('investor_twts', index)}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => addTweetField('investor_twts')}
-                className="text-blue-600 hover:underline text-sm"
-              >
-                + Add Investor Tweet
-              </button>
+              <textarea
+                value={formData.investor_twts_raw}
+                onChange={(e) => handleInputChange('investor_twts_raw', e.target.value)}
+                className="w-full border rounded px-3 py-2 min-h-[80px]"
+                placeholder={`Paste investor tweet URLs here.`}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                URLs can be separated by commas, spaces, or new lines.
+              </p>
             </div>
           </div>
         </div>

@@ -710,8 +710,8 @@ function EditCampaignForm({
     channels: campaign.alert_preferences.channels || ['email'],
   });
 
-  // Build initial tweet URL lists from existing tweets
-  const initialTweetUrls = (() => {
+  // Build initial tweet URL lists from existing tweets, then flatten into textarea strings
+  const initialTweetText = (() => {
     const grouped = {
       main_twt: [] as string[],
       influencer_twt: [] as string[],
@@ -725,22 +725,21 @@ function EditCampaignForm({
       if (t.category === 'investor_twt') grouped.investor_twt.push(url);
     }
 
-    // Ensure at least one empty field per group for UX
-    if (grouped.main_twt.length === 0) grouped.main_twt.push('');
-    if (grouped.influencer_twt.length === 0) grouped.influencer_twt.push('');
-    if (grouped.investor_twt.length === 0) grouped.investor_twt.push('');
-
-    return grouped;
+    return {
+      maintweets_raw: grouped.main_twt.join('\n'),
+      influencer_twts_raw: grouped.influencer_twt.join('\n'),
+      investor_twts_raw: grouped.investor_twt.join('\n'),
+    };
   })();
 
   const [tweetForm, setTweetForm] = useState<{
-    maintweets: string[];
-    influencer_twts: string[];
-    investor_twts: string[];
+    maintweets_raw: string;
+    influencer_twts_raw: string;
+    investor_twts_raw: string;
   }>({
-    maintweets: initialTweetUrls.main_twt,
-    influencer_twts: initialTweetUrls.influencer_twt,
-    investor_twts: initialTweetUrls.investor_twt,
+    maintweets_raw: initialTweetText.maintweets_raw,
+    influencer_twts_raw: initialTweetText.influencer_twts_raw,
+    investor_twts_raw: initialTweetText.investor_twts_raw,
   });
 
   function handleSettingsChange(field: keyof typeof settingsForm, value: any) {
@@ -756,49 +755,40 @@ function EditCampaignForm({
     }));
   }
 
-  function handleTweetChange(
-    field: 'maintweets' | 'influencer_twts' | 'investor_twts',
-    index: number,
-    value: string
-  ) {
-    setTweetForm((prev) => {
-      const next = [...prev[field]];
-      next[index] = value;
-      return { ...prev, [field]: next };
-    });
-  }
+  /**
+   * Extract tweet URLs from a free-form textarea string.
+   *
+   * Matches the same rules as the create campaign page:
+   * - Every http:// or https:// occurrence starts a new URL
+   * - Commas, spaces, and newlines before the URL are ignored
+   * - URL ends at whitespace or common delimiters
+   */
+  function extractTweetUrls(input: string): string[] {
+    if (!input) return [];
 
-  function addTweetField(field: 'maintweets' | 'influencer_twts' | 'investor_twts') {
-    setTweetForm((prev) => ({
-      ...prev,
-      [field]: [...prev[field], ''],
-    }));
-  }
+    const matches = input.match(/https?:\/\/\S+/g) || [];
 
-  function removeTweetField(field: 'maintweets' | 'influencer_twts' | 'investor_twts', index: number) {
-    setTweetForm((prev) => ({
-      ...prev,
-      [field]: prev[field].filter((_, i) => i !== index),
-    }));
+    return matches
+      .map((raw) => {
+        let url = raw.trim();
+        url = url.replace(/[),;]+$/g, '');
+        return url;
+      })
+      .filter((url) => url.length > 0);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const maintweets = tweetForm.maintweets
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0)
-      .map((url) => ({ url }));
+    const maintweets = extractTweetUrls(tweetForm.maintweets_raw).map((url) => ({ url }));
 
-    const influencer_twts = tweetForm.influencer_twts
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0)
-      .map((url) => ({ url }));
+    const influencer_twts = extractTweetUrls(tweetForm.influencer_twts_raw).map((url) => ({
+      url,
+    }));
 
-    const investor_twts = tweetForm.investor_twts
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0)
-      .map((url) => ({ url }));
+    const investor_twts = extractTweetUrls(tweetForm.investor_twts_raw).map((url) => ({
+      url,
+    }));
 
     const totalUrls =
       maintweets.length + influencer_twts.length + investor_twts.length;
@@ -920,105 +910,51 @@ function EditCampaignForm({
           <label className="block text-sm font-medium text-zinc-300 mb-2">
             Main Tweets
           </label>
-          {tweetForm.maintweets.map((url, index) => (
-            <div key={`main-${index}`} className="flex gap-2 mb-2">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) =>
-                  handleTweetChange('maintweets', index, e.target.value)
-                }
-                className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
-                placeholder="https://x.com/user/status/123456"
-              />
-              {tweetForm.maintweets.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeTweetField('maintweets', index)}
-                  className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => addTweetField('maintweets')}
-            className="text-sm text-indigo-400 hover:text-indigo-300"
-          >
-            + Add Main Tweet
-          </button>
+          <textarea
+            value={tweetForm.maintweets_raw}
+            onChange={(e) =>
+              setTweetForm((prev) => ({ ...prev, maintweets_raw: e.target.value }))
+            }
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all min-h-[80px]"
+            placeholder={`Paste one or more main tweet URLs (separated by commas, spaces, or new lines).`}
+          />
+          <p className="text-xs text-zinc-500 mt-1">
+            Each http(s) URL will be parsed as a separate main tweet.
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-2">
             Influencer Tweets
           </label>
-          {tweetForm.influencer_twts.map((url, index) => (
-            <div key={`influencer-${index}`} className="flex gap-2 mb-2">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) =>
-                  handleTweetChange('influencer_twts', index, e.target.value)
-                }
-                className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
-                placeholder="https://x.com/user/status/123456"
-              />
-              {tweetForm.influencer_twts.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeTweetField('influencer_twts', index)}
-                  className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => addTweetField('influencer_twts')}
-            className="text-sm text-indigo-400 hover:text-indigo-300"
-          >
-            + Add Influencer Tweet
-          </button>
+          <textarea
+            value={tweetForm.influencer_twts_raw}
+            onChange={(e) =>
+              setTweetForm((prev) => ({ ...prev, influencer_twts_raw: e.target.value }))
+            }
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all min-h-[80px]"
+            placeholder="Paste influencer tweet URLs here (any mix of commas, spaces, or newlines)."
+          />
+          <p className="text-xs text-zinc-500 mt-1">
+            Every http(s) URL will be treated as a separate influencer tweet.
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-2">
             Investor Tweets
           </label>
-          {tweetForm.investor_twts.map((url, index) => (
-            <div key={`investor-${index}`} className="flex gap-2 mb-2">
-              <input
-                type="url"
-                value={url}
-                onChange={(e) =>
-                  handleTweetChange('investor_twts', index, e.target.value)
-                }
-                className="flex-1 px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
-                placeholder="https://x.com/user/status/123456"
-              />
-              {tweetForm.investor_twts.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removeTweetField('investor_twts', index)}
-                  className="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={() => addTweetField('investor_twts')}
-            className="text-sm text-indigo-400 hover:text-indigo-300"
-          >
-            + Add Investor Tweet
-          </button>
+          <textarea
+            value={tweetForm.investor_twts_raw}
+            onChange={(e) =>
+              setTweetForm((prev) => ({ ...prev, investor_twts_raw: e.target.value }))
+            }
+            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all min-h-[80px]"
+            placeholder="Paste investor tweet URLs here."
+          />
+          <p className="text-xs text-zinc-500 mt-1">
+            URLs separated by spaces, commas, or new lines will all be parsed correctly.
+          </p>
         </div>
       </div>
 
