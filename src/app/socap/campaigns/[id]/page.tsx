@@ -52,7 +52,6 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis dataKey="time" stroke="#9ca3af" />
             <YAxis stroke="#9ca3af" />
             <Tooltip
@@ -68,7 +67,8 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
               dataKey={metric}
               stroke={color}
               strokeWidth={2}
-              dot={{ r: 4 }}
+              dot={{ r: 2 }}
+              activeDot={{ r: 4 }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -429,11 +429,17 @@ export default function CampaignDashboardPage() {
               <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_retweets.toLocaleString()}</p>
             </div>
             <div className="glass rounded-xl p-4">
+              <p className="text-sm text-zinc-400">Total Replies</p>
+              <p className="text-2xl font-bold text-white mt-1">
+                {data.metrics.total_replies.toLocaleString()}
+              </p>
+            </div>
+            <div className="glass rounded-xl p-4">
               <p className="text-sm text-zinc-400">Total Views</p>
               <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_views.toLocaleString()}</p>
             </div>
             <div className="glass rounded-xl p-4">
-              <p className="text-sm text-zinc-400">Total Quote Views</p>
+              <p className="text-sm text-zinc-400">Total Views from QuoteTwt</p>
               <p className="text-2xl font-bold text-indigo-400 mt-1">
                 {((data.metrics as any).total_quote_views ?? 0).toLocaleString()}
               </p>
