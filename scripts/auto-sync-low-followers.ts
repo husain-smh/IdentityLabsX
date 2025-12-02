@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
+
 /**
- * Auto Sync Low-Follower Important People
+ * Auto Sync Low-Following Important People
  *
  * - Finds important_people entries that are:
  *   - is_active: true
  *   - last_synced: null (never synced)
  * - For each person:
- *   - Calls twitterapi.io /twitter/user/info to get their follower count
- *   - If followers > FOLLOWER_THRESHOLD (default: 6000) -> skip
- *   - If followers <= FOLLOWER_THRESHOLD -> calls existing Next.js API
+ *   - Checks their following_count from Mongo
+ *   - If following_count > FOLLOWING_THRESHOLD (default: 6000) -> skip
+ *   - If following_count <= FOLLOWING_THRESHOLD -> calls existing Next.js API
  *     POST /api/ranker/admin/sync-person with { username }
  *   - Waits for that sync to complete before continuing
  *
@@ -20,7 +22,6 @@
  *   - NEXT server running (so /api/ranker/admin/sync-person is reachable)
  *   - Env vars:
  *       MONGODB_URI
- *       TWITTER_API_KEY
  *       AUTO_SYNC_BASE_URL (optional, defaults to http://localhost:3000)
  */
 
@@ -28,7 +29,7 @@ import rankerDbPromise from '../src/lib/mongodb-ranker';
 import type { ImportantPerson } from '../src/lib/models/ranker';
 import { getTwitterApiConfig } from '../src/lib/config/twitter-api-config';
 
-const FOLLOWER_THRESHOLD = 6000;
+const FOLLOWING_THRESHOLD = 6000;
 const BASE_URL = process.env.AUTO_SYNC_BASE_URL || 'http://localhost:3000';
 
 interface SyncPersonApiResult {
@@ -51,21 +52,37 @@ interface SyncPersonApiResponse {
   results: SyncPersonApiResult[];
 }
 
+function ts(): string {
+  return new Date().toISOString();
+}
+
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchFollowerCount(username: string): Promise<number | null> {
+/**
+ * Fetch live following count for a username from twitterapi.io
+ * using the /twitter/user/info endpoint.
+ *
+ * This lets us:
+ * - Distinguish true 0-following accounts (no need to call N8N)
+ * - Apply the 6000 following threshold based on real data
+ */
+async function fetchFollowingCount(username: string): Promise<number | null> {
   const config = getTwitterApiConfig();
 
   if (!config.apiKey) {
-    console.error('❌ TWITTER_API_KEY not configured in environment.');
+    console.error(`[${ts()}] ❌ TWITTER_API_KEY not configured in environment.`);
     return null;
   }
 
   try {
     const url = new URL(`${config.apiUrl}/twitter/user/info`);
     url.searchParams.set('userName', username);
+
+    console.log(
+      `[${ts()}]   🌐 Fetching twitterapi.io user info for @${username} → ${url.toString()}`,
+    );
 
     const response = await fetch(url.toString(), {
       method: 'GET',
@@ -77,34 +94,37 @@ async function fetchFollowerCount(username: string): Promise<number | null> {
 
     if (!response.ok) {
       console.error(
-        `❌ Failed to fetch user info for @${username}. Status: ${response.status}`,
+        `[${ts()}] ❌ Failed to fetch user info for @${username}. Status: ${response.status}`,
       );
       const text = await response.text().catch(() => '');
       if (text) {
-        console.error('   Response body:', text);
+        console.error(`[${ts()}]     Response body:`, text);
       }
       return null;
     }
 
     const data = (await response.json()) as any;
-    const followers = data?.data?.followers;
+    const following = data?.data?.following;
 
-    if (typeof followers === 'number') {
-      return followers;
+    if (typeof following === 'number') {
+      return following;
     }
 
-    const parsed = parseInt(String(followers ?? '0'), 10);
+    const parsed = parseInt(String(following ?? '0'), 10);
     if (Number.isNaN(parsed)) {
       console.error(
-        `❌ Could not parse followers for @${username}. Raw value:`,
-        followers,
+        `[${ts()}] ❌ Could not parse following for @${username}. Raw value:`,
+        following,
       );
       return null;
     }
 
     return parsed;
   } catch (error) {
-    console.error(`❌ Error fetching follower count for @${username}:`, error);
+    console.error(
+      `[${ts()}] ❌ Error fetching following count for @${username}:`,
+      error,
+    );
     return null;
   }
 }
@@ -113,6 +133,10 @@ async function triggerSync(username: string): Promise<SyncPersonApiResult | null
   const endpoint = `${BASE_URL}/api/ranker/admin/sync-person`;
 
   try {
+    console.log(
+      `[${ts()}]   📡 Calling sync API for @${username} → ${endpoint}`,
+    );
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -123,11 +147,11 @@ async function triggerSync(username: string): Promise<SyncPersonApiResult | null
 
     if (!response.ok) {
       console.error(
-        `❌ Sync API returned non-OK status for @${username}: ${response.status}`,
+        `[${ts()}] ❌ Sync API returned non-OK status for @${username}: ${response.status}`,
       );
       const text = await response.text().catch(() => '');
       if (text) {
-        console.error('   Response body:', text);
+          console.error(`[${ts()}]     Response body:`, text);
       }
       return null;
     }
@@ -137,7 +161,7 @@ async function triggerSync(username: string): Promise<SyncPersonApiResult | null
 
     if (!result) {
       console.error(
-        `❌ Sync API response did not contain results for @${username}. Full response:`,
+        `[${ts()}] ❌ Sync API response did not contain results for @${username}. Full response:`,
         data,
       );
       return null;
@@ -145,16 +169,22 @@ async function triggerSync(username: string): Promise<SyncPersonApiResult | null
 
     return result;
   } catch (error) {
-    console.error(`❌ Error calling sync API for @${username}:`, error);
+    console.error(
+      `[${ts()}] ❌ Error calling sync API for @${username}:`,
+      error,
+    );
     return null;
   }
 }
 
 async function main() {
-  console.log('🚀 Auto Sync Low-Follower Important People');
+  console.log(`[${ts()}] 🚀 Auto Sync Low-Following Important People`);
   console.log('-------------------------------------------');
-  console.log(`Base URL: ${BASE_URL}`);
-  console.log(`Follower threshold: ${FOLLOWER_THRESHOLD}`);
+  console.log(`[${ts()}] Base URL: ${BASE_URL}`);
+  console.log(`[${ts()}] Following threshold: ${FOLLOWING_THRESHOLD}`);
+  console.log(
+    `[${ts()}] Criteria: is_active=true AND last_synced=null (never synced)`,
+  );
   console.log('');
 
   try {
@@ -171,20 +201,28 @@ async function main() {
 
     const totalToCheck = await cursor.count();
     if (totalToCheck === 0) {
-      console.log('✅ No unsynced important people found (last_synced is null).');
+      console.log(
+        `[${ts()}] ✅ No unsynced important people found (last_synced is null).`,
+      );
       process.exit(0);
     }
 
     console.log(
-      `Found ${totalToCheck} unsynced important people (is_active: true, last_synced: null).`,
+      `[${ts()}] Found ${totalToCheck} unsynced important people (is_active: true, last_synced: null).`,
+    );
+    console.log(
+      `[${ts()}] Approximate minimum run time (very rough): at least ${Math.ceil(
+        totalToCheck * 0.5,
+      )} seconds + sync times`,
     );
     console.log('');
 
     let processed = 0;
-    let skippedHighFollowers = 0;
+    let skippedHighFollowing = 0;
     let synced = 0;
     let failed = 0;
-    let followerLookupFailed = 0;
+    let followingLookupFailed = 0;
+    let zeroFollowingMarkedSynced = 0;
 
     while (await cursor.hasNext()) {
       const person = await cursor.next();
@@ -193,50 +231,77 @@ async function main() {
       processed += 1;
       const username = person.username;
 
+      // 1) Get live following count from twitterapi.io
+      const followingCount = await fetchFollowingCount(username);
+      if (followingCount === null) {
+        console.log(
+          `   ⚠️  [${ts()}] Skipping @${username} because following count lookup failed (see error above).`,
+        );
+        followingLookupFailed += 1;
+        continue;
+      }
+
       console.log(
-        `\n[${processed}/${totalToCheck}] Checking @${username} (created_at: ${person.created_at})`,
+        `\n[${processed}/${totalToCheck}] [${ts()}] 👤 Checking @${username} (created_at: ${person.created_at}, last_synced: ${person.last_synced ?? 'null'}, following_count: ${followingCount})`,
       );
 
-      // 1) Fetch follower count from twitterapi.io
-      const followers = await fetchFollowerCount(username);
-      if (followers === null) {
+      // 2) Handle special case: true zero-following accounts
+      if (followingCount === 0) {
         console.log(
-          `   ⚠️  Skipping @${username} because follower count lookup failed.`,
+          `   ✅ [${ts()}] @${username} has 0 following (from twitterapi.io). Marking as synced without calling N8N.`,
         );
-        followerLookupFailed += 1;
+
+        // Directly mark as synced in important_people so it no longer shows as pending
+        const db = await rankerDbPromise;
+        const collection = db.collection<ImportantPerson>('important_people');
+        await collection.updateOne(
+          { username },
+          {
+            $set: {
+              last_synced: new Date(),
+              following_count: 0,
+              updated_at: new Date(),
+            },
+          },
+        );
+
+        zeroFollowingMarkedSynced += 1;
+        synced += 1;
+        // No need to call sync API or N8N – there is nothing to index.
         continue;
       }
 
-      console.log(`   Followers: ${followers}`);
+      // 3) Use following_count from twitterapi.io for threshold + decision
+      console.log(`   ℹ️  Following count: ${followingCount}`);
 
-      // 2) Apply threshold
-      if (followers > FOLLOWER_THRESHOLD) {
+      // 4) Apply threshold
+      if (followingCount > FOLLOWING_THRESHOLD) {
         console.log(
-          `   ⏭️  Skipping @${username} (followers ${followers} > ${FOLLOWER_THRESHOLD}).`,
+          `   ⏭️  [${ts()}] Skipping @${username} (following_count ${followingCount} > ${FOLLOWING_THRESHOLD}).`,
         );
-        skippedHighFollowers += 1;
+        skippedHighFollowing += 1;
         continue;
       }
 
-      // 3) Trigger sync via existing API
+      // 5) Trigger sync via existing API (N8N will handle pagination / errors)
       console.log(
-        `   🔄 Triggering sync for @${username} (followers ${followers} <= ${FOLLOWER_THRESHOLD})...`,
+        `   🔄 [${ts()}] Triggering sync for @${username} (following_count ${followingCount} <= ${FOLLOWING_THRESHOLD})...`,
       );
       const result = await triggerSync(username);
 
       if (!result) {
         console.log(
-          `   ❌ Sync failed for @${username} (no result from API).`,
+          `   ❌ [${ts()}] Sync failed for @${username} (no result from API).`,
         );
         failed += 1;
       } else if (!result.success) {
         console.log(
-          `   ❌ Sync failed for @${username}: ${result.message} (${result.error || 'no error detail'})`,
+          `   ❌ [${ts()}] Sync failed for @${username}: ${result.message} (${result.error || 'no error detail'})`,
         );
         failed += 1;
       } else {
         console.log(
-          `   ✅ Synced @${username}. Following count: ${
+          `   ✅ [${ts()}] Synced @${username}. Following count: ${
             result.following_count ?? 'unknown'
           }`,
         );
@@ -248,16 +313,20 @@ async function main() {
     }
 
     console.log('\n-------------------------------------------');
-    console.log('🏁 Auto sync complete.');
-    console.log(`   Processed:            ${processed}`);
-    console.log(`   Synced successfully:  ${synced}`);
-    console.log(`   Skipped (> threshold):${skippedHighFollowers}`);
-    console.log(`   Follower lookup fail: ${followerLookupFailed}`);
-    console.log(`   Sync failures:        ${failed}`);
+    console.log(`[${ts()}] 🏁 Auto sync complete.`);
+    console.log(`   Processed:             ${processed}`);
+    console.log(`   Synced successfully:   ${synced}`);
+    console.log(`   Skipped (> threshold): ${skippedHighFollowing}`);
+    console.log(`   Zero-following synced: ${zeroFollowingMarkedSynced}`);
+    console.log(`   Following lookup fail: ${followingLookupFailed}`);
+    console.log(`   Sync failures:         ${failed}`);
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Fatal error in auto-sync script:', error);
+    console.error(
+      `[${ts()}] ❌ Fatal error in auto-sync script:`,
+      error,
+    );
     process.exit(1);
   }
 }

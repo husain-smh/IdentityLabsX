@@ -52,7 +52,14 @@ export async function createTweetIndexes(): Promise<void> {
   const collection = await getCampaignTweetsCollection();
   
   await collection.createIndex({ campaign_id: 1 });
-  await collection.createIndex({ tweet_id: 1 }, { unique: true });
+
+  // Allow the same tweet to be monitored across multiple campaigns,
+  // but prevent duplicate tweet_id entries within the *same* campaign.
+  await collection.createIndex(
+    { campaign_id: 1, tweet_id: 1 },
+    { unique: true }
+  );
+
   await collection.createIndex({ campaign_id: 1, category: 1 });
 }
 

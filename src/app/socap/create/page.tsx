@@ -76,12 +76,6 @@ export default function CreateCampaignPage() {
         .filter((url) => url.trim())
         .map((url) => ({ url: url.trim() }));
 
-      if (maintweets.length === 0 && influencer_twts.length === 0 && investor_twts.length === 0) {
-        setError('Please add at least one tweet URL');
-        setLoading(false);
-        return;
-      }
-
       const payload = {
         launch_name: formData.launch_name,
         client_info: {

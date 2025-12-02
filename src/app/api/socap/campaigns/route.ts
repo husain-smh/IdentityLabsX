@@ -103,38 +103,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    // Resolve all tweet URLs
-    const allTweetUrls = [
-      ...(body.maintweets || []).map((t: { url: string }) => t.url),
-      ...(body.influencer_twts || []).map((t: { url: string }) => t.url),
-      ...(body.investor_twts || []).map((t: { url: string }) => t.url),
-    ];
-    
-    if (allTweetUrls.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'At least one tweet URL is required',
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Resolve tweet URLs
-    const resolvedTweets = await resolveTweetUrls(allTweetUrls);
-    
-    if (resolvedTweets.length === 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to resolve any tweet URLs',
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Create campaign
+
+    // Create campaign first – campaigns can exist with zero tweets,
+    // and tweet attachment is a best-effort, append-only operation.
     const campaignInput: CreateCampaignInput = {
       launch_name: body.launch_name,
       client_info: body.client_info,
@@ -151,60 +122,121 @@ export async function POST(request: NextRequest) {
     };
     
     const campaign = await createCampaign(campaignInput);
-    
-    // Create tweet documents and worker states
-    const tweetMap = new Map<string, { url: string; category: 'main_twt' | 'influencer_twt' | 'investor_twt' }>();
-    
-    (body.maintweets || []).forEach((t: { url: string }) => {
-      tweetMap.set(t.url, { url: t.url, category: 'main_twt' });
-    });
-    
-    (body.influencer_twts || []).forEach((t: { url: string }) => {
-      tweetMap.set(t.url, { url: t.url, category: 'influencer_twt' });
-    });
-    
-    (body.investor_twts || []).forEach((t: { url: string }) => {
-      tweetMap.set(t.url, { url: t.url, category: 'investor_twt' });
-    });
-    
-    // Create tweets and worker states
-    const jobTypes: Array<'retweets' | 'replies' | 'quotes' | 'metrics'> = [
-      'retweets',
-      'replies',
-      'quotes',
-      'metrics',
+
+    // Resolve and attach tweets in a best-effort way.
+    // - Campaign creation never rolls back because of tweet issues.
+    // - Campaigns are allowed to have zero tweets.
+    const allTweetUrls = [
+      ...(body.maintweets || []).map((t: { url: string }) => t.url),
+      ...(body.influencer_twts || []).map((t: { url: string }) => t.url),
+      ...(body.investor_twts || []).map((t: { url: string }) => t.url),
     ];
-    
-    for (const resolvedTweet of resolvedTweets) {
-      const tweetInfo = tweetMap.get(resolvedTweet.tweet_url);
-      if (!tweetInfo) continue;
-      
-      // Create tweet document
-      await createCampaignTweet(
-        campaign._id!,
-        resolvedTweet.tweet_id,
-        resolvedTweet.tweet_url,
-        tweetInfo.category,
-        resolvedTweet.author_name,
-        resolvedTweet.author_username,
-        resolvedTweet.text
-      );
-      
-      // Create worker states for each job type
-      for (const jobType of jobTypes) {
-        await createWorkerState({
-          campaign_id: campaign._id!,
-          tweet_id: resolvedTweet.tweet_id,
-          job_type: jobType,
+
+    let tweetsCreated = 0;
+    const tweetErrors: Array<{ url: string; reason: string }> = [];
+
+    if (allTweetUrls.length > 0) {
+      try {
+        const resolvedTweets = await resolveTweetUrls(allTweetUrls);
+
+        if (resolvedTweets.length === 0) {
+          // No URLs could be resolved – keep the campaign but report the issue.
+          for (const url of allTweetUrls) {
+            tweetErrors.push({
+              url,
+              reason: 'Failed to resolve tweet URL',
+            });
+          }
+        } else {
+          // Build URL -> category map once from the original body
+          const tweetMap = new Map<
+            string,
+            { url: string; category: 'main_twt' | 'influencer_twt' | 'investor_twt' }
+          >();
+
+          (body.maintweets || []).forEach((t: { url: string }) => {
+            tweetMap.set(t.url, { url: t.url, category: 'main_twt' });
+          });
+
+          (body.influencer_twts || []).forEach((t: { url: string }) => {
+            tweetMap.set(t.url, { url: t.url, category: 'influencer_twt' });
+          });
+
+          (body.investor_twts || []).forEach((t: { url: string }) => {
+            tweetMap.set(t.url, { url: t.url, category: 'investor_twt' });
+          });
+
+          const jobTypes: Array<'retweets' | 'replies' | 'quotes' | 'metrics'> = [
+            'retweets',
+            'replies',
+            'quotes',
+            'metrics',
+          ];
+
+          for (const resolvedTweet of resolvedTweets) {
+            const tweetInfo = tweetMap.get(resolvedTweet.tweet_url);
+            if (!tweetInfo) continue;
+
+            try {
+              // Create tweet document
+              await createCampaignTweet(
+                campaign._id!,
+                resolvedTweet.tweet_id,
+                resolvedTweet.tweet_url,
+                tweetInfo.category,
+                resolvedTweet.author_name,
+                resolvedTweet.author_username,
+                resolvedTweet.text
+              );
+              tweetsCreated += 1;
+            } catch (err) {
+              const message =
+                err instanceof Error ? err.message : 'Failed to create campaign tweet';
+              tweetErrors.push({
+                url: resolvedTweet.tweet_url,
+                reason: message,
+              });
+              // Skip worker state creation for this tweet
+              continue;
+            }
+
+            // Create worker states for each job type (best-effort per job)
+            for (const jobType of jobTypes) {
+              try {
+                await createWorkerState({
+                  campaign_id: campaign._id!,
+                  tweet_id: resolvedTweet.tweet_id,
+                  job_type: jobType,
+                });
+              } catch (err) {
+                const message =
+                  err instanceof Error
+                    ? err.message
+                    : 'Failed to create worker state for tweet';
+                tweetErrors.push({
+                  url: resolvedTweet.tweet_url,
+                  reason: `worker_state:${jobType}:${message}`,
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to resolve tweet URLs';
+        tweetErrors.push({
+          url: 'ALL_URLS',
+          reason: message,
         });
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       data: {
         campaign,
-        tweets_created: resolvedTweets.length,
+        tweets_created: tweetsCreated,
+        tweet_errors: tweetErrors,
       },
     });
   } catch (error) {
