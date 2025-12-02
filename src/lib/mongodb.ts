@@ -5,17 +5,22 @@ if (!process.env.MONGODB_URI) {
 }
 
 const uri = process.env.MONGODB_URI;
+// Determine if we're connecting to local MongoDB or Atlas
+const isLocalMongo = uri?.includes('localhost') || uri?.includes('127.0.0.1') || uri?.includes('mongodb://localhost');
+
 const options = {
-  tls: true,
-  tlsAllowInvalidCertificates: false,
-  serverSelectionTimeoutMS: 10000, // Increased from 5000ms to 10000ms
-  socketTimeoutMS: 45000,
-  connectTimeoutMS: 10000, // Added explicit connection timeout
+  // Only use TLS for Atlas connections, not local MongoDB
+  ...(isLocalMongo ? {} : { tls: true, tlsAllowInvalidCertificates: false }),
+  serverSelectionTimeoutMS: 5000, // Reduced timeout for faster failure detection
+  socketTimeoutMS: 30000,
+  connectTimeoutMS: 5000, // Reduced timeout for faster failure detection
   maxPoolSize: 10,
-  minPoolSize: 1, // Reduced from 2 to 1 for better serverless compatibility
-  maxIdleTimeMS: 30000, // Close idle connections after 30s to prevent stale connections
+  minPoolSize: 1,
+  maxIdleTimeMS: 30000,
   retryWrites: true,
   retryReads: true,
+  // Add heartbeat to detect connection issues faster
+  heartbeatFrequencyMS: 10000,
 };
 
 let client: MongoClient;
@@ -83,10 +88,25 @@ async function getClient(): Promise<MongoClient> {
   }
   
   try {
-    return await clientPromise;
+    const clientInstance = await clientPromise;
+    // Test the connection by pinging the server
+    await clientInstance.db().admin().ping();
+    return clientInstance;
   } catch (error) {
-    console.error('❌ MongoDB connection failed, retrying...', error);
-    // Recreate connection on failure
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ MongoDB connection failed:', errorMessage);
+    
+    // Provide helpful error message for common issues
+    if (errorMessage.includes('timeout') || errorMessage.includes('MongoServerSelectionError')) {
+      if (isLocalMongo) {
+        console.error('💡 Tip: Make sure MongoDB is running locally. Try: mongod or brew services start mongodb-community');
+      } else {
+        console.error('💡 Tip: Check your MongoDB Atlas connection string and IP whitelist settings.');
+        console.error('💡 Tip: Make sure your IP address is whitelisted in MongoDB Atlas Network Access.');
+      }
+    }
+    
+    // Recreate connection on failure (only once to avoid infinite loops)
     if (process.env.NODE_ENV === 'development') {
       const globalWithMongo = global as typeof globalThis & {
         _mongoClientPromise?: Promise<MongoClient>;
@@ -100,7 +120,15 @@ async function getClient(): Promise<MongoClient> {
     } else {
       clientPromise = createConnection();
     }
-    return await clientPromise;
+    
+    // Try once more, but don't retry indefinitely
+    try {
+      return await clientPromise;
+    } catch (retryError) {
+      const retryErrorMessage = retryError instanceof Error ? retryError.message : String(retryError);
+      console.error('❌ MongoDB connection retry also failed:', retryErrorMessage);
+      throw new Error(`MongoDB connection failed: ${retryErrorMessage}. Please check your MongoDB connection string and ensure the database is accessible.`);
+    }
   }
 }
 

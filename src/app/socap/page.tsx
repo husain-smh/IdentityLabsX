@@ -21,6 +21,7 @@ interface Campaign {
 export default function SocapCampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCampaigns();
@@ -28,14 +29,18 @@ export default function SocapCampaignsPage() {
 
   async function fetchCampaigns() {
     try {
+      setError(null);
       const response = await fetch('/api/socap/campaigns');
       const data = await response.json();
       
       if (data.success) {
-        setCampaigns(data.data);
+        setCampaigns(data.data || []);
+      } else {
+        setError(data.error || 'Failed to load campaigns');
       }
     } catch (error) {
       console.error('Error fetching campaigns:', error);
+      setError('Failed to connect to the server. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -82,7 +87,18 @@ export default function SocapCampaignsPage() {
         </div>
       </div>
 
-      {campaigns.length === 0 ? (
+      {error ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <p className="text-red-800 font-semibold mb-2">Error loading campaigns</p>
+          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <button
+            onClick={fetchCampaigns}
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      ) : campaigns.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 mb-4">No campaigns yet</p>
           <Link
