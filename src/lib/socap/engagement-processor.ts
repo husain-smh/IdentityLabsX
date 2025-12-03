@@ -3,6 +3,7 @@ import { categorizeEngager } from '../analyze-engagers';
 import { FilteredUser } from '../twitter-api-client';
 import type { EngagementInput } from '../models/socap/engagements';
 import type { Engager } from '../models/tweets';
+import { getTweetByTweetId } from '../models/socap/tweets';
 
 /**
  * Calculate importance score for a user
@@ -70,6 +71,17 @@ export async function processEngagement(
   timestamp: Date,
   text?: string
 ): Promise<EngagementInput> {
+  // Figure out tweet category so we can denormalize it onto the engagement.
+  // This avoids expensive joins later when filtering by main/influencer/investor.
+  let tweetCategory: EngagementInput['tweet_category'];
+  try {
+    const tweet = await getTweetByTweetId(tweetId);
+    if (tweet) {
+      tweetCategory = tweet.category;
+    }
+  } catch (error) {
+    console.error(`Error fetching tweet category for tweet ${tweetId}:`, error);
+  }
   // Calculate importance score
   const importanceScore = await calculateImportanceScore(user.userId);
   
@@ -86,6 +98,7 @@ export async function processEngagement(
   return {
     campaign_id: campaignId,
     tweet_id: tweetId,
+    tweet_category: tweetCategory,
     user_id: user.userId,
     action_type: actionType,
     timestamp,

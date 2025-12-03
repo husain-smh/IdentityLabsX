@@ -7,6 +7,7 @@ export interface Engagement {
   _id?: string;
   campaign_id: string;
   tweet_id: string; // Original tweet being engaged with
+  tweet_category?: 'main_twt' | 'influencer_twt' | 'investor_twt'; // denormalized from socap_tweets
   user_id: string;
   action_type: 'retweet' | 'reply' | 'quote';
   timestamp: Date;
@@ -29,6 +30,7 @@ export interface Engagement {
 export interface EngagementInput {
   campaign_id: string;
   tweet_id: string;
+  tweet_category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
   user_id: string;
   action_type: 'retweet' | 'reply' | 'quote';
   timestamp: Date;
@@ -67,6 +69,7 @@ export async function createEngagementIndexes(): Promise<void> {
   
   await collection.createIndex({ campaign_id: 1, created_at: -1 });
   await collection.createIndex({ tweet_id: 1, timestamp: -1 });
+  await collection.createIndex({ campaign_id: 1, tweet_category: 1, timestamp: -1 });
   await collection.createIndex({ importance_score: -1 });
   await collection.createIndex({ campaign_id: 1, importance_score: -1 });
   await collection.createIndex({ user_id: 1, campaign_id: 1 });
@@ -82,6 +85,7 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
   const updateFields = {
     campaign_id: input.campaign_id,
     tweet_id: input.tweet_id,
+    tweet_category: input.tweet_category,
     user_id: input.user_id,
     action_type: input.action_type,
     timestamp: input.timestamp,
@@ -198,7 +202,7 @@ export async function getEngagementTimeSeriesByCampaign(
   options?: {
     startDate?: Date;
     endDate?: Date;
-    granularity?: 'hour' | 'day';
+    granularity?: 'half_hour' | 'hour' | 'day';
     action_type?: 'retweet' | 'reply' | 'quote';
     category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
   }
@@ -231,41 +235,43 @@ export async function getEngagementTimeSeriesByCampaign(
     match.action_type = options.action_type;
   }
 
+  if (options?.category) {
+    match.tweet_category = options.category;
+  }
+
   const pipeline: any[] = [
     { $match: match },
   ];
 
-  // Optional join with tweets collection for category filtering
-  if (options?.category) {
-    pipeline.push(
-      {
-        $lookup: {
-          from: 'socap_tweets',
-          localField: 'tweet_id',
-          foreignField: 'tweet_id',
-          as: 'tweet',
-        },
-      },
-      { $unwind: '$tweet' },
-      {
-        $match: {
-          'tweet.category': options.category,
-        },
-      }
-    );
+  // Determine bucketing behavior.
+  // - 'half_hour' → 30-minute buckets
+  // - 'hour'     → hourly buckets (default)
+  // - 'day'      → daily buckets
+  let dateTruncSpec: any;
+  if (options?.granularity === 'day') {
+    dateTruncSpec = {
+      date: '$timestamp',
+      unit: 'day',
+    };
+  } else if (options?.granularity === 'half_hour') {
+    dateTruncSpec = {
+      date: '$timestamp',
+      unit: 'minute',
+      binSize: 30,
+    };
+  } else {
+    dateTruncSpec = {
+      date: '$timestamp',
+      unit: 'hour',
+    };
   }
-
-  const unit = options?.granularity === 'day' ? 'day' : 'hour';
 
   pipeline.push(
     {
       $group: {
         _id: {
           bucket_start: {
-            $dateTrunc: {
-              date: '$timestamp',
-              unit,
-            },
+            $dateTrunc: dateTruncSpec,
           },
         },
         retweets: {
@@ -313,5 +319,23 @@ export async function getEngagementById(engagementId: string): Promise<Engagemen
   }
   
   return await collection.findOne({ _id: new ObjectId(engagementId) } as any);
+}
+
+/**
+ * Get the latest engagement timestamp for a campaign.
+ * This helps identify when engagement data was last updated.
+ */
+export async function getLatestEngagementTimestamp(
+  campaignId: string
+): Promise<Date | null> {
+  const collection = await getEngagementsCollection();
+  
+  const latest = await collection
+    .findOne(
+      { campaign_id: campaignId },
+      { sort: { timestamp: -1 }, projection: { timestamp: 1 } }
+    );
+  
+  return latest?.timestamp ? new Date(latest.timestamp) : null;
 }
 

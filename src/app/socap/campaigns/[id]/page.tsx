@@ -100,7 +100,8 @@ export default function CampaignDashboardPage() {
       quotes: number;
       total: number;
     }>
-  >([]);
+ >([]);
+  const [engagementLastUpdated, setEngagementLastUpdated] = useState<Date | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -141,7 +142,7 @@ export default function CampaignDashboardPage() {
   const fetchEngagementSeries = useCallback(async () => {
     try {
       const response = await fetch(
-        `/api/socap/campaigns/${campaignId}/engagements/timeseries?granularity=hour`
+        `/api/socap/campaigns/${campaignId}/engagements/timeseries?granularity=half_hour`
       );
       const result = await response.json();
 
@@ -163,6 +164,13 @@ export default function CampaignDashboardPage() {
         }));
 
         setEngagementSeries(mapped);
+        
+        // Store last updated timestamp if available
+        if (result.data?.last_updated) {
+          setEngagementLastUpdated(new Date(result.data.last_updated));
+        } else {
+          setEngagementLastUpdated(null);
+        }
       }
     } catch (error) {
       console.error('Error fetching engagement time series:', error);
@@ -549,6 +557,19 @@ export default function CampaignDashboardPage() {
 
           {/* Charts */}
           <div className="space-y-6 mb-6">
+          {/* Engagement Data Status Note */}
+          {engagementLastUpdated && (
+            <div className="glass rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10">
+              <p className="text-sm text-yellow-400">
+                <span className="font-semibold">Note:</span> Engagement charts (Retweets, Replies, Quotes) show data up to{' '}
+                <span className="font-mono">
+                  {engagementLastUpdated.toLocaleString()}
+                </span>
+                . New engagements will appear once workers process them.
+              </p>
+            </div>
+          )}
+          
           {/* Quote Tweets Chart */}
         <MetricChart
           title="Quote Tweets"

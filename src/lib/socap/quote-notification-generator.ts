@@ -97,6 +97,29 @@ function extractJsonArray(raw: string): unknown {
   return JSON.parse(jsonSegment);
 }
 
+/**
+ * Check if an error is an OpenAI rate limit error
+ */
+function isRateLimitError(error: unknown): boolean {
+  if (error && typeof error === 'object') {
+    const err = error as any;
+    // Check for OpenAI rate limit indicators
+    if (err.status === 429 || err.code === 'rate_limit_exceeded') {
+      return true;
+    }
+    // Check error message for rate limit keywords
+    if (err.message && typeof err.message === 'string') {
+      const msg = err.message.toLowerCase();
+      return (
+        msg.includes('rate limit') ||
+        msg.includes('429') ||
+        msg.includes('requests per day')
+      );
+    }
+  }
+  return false;
+}
+
 export async function generateQuoteNotifications(
   payload: QuoteNotificationPrompt
 ): Promise<QuoteNotificationSuggestion[]> {
@@ -107,44 +130,56 @@ export async function generateQuoteNotifications(
 
   const prompt = buildPrompt(payload);
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0.4,
-    max_tokens: 700,
-    messages: [
-      {
-        role: 'system',
-        content:
-          'You generate unique, specific notifications for each quote tweet engagement. Each notification must be distinct and highlight what that particular engager said. Always respond with JSON array containing one notification object per engagement.',
-      },
-      {
-        role: 'user',
-        content: prompt,
-      },
-    ],
-  });
+  try {
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.4,
+      max_tokens: 700,
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You generate unique, specific notifications for each quote tweet engagement. Each notification must be distinct and highlight what that particular engager said. Always respond with JSON array containing one notification object per engagement.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    });
 
-  const raw = completion.choices[0].message.content?.trim() || '[]';
+    const raw = completion.choices[0].message.content?.trim() || '[]';
 
-  const parsed = extractJsonArray(raw) as Array<{
-    engagement_ids?: string[];
-    notification?: string;
-    sentiment?: SentimentLabel;
-  }>;
+    const parsed = extractJsonArray(raw) as Array<{
+      engagement_ids?: string[];
+      notification?: string;
+      sentiment?: SentimentLabel;
+    }>;
 
-  return parsed
-    .filter(
-      (item): item is Required<typeof item> =>
-        Array.isArray(item.engagement_ids) &&
-        item.engagement_ids.length > 0 &&
-        typeof item.notification === 'string' &&
-        !!item.notification.trim() &&
-        (item.sentiment === 'positive' || item.sentiment === 'neutral' || item.sentiment === 'critical')
-    )
-    .map((item) => ({
-      engagementIds: item.engagement_ids!,
-      notification: item.notification!.trim(),
-      sentiment: item.sentiment!,
-    }));
+    return parsed
+      .filter(
+        (item): item is Required<typeof item> =>
+          Array.isArray(item.engagement_ids) &&
+          item.engagement_ids.length > 0 &&
+          typeof item.notification === 'string' &&
+          !!item.notification.trim() &&
+          (item.sentiment === 'positive' || item.sentiment === 'neutral' || item.sentiment === 'critical')
+      )
+      .map((item) => ({
+        engagementIds: item.engagement_ids!,
+        notification: item.notification!.trim(),
+        sentiment: item.sentiment!,
+      }));
+  } catch (error) {
+    // If rate limited, throw a special error that callers can detect
+    if (isRateLimitError(error)) {
+      const rateLimitError = new Error('OpenAI rate limit exceeded');
+      (rateLimitError as any).isRateLimit = true;
+      (rateLimitError as any).originalError = error;
+      throw rateLimitError;
+    }
+    // Re-throw other errors
+    throw error;
+  }
 }
 

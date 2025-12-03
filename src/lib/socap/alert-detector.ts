@@ -159,7 +159,10 @@ export async function detectAndQueueAlerts(campaignId: string): Promise<number> 
     
     alertsQueued++;
 
-    if (engagement.action_type === 'quote' && engagement._id) {
+    // Only process quote alerts that don't already have LLM copy
+    // This prevents duplicate GPT API calls when detectAndQueueAlerts
+    // is called multiple times (e.g., after each engagement job)
+    if (engagement.action_type === 'quote' && engagement._id && !alert.llm_copy) {
       const tweetContexts = quoteAlertContexts.get(engagement.tweet_id) || [];
       const account = engagement.account_profile;
       tweetContexts.push({
@@ -239,11 +242,53 @@ async function processQuoteAlertContexts(
     return;
   }
 
+  // Safety check: Filter out contexts where alerts already have LLM copy
+  // This prevents duplicate GPT API calls if alerts somehow get into contexts with LLM copy
+  const { getAlertQueueCollection } = await import('../models/socap/alert-queue');
+  const { ObjectId } = await import('mongodb');
+  const collection = await getAlertQueueCollection();
+  
+  // Fetch all alerts at once for efficiency
+  const alertIds = contexts.map((ctx) => new ObjectId(ctx.alertId));
+  const alerts = await collection
+    .find({ _id: { $in: alertIds as any } })
+    .toArray();
+  
+  const alertMap = new Map(alerts.map((a) => [String(a._id), a]));
+  const contextsToProcess: QuoteAlertContext[] = [];
+  
+  for (const ctx of contexts) {
+    const alert = alertMap.get(ctx.alertId);
+    // Only process if alert exists and doesn't have LLM copy yet
+    if (alert && !alert.llm_copy) {
+      contextsToProcess.push(ctx);
+    } else if (alert?.llm_copy) {
+      console.log(
+        `[QuoteNotifications] Skipping alert ${ctx.alertId} for engagement ${ctx.engagementId} - already has LLM copy`
+      );
+    }
+  }
+
+  if (contextsToProcess.length === 0) {
+    return;
+  }
+
   // Process all contexts together to give LLM full context, but ensure each gets unique notification
   // We can still batch them for efficiency, but each will get its own notification
-  const chunks = chunk(contexts, 10); // Increased batch size since we're not combining
+  const chunks = chunk(contextsToProcess, 10); // Increased batch size since we're not combining
+
+  // Track if we hit rate limit - if so, skip remaining chunks to avoid wasting time
+  let rateLimitHit = false;
 
   for (const group of chunks) {
+    // If we hit rate limit in previous chunk, skip remaining
+    if (rateLimitHit) {
+      console.warn(
+        `[QuoteNotifications] Skipping remaining ${chunks.length - chunks.indexOf(group)} chunks for tweet ${tweetId} due to rate limit`
+      );
+      break;
+    }
+
     const promptPayload = {
       campaignName: campaign.launch_name,
       mainTweet: {
@@ -313,7 +358,18 @@ async function processQuoteAlertContexts(
           `[QuoteNotifications] ${missingEngagements.length} engagements did not receive notifications for tweet ${tweetId}`
         );
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Check if this is a rate limit error
+      if (error?.isRateLimit || (error?.status === 429) || (error?.code === 'rate_limit_exceeded')) {
+        rateLimitHit = true;
+        console.warn(
+          `[QuoteNotifications] OpenAI rate limit hit for campaign ${campaign._id} tweet ${tweetId}. Skipping remaining quote notifications.`
+        );
+        // Don't throw - just skip remaining chunks
+        break;
+      }
+      
+      // For other errors, log but continue processing other chunks
       console.error(
         `[QuoteNotifications] Failed to generate notifications for campaign ${campaign._id} tweet ${tweetId}:`,
         error
