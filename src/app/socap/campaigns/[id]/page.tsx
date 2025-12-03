@@ -632,7 +632,7 @@ export default function CampaignDashboardPage() {
                 </span>
                 . New engagements will appear once workers process them. For campaigns where metrics are collected
                 retrospectively, the charts for views, views from quote tweets, likes, and retweets may not be fully accurate
-                because we don't have a reliable timestamp for when those actions occurred.
+                because we don&apos;t have a reliable timestamp for when those actions occurred.
               </p>
             </div>
           )}

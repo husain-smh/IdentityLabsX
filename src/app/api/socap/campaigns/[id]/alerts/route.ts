@@ -29,6 +29,8 @@ export async function GET(
     });
 
     // Attach engagement details to each alert so the UI can render
+    // IMPORTANT: Filter out alerts where the engagement doesn't belong to this campaign
+    // This prevents showing alerts for tweets from other campaigns due to data inconsistencies
     const alertWithDetails = await Promise.all(
       alerts.map(async (alert) => {
         const engagement = await getEngagementById(alert.engagement_id);
@@ -39,13 +41,32 @@ export async function GET(
       })
     );
 
+    // Filter out alerts where engagement is missing or belongs to a different campaign
+    const filteredAlerts = alertWithDetails.filter((alert) => {
+      if (!alert.engagement) {
+        // Log missing engagements for debugging but don't show them
+        console.warn(
+          `[Alerts API] Alert ${alert._id} references missing engagement ${alert.engagement_id}`
+        );
+        return false;
+      }
+      if (alert.engagement.campaign_id !== campaignId) {
+        // Log mismatched campaign_ids for debugging
+        console.warn(
+          `[Alerts API] Alert ${alert._id} has engagement ${alert.engagement_id} with campaign_id ${alert.engagement.campaign_id}, but requested campaign is ${campaignId}`
+        );
+        return false;
+      }
+      return true;
+    });
+
     // Also fetch recent alert history so we can see what actually went out
     const history = await getAlertHistoryByCampaign(campaignId, 100);
 
     return NextResponse.json({
       success: true,
       data: {
-        alerts: alertWithDetails,
+        alerts: filteredAlerts,
         history,
       },
     });
