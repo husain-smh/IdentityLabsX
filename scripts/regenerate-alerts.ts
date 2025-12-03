@@ -23,7 +23,7 @@ async function regenerateAlerts(campaignId: string): Promise<void> {
     process.exit(1);
   }
   
-  console.log(`✓ Campaign found: ${campaign.name || campaign.launch_name || campaignId}`);
+  console.log(`✓ Campaign found: ${campaign.launch_name || campaignId}`);
   console.log(`✓ Importance threshold: ${campaign.alert_preferences.importance_threshold}`);
   console.log(`✓ Alert spacing: ${campaign.alert_preferences.alert_spacing_minutes || 'default'} minutes`);
   

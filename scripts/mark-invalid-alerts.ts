@@ -33,7 +33,7 @@ async function markInvalidAlertsForCampaign(campaignId: string): Promise<{
     return { totalAlerts: 0, invalidAlerts: 0, markedCount: 0, errors: 1 };
   }
   
-  console.log(`✓ Campaign found: ${campaign.name || campaignId}`);
+  console.log(`✓ Campaign found: ${campaign.launch_name || campaignId}`);
   
   // Get all tweets for this campaign
   const campaignTweets = await getTweetsByCampaign(campaignId);

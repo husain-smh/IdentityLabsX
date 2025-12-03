@@ -96,7 +96,7 @@ export async function processEngagement(
   
   // Figure out tweet category so we can denormalize it onto the engagement.
   // This avoids expensive joins later when filtering by main/influencer/investor.
-  let tweetCategory: EngagementInput['tweet_category'] = tweet.category;
+  const tweetCategory: EngagementInput['tweet_category'] = tweet.category;
   // Calculate importance score
   const importanceScore = await calculateImportanceScore(user.userId);
   
