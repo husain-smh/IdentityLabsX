@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import {
@@ -116,6 +116,7 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
 
 export default function CampaignDashboardPage() {
   const params = useParams();
+  const router = useRouter();
   const campaignId = params.id as string;
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,7 +136,6 @@ export default function CampaignDashboardPage() {
     }>
   >([]);
   const [engagementLastUpdated, setEngagementLastUpdated] = useState<Date | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
@@ -277,31 +277,6 @@ export default function CampaignDashboardPage() {
     }
   }
 
-  async function updateCampaign(updateBody: any) {
-    setActionLoading(true);
-    try {
-      const response = await fetch(`/api/socap/campaigns/${campaignId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateBody),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        await fetchDashboard(); // Refresh data
-        setShowEditModal(false);
-        alert('Campaign updated successfully');
-      } else {
-        alert(`Failed to update: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error updating settings:', error);
-      alert('Failed to update campaign settings');
-    } finally {
-      setActionLoading(false);
-    }
-  }
 
   async function deleteCampaign() {
     setActionLoading(true);
@@ -555,7 +530,7 @@ export default function CampaignDashboardPage() {
                     </button>
                   ) : null}
                   <button
-                    onClick={() => setShowEditModal(true)}
+                    onClick={() => router.push(`/socap/campaigns/${campaignId}/edit`)}
                     className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
                   >
                     Edit Campaign
@@ -799,26 +774,6 @@ export default function CampaignDashboardPage() {
             )}
           </div>
 
-          {/* Edit Campaign Modal */}
-          {showEditModal && data && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-              <div className="glass rounded-2xl max-w-md w-full max-h-[85vh] border border-zinc-800 overflow-hidden flex flex-col">
-                <div className="p-6 border-b border-zinc-800">
-                  <h2 className="text-2xl font-bold text-white">Edit Campaign</h2>
-                </div>
-                <div className="p-6 overflow-y-auto">
-                  <EditCampaignForm
-                    campaign={data.campaign}
-                    tweets={data.tweets || []}
-                    onSave={updateCampaign}
-                    onCancel={() => setShowEditModal(false)}
-                    loading={actionLoading}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Delete Confirmation Modal */}
           {showDeleteConfirm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -849,295 +804,6 @@ export default function CampaignDashboardPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function EditCampaignForm({ 
-  campaign, 
-  tweets,
-  onSave, 
-  onCancel, 
-  loading 
-}: { 
-  campaign: any; 
-  tweets: Array<{ tweet_id: string; category: 'main_twt' | 'influencer_twt' | 'investor_twt'; author_username: string }>;
-  onSave: (data: any) => void; 
-  onCancel: () => void;
-  loading: boolean;
-}) {
-  const [settingsForm, setSettingsForm] = useState({
-    importance_threshold: campaign.alert_preferences.importance_threshold || 10,
-    alert_spacing_minutes: campaign.alert_preferences.alert_spacing_minutes || 20,
-    frequency_window_minutes: campaign.alert_preferences.frequency_window_minutes || 30,
-    channels: campaign.alert_preferences.channels || ['email'],
-  });
-
-  // Build initial tweet URL lists from existing tweets, then flatten into textarea strings
-  const initialTweetText = (() => {
-    const grouped = {
-      main_twt: [] as string[],
-      influencer_twt: [] as string[],
-      investor_twt: [] as string[],
-    };
-
-    for (const t of tweets) {
-      const url = `https://x.com/${t.author_username}/status/${t.tweet_id}`;
-      if (t.category === 'main_twt') grouped.main_twt.push(url);
-      if (t.category === 'influencer_twt') grouped.influencer_twt.push(url);
-      if (t.category === 'investor_twt') grouped.investor_twt.push(url);
-    }
-
-    return {
-      maintweets_raw: grouped.main_twt.join('\n'),
-      influencer_twts_raw: grouped.influencer_twt.join('\n'),
-      investor_twts_raw: grouped.investor_twt.join('\n'),
-    };
-  })();
-
-  const [tweetForm, setTweetForm] = useState<{
-    maintweets_raw: string;
-    influencer_twts_raw: string;
-    investor_twts_raw: string;
-  }>({
-    maintweets_raw: initialTweetText.maintweets_raw,
-    influencer_twts_raw: initialTweetText.influencer_twts_raw,
-    investor_twts_raw: initialTweetText.investor_twts_raw,
-  });
-
-  function handleSettingsChange(field: keyof typeof settingsForm, value: any) {
-    setSettingsForm((prev) => ({ ...prev, [field]: value }));
-  }
-
-  function toggleChannel(channel: string) {
-    setSettingsForm((prev) => ({
-      ...prev,
-      channels: prev.channels.includes(channel)
-        ? prev.channels.filter((c: string) => c !== channel)
-        : [...prev.channels, channel],
-    }));
-  }
-
-  /**
-   * Extract tweet URLs from a free-form textarea string.
-   *
-   * Matches the same rules as the create campaign page:
-   * - Every http:// or https:// occurrence starts a new URL
-   * - Commas, spaces, and newlines before the URL are ignored
-   * - URL ends at whitespace or common delimiters
-   */
-  function extractTweetUrls(input: string): string[] {
-    if (!input) return [];
-
-    const matches = input.match(/https?:\/\/\S+/g) || [];
-
-    return matches
-      .map((raw) => {
-        let url = raw.trim();
-        url = url.replace(/[),;]+$/g, '');
-        return url;
-      })
-      .filter((url) => url.length > 0);
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-
-    const maintweets = extractTweetUrls(tweetForm.maintweets_raw).map((url) => ({ url }));
-
-    const influencer_twts = extractTweetUrls(tweetForm.influencer_twts_raw).map((url) => ({
-      url,
-    }));
-
-    const investor_twts = extractTweetUrls(tweetForm.investor_twts_raw).map((url) => ({
-      url,
-    }));
-
-    const totalUrls =
-      maintweets.length + influencer_twts.length + investor_twts.length;
-
-    if (totalUrls === 0) {
-      alert('Please add at least one tweet URL before updating the campaign.');
-      return;
-    }
-
-    onSave({
-      alert_preferences: settingsForm,
-      maintweets,
-      influencer_twts,
-      investor_twts,
-    });
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Alert Settings */}
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Importance Threshold
-          </label>
-          <input
-            type="number"
-            min="1"
-            value={settingsForm.importance_threshold}
-            onChange={(e) =>
-              handleSettingsChange(
-                'importance_threshold',
-                parseInt(e.target.value || '0', 10)
-              )
-            }
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
-            required
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            Minimum importance score to trigger alerts
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Alert Spacing (minutes)
-          </label>
-          <input
-            type="number"
-            min="1"
-            value={settingsForm.alert_spacing_minutes}
-            onChange={(e) =>
-              handleSettingsChange(
-                'alert_spacing_minutes',
-                parseInt(e.target.value || '0', 10)
-              )
-            }
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
-            required
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            Time window to spread alerts from same run (recommended: 80% of
-            schedule interval)
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Frequency Window (minutes)
-          </label>
-          <input
-            type="number"
-            min="1"
-            value={settingsForm.frequency_window_minutes}
-            onChange={(e) =>
-              handleSettingsChange(
-                'frequency_window_minutes',
-                parseInt(e.target.value || '0', 10)
-              )
-            }
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
-            required
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            Don&apos;t send duplicate alerts within this window
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Alert Channels
-          </label>
-          <div className="space-y-2">
-            <label className="flex items-center text-zinc-300">
-              <input
-                type="checkbox"
-                checked={settingsForm.channels.includes('email')}
-                onChange={() => toggleChannel('email')}
-                className="mr-2 rounded border-zinc-700 bg-zinc-900 text-indigo-500 focus:ring-indigo-500 focus:ring-2"
-              />
-              Email
-            </label>
-            <label className="flex items-center text-zinc-300">
-              <input
-                type="checkbox"
-                checked={settingsForm.channels.includes('slack')}
-                onChange={() => toggleChannel('slack')}
-                className="mr-2 rounded border-zinc-700 bg-zinc-900 text-indigo-500 focus:ring-indigo-500 focus:ring-2"
-              />
-              Slack
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* Tweet URLs */}
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Main Tweets
-          </label>
-          <textarea
-            value={tweetForm.maintweets_raw}
-            onChange={(e) =>
-              setTweetForm((prev) => ({ ...prev, maintweets_raw: e.target.value }))
-            }
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all min-h-[80px]"
-            placeholder={`Paste one or more main tweet URLs (separated by commas, spaces, or new lines).`}
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            Each http(s) URL will be parsed as a separate main tweet.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Influencer Tweets
-          </label>
-          <textarea
-            value={tweetForm.influencer_twts_raw}
-            onChange={(e) =>
-              setTweetForm((prev) => ({ ...prev, influencer_twts_raw: e.target.value }))
-            }
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all min-h-[80px]"
-            placeholder="Paste influencer tweet URLs here (any mix of commas, spaces, or newlines)."
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            Every http(s) URL will be treated as a separate influencer tweet.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Investor Tweets
-          </label>
-          <textarea
-            value={tweetForm.investor_twts_raw}
-            onChange={(e) =>
-              setTweetForm((prev) => ({ ...prev, investor_twts_raw: e.target.value }))
-            }
-            className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all min-h-[80px]"
-            placeholder="Paste investor tweet URLs here."
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            URLs separated by spaces, commas, or new lines will all be parsed correctly.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex gap-2 justify-end pt-4">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white hover:bg-zinc-700 transition-colors"
-          disabled={loading}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading ? 'Saving...' : 'Update Campaign'}
-        </button>
-      </div>
-    </form>
   );
 }
 
