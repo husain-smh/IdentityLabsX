@@ -65,6 +65,7 @@ export default function CampaignAlertsPage() {
   const [error, setError] = useState<string | null>(null);
   const [sendingAlertId, setSendingAlertId] = useState<string | null>(null);
   const [expandedAlertId, setExpandedAlertId] = useState<string | null>(null);
+  const [actionFilter, setActionFilter] = useState<'all' | 'retweet' | 'reply' | 'quote'>('all');
   const [dedupeLoading, setDedupeLoading] = useState(false);
   const [backfillLoading, setBackfillLoading] = useState(false);
 
@@ -322,6 +323,19 @@ export default function CampaignAlertsPage() {
   const pendingAlerts = data.alerts.filter((a) => a.status === 'pending');
   const sentOrSkippedAlerts = data.alerts.filter((a) => a.status !== 'pending');
 
+  const filterByAction = (alert: AlertItem) =>
+    actionFilter === 'all' || alert.action_type === actionFilter;
+
+  const pendingAlertsFilteredAndSorted = pendingAlerts
+    .filter(filterByAction)
+    .slice()
+    .sort((a, b) => b.importance_score - a.importance_score);
+
+  const sentOrSkippedAlertsFilteredAndSorted = sentOrSkippedAlerts
+    .filter(filterByAction)
+    .slice()
+    .sort((a, b) => b.importance_score - a.importance_score);
+
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
@@ -342,30 +356,49 @@ export default function CampaignAlertsPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 space-y-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-white mb-2">Campaign Alerts</h1>
-              <p className="text-sm text-zinc-400">
-                Visualize how notifications are formed, when they are generated, and how they are spaced.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleBackfillLlm}
-                disabled={backfillLoading}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
-              >
-                {backfillLoading ? 'Backfilling...' : 'Generate LLM Notifications'}
-              </button>
-              <button
-                type="button"
-                onClick={handleDeduplicate}
-                disabled={dedupeLoading}
-                className="px-4 py-2 bg-zinc-800 border border-zinc-700 text-white rounded-lg hover:bg-zinc-700 disabled:opacity-50 transition-colors"
-              >
-                {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
-              </button>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <h1 className="text-2xl font-bold text-white mb-2">Campaign Alerts</h1>
+                  <p className="text-sm text-zinc-400">
+                    Visualize how notifications are formed, when they are generated, and how they are spaced.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-zinc-400">Filter by type:</span>
+                  <select
+                    value={actionFilter}
+                    onChange={(e) =>
+                      setActionFilter(e.target.value as 'all' | 'retweet' | 'reply' | 'quote')
+                    }
+                    className="px-3 py-2 text-sm rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="all">All notifications</option>
+                    <option value="retweet">Retweet notifications</option>
+                    <option value="reply">Reply notifications</option>
+                    <option value="quote">Quote tweet notifications</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-2 justify-end w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleBackfillLlm}
+                  disabled={backfillLoading}
+                  className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-md font-medium transition-colors"
+                >
+                  {backfillLoading ? 'Backfilling...' : 'Generate LLM Notifications'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeduplicate}
+                  disabled={dedupeLoading}
+                  className="px-3 py-1.5 text-xs bg-zinc-800 border border-zinc-700 text-white rounded-md hover:bg-zinc-700 disabled:opacity-50 transition-colors"
+                >
+                  {dedupeLoading ? 'Deduplicating...' : 'Deduplicate Alerts'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -379,11 +412,11 @@ export default function CampaignAlertsPage() {
               </p>
             </div>
 
-            {pendingAlerts.length === 0 ? (
+            {pendingAlertsFilteredAndSorted.length === 0 ? (
               <div className="text-zinc-400 text-center py-8">No pending alerts for this campaign.</div>
             ) : (
               <div className="space-y-4">
-                {pendingAlerts.map((alert) => {
+                {pendingAlertsFilteredAndSorted.map((alert) => {
                   const engagement = alert.engagement;
                   const { text: llmCopy, sentiment, isGrouped } = resolveNotificationDetails(alert);
                   const preview = llmCopy || buildNotificationPreview(alert);
@@ -452,6 +485,14 @@ export default function CampaignAlertsPage() {
                           )}
                           {engagement && (
                             <div className="space-y-2">
+                              <div className="text-xs text-zinc-400">
+                                {humanActionLabel(alert.action_type)} your post{' '}
+                                {engagement.tweet_id && (
+                                  <span className="font-mono text-[11px] text-zinc-300">
+                                    (Tweet ID: {engagement.tweet_id})
+                                  </span>
+                                )}
+                              </div>
                               {/* Link to the engagement (quote/reply/retweet) */}
                               {buildEngagementUrl(engagement) && (
                                 <a
@@ -610,11 +651,11 @@ export default function CampaignAlertsPage() {
               </p>
             </div>
 
-            {sentOrSkippedAlerts.length === 0 ? (
+            {sentOrSkippedAlertsFilteredAndSorted.length === 0 ? (
               <div className="text-zinc-400 text-center py-8">No processed alerts in the queue for this campaign.</div>
             ) : (
               <div className="space-y-2">
-                {sentOrSkippedAlerts.map((alert) => (
+                {sentOrSkippedAlertsFilteredAndSorted.map((alert) => (
                   <div
                     key={alert._id}
                     className="glass rounded-xl p-4 flex items-center justify-between transition-all hover:border-zinc-700"

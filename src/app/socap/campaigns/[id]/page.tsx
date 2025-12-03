@@ -516,7 +516,7 @@ export default function CampaignDashboardPage() {
                     <button
                       onClick={() => updateCampaignStatus('paused')}
                       disabled={actionLoading}
-                      className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                      className="px-4 py-2 border border-yellow-400 text-yellow-300 rounded-lg font-medium transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-yellow-300 hover:text-yellow-200"
                     >
                       {actionLoading ? 'Pausing...' : 'Pause'}
                     </button>
@@ -524,21 +524,21 @@ export default function CampaignDashboardPage() {
                     <button
                       onClick={() => updateCampaignStatus('active')}
                       disabled={actionLoading}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                      className="px-4 py-2 border border-emerald-400 text-emerald-300 rounded-lg font-medium transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-emerald-300 hover:text-emerald-200"
                     >
                       {actionLoading ? 'Resuming...' : 'Resume'}
                     </button>
                   ) : null}
                   <button
                     onClick={() => router.push(`/socap/campaigns/${campaignId}/edit`)}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors"
+                    className="px-4 py-2 border border-indigo-400 text-indigo-300 rounded-lg font-medium transition-colors hover:border-indigo-300 hover:text-indigo-200"
                   >
                     Edit Campaign
                   </button>
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={actionLoading}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+                    className="px-4 py-2 border border-red-500 text-red-400 rounded-lg font-medium transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-red-400 hover:text-red-300"
                   >
                     Delete
                   </button>
@@ -787,7 +787,7 @@ export default function CampaignDashboardPage() {
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white hover:bg-zinc-700 transition-colors"
+                    className="px-4 py-2 border border-zinc-600 rounded-lg text-zinc-200 hover:border-zinc-400 hover:text-zinc-100 transition-colors"
                     disabled={actionLoading}
                   >
                     Cancel
@@ -795,7 +795,7 @@ export default function CampaignDashboardPage() {
                   <button
                     onClick={deleteCampaign}
                     disabled={actionLoading}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 border border-red-500 text-red-400 rounded-lg hover:border-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {actionLoading ? 'Deleting...' : 'Delete Campaign'}
                   </button>
