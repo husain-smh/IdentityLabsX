@@ -420,6 +420,31 @@ export async function fetchTweetQuotes(
       for (const quoteTweet of data.tweets) {
         if (!quoteTweet.author) continue;
 
+        // CRITICAL: Verify that this quote tweet actually quotes the tweet we requested
+        // The API might return quote tweets that quote other tweets (nested quotes, API bugs, etc.)
+        const quotedTweetId = (quoteTweet as any).quoted_tweet?.id || 
+                              (quoteTweet as any).quotedTweet?.id ||
+                              (quoteTweet as any).quoted_tweet?.id_str ||
+                              (quoteTweet as any).quotedTweet?.id_str;
+        
+        // If we can verify the quoted tweet ID, ensure it matches what we requested
+        if (quotedTweetId) {
+          if (quotedTweetId !== tweetId) {
+            // This quote tweet is quoting a different tweet - skip it
+            console.warn(
+              `[fetchTweetQuotes] Skipping quote tweet ${quoteTweet.id} - it quotes tweet ${quotedTweetId}, not the requested tweet ${tweetId}`
+            );
+            continue;
+          }
+        } else {
+          // If quoted_tweet.id is missing, we can't verify this is the right quote
+          // Log a warning but still process it (some APIs might not include this field)
+          console.warn(
+            `[fetchTweetQuotes] Quote tweet ${quoteTweet.id} missing quoted_tweet.id field - cannot verify it quotes tweet ${tweetId}`
+          );
+          // Continue processing - the validation in alerts API will catch if tweet_id doesn't match
+        }
+
         // quoteTweet.createdAt is when the quote tweet was created
         const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
         if (!user) continue;

@@ -143,6 +143,15 @@ export default function CampaignDashboardPage() {
   
   // Single global filter state for all charts
   const [globalFilter, setGlobalFilter] = useState<'all' | 'main_twt' | 'influencer_twt' | 'investor_twt'>('all');
+  
+  // Action type filter for engagements
+  const [actionTypeFilter, setActionTypeFilter] = useState<'all' | 'retweet' | 'reply' | 'quote'>('all');
+  
+  // Pagination for people
+  const [peopleDisplayLimit, setPeopleDisplayLimit] = useState(20);
+  
+  // Track which people have expanded actions (show all vs show top 3)
+  const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set());
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -475,6 +484,107 @@ export default function CampaignDashboardPage() {
     return calculateDeltas(data, metric);
   };
 
+  // Helper function to get tweet info by tweet_id
+  const getTweetInfo = (tweetId: string) => {
+    return data.tweets?.find(t => t.tweet_id === tweetId);
+  };
+
+  // Group engagements by user_id
+  interface GroupedEngagement {
+    user_id: string;
+    account_profile: {
+      username: string;
+      name: string;
+      bio?: string;
+      location?: string;
+      followers: number;
+      verified: boolean;
+    };
+    importance_score: number;
+    account_categories: string[];
+    actions: Array<{
+      action_type: 'retweet' | 'reply' | 'quote';
+      tweet_id: string;
+      tweet_category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
+      timestamp: Date;
+      engagement_tweet_id?: string;
+    }>;
+  }
+
+  const groupEngagementsByUser = (engagements: any[]): GroupedEngagement[] => {
+    const groupedMap = new Map<string, GroupedEngagement>();
+
+    for (const engagement of engagements) {
+      const userId = engagement.user_id;
+      
+      // Apply action type filter
+      if (actionTypeFilter !== 'all' && engagement.action_type !== actionTypeFilter) {
+        continue;
+      }
+
+      if (!groupedMap.has(userId)) {
+        groupedMap.set(userId, {
+          user_id: userId,
+          account_profile: engagement.account_profile,
+          importance_score: engagement.importance_score,
+          account_categories: engagement.account_categories || [],
+          actions: [],
+        });
+      }
+
+      const grouped = groupedMap.get(userId)!;
+      grouped.actions.push({
+        action_type: engagement.action_type,
+        tweet_id: engagement.tweet_id,
+        tweet_category: engagement.tweet_category,
+        timestamp: new Date(engagement.timestamp),
+        engagement_tweet_id: engagement.engagement_tweet_id,
+      });
+
+      // Keep the highest importance score
+      if (engagement.importance_score > grouped.importance_score) {
+        grouped.importance_score = engagement.importance_score;
+      }
+    }
+
+    // Convert to array and sort by importance_score (highest first)
+    return Array.from(groupedMap.values()).sort((a, b) => b.importance_score - a.importance_score);
+  };
+
+  const groupedEngagements = data ? groupEngagementsByUser(data.latest_engagements) : [];
+  
+  // Get paginated people
+  const displayedPeople = groupedEngagements.slice(0, peopleDisplayLimit);
+  const hasMorePeople = groupedEngagements.length > peopleDisplayLimit;
+  
+  // Helper to toggle expanded actions for a person
+  const toggleExpandedActions = (userId: string) => {
+    setExpandedActions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
+
+  // Helper function to format action description
+  const formatActionDescription = (action: GroupedEngagement['actions'][0]) => {
+    const tweetInfo = getTweetInfo(action.tweet_id);
+    const tweetAuthor = tweetInfo?.author_username || 'tweet';
+    const categoryLabel = action.tweet_category === 'main_twt' ? 'main tweet' :
+                         action.tweet_category === 'influencer_twt' ? 'influencer tweet' :
+                         action.tweet_category === 'investor_twt' ? 'investor tweet' : 'tweet';
+    
+    const actionVerb = action.action_type === 'retweet' ? 'retweeted' :
+                       action.action_type === 'reply' ? 'replied to' :
+                       'quoted tweeted';
+    
+    return `${actionVerb} ${tweetAuthor}'s ${categoryLabel}`;
+  };
+
   return (
     <div className="min-h-screen bg-black">
       <Navbar />
@@ -736,54 +846,148 @@ export default function CampaignDashboardPage() {
         </div>
       </div>
 
-          {/* Latest Engagements */}
+          {/* Engagements Section */}
           <div className="glass rounded-2xl overflow-hidden">
             <div className="p-6 border-b border-zinc-800">
-              <h2 className="text-xl font-semibold text-white">Latest Engagements</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-white">Engagements by Important Accounts</h2>
+                <div className="flex items-center gap-3">
+                  <label htmlFor="action-filter" className="text-sm font-medium text-zinc-300">
+                    Filter by Action:
+                  </label>
+                  <select
+                    id="action-filter"
+                    value={actionTypeFilter}
+                    onChange={(e) => setActionTypeFilter(e.target.value as 'all' | 'retweet' | 'reply' | 'quote')}
+                    className="px-4 py-2 text-sm border border-zinc-700 rounded-lg bg-zinc-900 text-white hover:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer transition-all"
+                  >
+                    <option value="all">All Actions</option>
+                    <option value="retweet">Retweeted</option>
+                    <option value="quote">Quoted Tweeted</option>
+                    <option value="reply">Replied</option>
+                  </select>
+                </div>
+              </div>
             </div>
-            {data.latest_engagements.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-800">
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Account</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Action</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Importance</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Categories</th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-800">
-                    {data.latest_engagements.map((engagement, idx) => (
-                      <tr key={idx} className="hover:bg-zinc-900/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="text-sm font-medium text-white">
-                            @{engagement.account_profile.username}
+            {displayedPeople.length > 0 ? (
+              <div className="p-6 space-y-4">
+                {displayedPeople.map((person) => {
+                  const isExpanded = expandedActions.has(person.user_id);
+                  const actionsToShow = isExpanded ? person.actions : person.actions.slice(0, 3);
+                  const hasMoreActions = person.actions.length > 3;
+                  
+                  return (
+                    <div
+                      key={person.user_id}
+                      className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                    >
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
+                        {/* Left Side - Person Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-sm font-semibold text-zinc-900">
+                                {person.account_profile.name}
+                              </span>
+                              {person.account_profile.verified && (
+                                <svg
+                                  className="w-4 h-4 text-indigo-500"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-sm text-zinc-400">
-                            {engagement.account_profile.name}
+                          <div className="text-sm text-zinc-600 mb-1">@{person.account_profile.username}</div>
+                          {person.account_profile.bio && (
+                            <div className="text-xs text-zinc-600 mb-2 line-clamp-2">
+                              {person.account_profile.bio}
+                            </div>
+                          )}
+                          <div className="text-xs text-zinc-500">
+                            {person.account_profile.followers.toLocaleString()} followers
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-white capitalize">{engagement.action_type}</td>
-                        <td className="px-6 py-4">
-                          <span className="text-lg font-bold text-emerald-400">
-                            {engagement.importance_score}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-zinc-300">
-                          {engagement.account_categories?.join(', ') || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-zinc-400">
-                          {new Date(engagement.timestamp).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+
+                        {/* Right Side - Imp. Score and Actions */}
+                        <div className="md:w-2/5 flex flex-col gap-3 border-t border-zinc-200 pt-3 md:border-t-0 md:border-l md:pl-4">
+                          <div className="flex items-center justify-between md:justify-end">
+                            <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                              Imp. Score - 
+                            </span>
+                            <span className="text-lg font-bold text-emerald-600">
+                              {person.importance_score.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs font-medium text-zinc-700">
+                                Actions
+                              </div>
+                              {hasMoreActions && (
+                                <button
+                                  onClick={() => toggleExpandedActions(person.user_id)}
+                                  className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
+                                >
+                                  {isExpanded ? 'Show Less' : 'Show All'}
+                                </button>
+                              )}
+                            </div>
+                            <div className={`space-y-0.5 ${isExpanded && hasMoreActions ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
+                              {actionsToShow.map((action, idx) => {
+                                const tweetInfo = getTweetInfo(action.tweet_id);
+                                const tweetIdShort = action.tweet_id.slice(-8);
+                                
+                                return (
+                                  <div key={idx} className="ml-2 text-xs text-zinc-700">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-zinc-500">• </span>
+                                      <span className="text-zinc-600">
+                                        {action.action_type === 'reply' && 'Replied to '}
+                                        {action.action_type === 'retweet' && 'Retweeted '}
+                                        {action.action_type === 'quote' && 'Quoted '}
+                                      </span>
+                                      <Link
+                                        href={`/tweets/${action.tweet_id}`}
+                                        className="text-indigo-600 hover:text-indigo-700 hover:underline"
+                                      >
+                                        Tweet {tweetIdShort}
+                                      </Link>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {/* Load More Button */}
+                {hasMorePeople && (
+                  <div className="flex justify-center pt-4">
+                    <button
+                      onClick={() => setPeopleDisplayLimit(prev => prev + 20)}
+                      className="px-6 py-2 border border-indigo-500 text-indigo-400 rounded-lg hover:border-indigo-400 hover:text-indigo-300 transition-colors"
+                    >
+                      Load More ({groupedEngagements.length - peopleDisplayLimit} remaining)
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="text-center text-zinc-400 py-12">
-                No engagements yet
+                {actionTypeFilter !== 'all' 
+                  ? `No ${actionTypeFilter} engagements found`
+                  : 'No engagements yet'}
               </div>
             )}
           </div>

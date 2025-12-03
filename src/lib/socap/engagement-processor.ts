@@ -71,17 +71,32 @@ export async function processEngagement(
   timestamp: Date,
   text?: string
 ): Promise<EngagementInput> {
+  // CRITICAL: Verify that the tweet actually belongs to this campaign
+  // This prevents creating engagements for tweets from other campaigns (including deleted ones)
+  const tweet = await getTweetByTweetId(tweetId);
+  if (!tweet) {
+    throw new Error(`Tweet ${tweetId} not found in any campaign`);
+  }
+  
+  if (tweet.campaign_id !== campaignId) {
+    // Verify the tweet's campaign still exists
+    const { getCampaignById } = await import('../models/socap/campaigns');
+    const tweetCampaign = await getCampaignById(tweet.campaign_id);
+    
+    if (!tweetCampaign) {
+      throw new Error(
+        `Cannot create engagement: Tweet ${tweetId} belongs to deleted campaign ${tweet.campaign_id}, but job is for campaign ${campaignId}`
+      );
+    }
+    
+    throw new Error(
+      `Cannot create engagement: Tweet ${tweetId} belongs to campaign ${tweet.campaign_id}, but job is for campaign ${campaignId}`
+    );
+  }
+  
   // Figure out tweet category so we can denormalize it onto the engagement.
   // This avoids expensive joins later when filtering by main/influencer/investor.
-  let tweetCategory: EngagementInput['tweet_category'];
-  try {
-    const tweet = await getTweetByTweetId(tweetId);
-    if (tweet) {
-      tweetCategory = tweet.category;
-    }
-  } catch (error) {
-    console.error(`Error fetching tweet category for tweet ${tweetId}:`, error);
-  }
+  let tweetCategory: EngagementInput['tweet_category'] = tweet.category;
   // Calculate importance score
   const importanceScore = await calculateImportanceScore(user.userId);
   

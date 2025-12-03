@@ -97,8 +97,11 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
     last_seen_at: new Date(), // Always update last_seen_at
   };
   
+  // CRITICAL: Include campaign_id in the match criteria to prevent cross-campaign contamination
+  // This ensures engagements from different campaigns don't overwrite each other
   const result = await collection.findOneAndUpdate(
     {
+      campaign_id: input.campaign_id,
       tweet_id: input.tweet_id,
       user_id: input.user_id,
       action_type: input.action_type,

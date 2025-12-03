@@ -54,9 +54,9 @@ export async function GET(
     const totalEngagements = await getEngagementCountByCampaign(id);
     const uniqueEngagers = await getUniqueEngagersByCampaign(id);
     
-    // Get latest engagements
+    // Get latest engagements - fetch more to ensure we get at least 20 unique people
     const latestEngagements = await getEngagementsByCampaign(id, {
-      limit: 50,
+      limit: 200,
       sort: 'importance_score',
     });
     
@@ -88,7 +88,7 @@ export async function GET(
           author_username: t.author_username,
           metrics: t.metrics,
         })),
-        latest_engagements: latestEngagements.slice(0, 20),
+        latest_engagements: latestEngagements,
         category_breakdown: categoryCounts,
       },
     });
