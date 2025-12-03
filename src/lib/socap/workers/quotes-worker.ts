@@ -50,7 +50,7 @@ export class QuotesWorker extends BaseWorker {
       // Process each quote
       for (const user of response.data) {
         // Quotes API provides engagement timestamp
-        const timestamp = user.engagementCreatedAt || new Date();
+
 
         // Accumulate quote tweet view counts (if present)
         if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {

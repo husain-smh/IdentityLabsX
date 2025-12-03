@@ -51,6 +51,41 @@ interface MetricChartProps {
 }
 
 function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps, 'filter' | 'onFilterChange'>) {
+  // Custom tooltip to show cumulative value and delta
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      const cumulativeValue = payload[0].value;
+      const delta = data.delta !== undefined ? data.delta : null;
+
+      return (
+        <div
+          style={{
+            backgroundColor: '#1f2937',
+            border: '1px solid #374151',
+            borderRadius: '8px',
+            padding: '12px',
+          }}
+        >
+          <p style={{ color: '#f3f4f6', marginBottom: '8px', fontWeight: 'bold' }}>
+            {label}
+          </p>
+          <p style={{ color: color, marginBottom: '4px' }}>
+            {title}: <strong>{cumulativeValue?.toLocaleString()}</strong>
+          </p>
+          {delta !== null && (
+            <p style={{ color: '#9ca3af', fontSize: '12px', marginTop: '4px' }}>
+              Δ (this period): <strong style={{ color: delta >= 0 ? '#34d399' : '#f87171' }}>
+                {delta >= 0 ? '+' : ''}{delta.toLocaleString()}
+              </strong>
+            </p>
+          )}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="glass rounded-2xl p-6">
       <h2 className="text-xl font-semibold text-white mb-4">{title}</h2>
@@ -59,14 +94,7 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
           <LineChart data={chartData}>
             <XAxis dataKey="time" stroke="#9ca3af" />
             <YAxis stroke="#9ca3af" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#1f2937',
-                border: '1px solid #374151',
-                borderRadius: '8px',
-              }}
-              labelStyle={{ color: '#f3f4f6' }}
-            />
+            <Tooltip content={<CustomTooltip />} />
             <Line
               type="monotone"
               dataKey={metric}
@@ -95,12 +123,17 @@ export default function CampaignDashboardPage() {
   const [engagementSeries, setEngagementSeries] = useState<
     Array<{
       time: string;
+      timeRaw?: Date;
       retweets: number;
       replies: number;
       quotes: number;
       total: number;
+      retweetsDelta: number;
+      repliesDelta: number;
+      quotesDelta: number;
+      totalDelta: number;
     }>
- >([]);
+  >([]);
   const [engagementLastUpdated, setEngagementLastUpdated] = useState<Date | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -155,13 +188,40 @@ export default function CampaignDashboardPage() {
           total?: number;
         }>;
 
-        const mapped = points.map((p) => ({
-          time: new Date(p.time).toLocaleString(),
-          retweets: p.retweets ?? 0,
-          replies: p.replies ?? 0,
-          quotes: p.quotes ?? 0,
-          total: p.total ?? 0,
-        }));
+        // Sort points by time to ensure proper cumulative calculation
+        const sortedPoints = [...points].sort((a, b) => {
+          const timeA = new Date(a.time).getTime();
+          const timeB = new Date(b.time).getTime();
+          return timeA - timeB;
+        });
+
+        // Convert per-bucket counts to cumulative totals
+        let cumulativeRetweets = 0;
+        let cumulativeReplies = 0;
+        let cumulativeQuotes = 0;
+        let cumulativeTotal = 0;
+
+        const mapped = sortedPoints.map((p) => {
+          // Add current bucket's counts to cumulative totals
+          cumulativeRetweets += p.retweets ?? 0;
+          cumulativeReplies += p.replies ?? 0;
+          cumulativeQuotes += p.quotes ?? 0;
+          cumulativeTotal += p.total ?? 0;
+
+          return {
+            time: new Date(p.time).toLocaleString(),
+            timeRaw: new Date(p.time), // Keep raw date for sorting/delta calculation
+            retweets: cumulativeRetweets,
+            replies: cumulativeReplies,
+            quotes: cumulativeQuotes,
+            total: cumulativeTotal,
+            // Store deltas (per-bucket counts) for tooltip display
+            retweetsDelta: p.retweets ?? 0,
+            repliesDelta: p.replies ?? 0,
+            quotesDelta: p.quotes ?? 0,
+            totalDelta: p.total ?? 0,
+          };
+        });
 
         setEngagementSeries(mapped);
         
@@ -339,6 +399,7 @@ export default function CampaignDashboardPage() {
     
     return {
       time: new Date(snapshot.snapshot_time).toLocaleString(),
+      timeRaw: new Date(snapshot.snapshot_time), // Keep raw date for sorting/delta calculation
       // Total values (include quote views)
       likes: snapshot.total_likes || 0,
       retweets: snapshot.total_retweets || 0,
@@ -355,18 +416,36 @@ export default function CampaignDashboardPage() {
     };
   });
 
+  // Helper function to calculate deltas between consecutive data points
+  const calculateDeltas = <T extends { [key: string]: any }>(
+    data: T[],
+    metricKey: string
+  ): Array<T & { delta?: number }> => {
+    return data.map((item, index) => {
+      const currentValue = item[metricKey] || 0;
+      const previousValue = index > 0 ? (data[index - 1][metricKey] || 0) : 0;
+      const delta = currentValue - previousValue;
+      return { ...item, delta };
+    });
+  };
+
   // Filtered chart data for each metric using global filter
   const getFilteredChartData = (metric: MetricKey) => {
     // For engagement metrics (retweets / replies / quotes), prefer the
     // per-engagement time series based on actual engagement timestamps.
     if (metric === 'retweets' || metric === 'replies' || metric === 'quotes') {
-      return engagementSeries.map((point) => ({
+      const data = engagementSeries.map((point) => ({
         time: point.time,
         [metric]: point[metric],
+        // Include delta from the engagement series (already calculated per-bucket)
+        delta: metric === 'retweets' ? point.retweetsDelta : 
+               metric === 'replies' ? point.repliesDelta : 
+               point.quotesDelta,
       }));
+      return data;
     }
 
-    return baseChartData.map((item) => {
+    const data = baseChartData.map((item) => {
       let value: number;
       if (globalFilter === 'all') {
         // For total views in "All (Combined)" view, include both base tweet views and quote tweet views
@@ -402,9 +481,20 @@ export default function CampaignDashboardPage() {
       }
       return {
         time: item.time,
+        timeRaw: item.timeRaw, // Keep for sorting
         [metric]: value,
       };
     });
+
+    // Sort by time to ensure proper delta calculation
+    data.sort((a, b) => {
+      const timeA = (a as any).timeRaw?.getTime() || new Date(a.time).getTime();
+      const timeB = (b as any).timeRaw?.getTime() || new Date(b.time).getTime();
+      return timeA - timeB;
+    });
+
+    // Calculate deltas for view metrics
+    return calculateDeltas(data, metric);
   };
 
   return (
