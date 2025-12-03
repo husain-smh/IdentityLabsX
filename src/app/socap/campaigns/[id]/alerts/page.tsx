@@ -386,7 +386,7 @@ export default function CampaignAlertsPage() {
                   type="button"
                   onClick={handleBackfillLlm}
                   disabled={backfillLoading}
-                  className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-md font-medium transition-colors"
+                  className="px-3 py-1.5 text-xs border border-indigo-500 text-indigo-300 bg-transparent hover:bg-indigo-500/10 disabled:border-zinc-700 disabled:text-zinc-500 disabled:cursor-not-allowed rounded-md font-medium transition-colors"
                 >
                   {backfillLoading ? 'Backfilling...' : 'Generate LLM Notifications'}
                 </button>
