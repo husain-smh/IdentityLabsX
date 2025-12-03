@@ -206,6 +206,27 @@ input {
   --chart-5: #57534e;
 }
 
+/* 75% scale - applies to entire site */
+html {
+  zoom: 0.75;
+}
+
+/* Firefox fallback - zoom not supported, use transform instead */
+@-moz-document url-prefix() {
+  html {
+    zoom: normal;
+    transform: scale(0.75);
+    transform-origin: top left;
+    width: 133.33%; /* Compensate for 75% scale (100/0.75 = 133.33) */
+    height: 133.33%;
+  }
+  
+  body {
+    width: 133.33%;
+    height: 133.33%;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
