@@ -6,7 +6,7 @@ import { createOrUpdateEngagement } from '../../models/socap/engagements';
 import { processEngagement } from '../engagement-processor';
 import { updateWorkerState } from '../../models/socap/worker-state';
 import { getEngagementsByTweet } from '../../models/socap/engagements';
-import { updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
+import { updateTweetQuoteViewsFromQuotes, getTweetMetrics } from '../../models/socap/tweets';
 
 /**
  * Quotes Worker
@@ -50,7 +50,7 @@ export class QuotesWorker extends BaseWorker {
       // Process each quote
       for (const user of response.data) {
         // Quotes API provides engagement timestamp
-
+        const timestamp = user.engagementCreatedAt || new Date();
 
         // Accumulate quote tweet view counts (if present)
         if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
@@ -138,8 +138,8 @@ export class QuotesWorker extends BaseWorker {
         break;
       }
       
-      // Accumulate views only for newly seen or updated quotes
-      if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
+      // Accumulate views only for NEW quotes (not updated ones, to avoid double-counting)
+      if (isNew && typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
         deltaQuoteViewsFromQuotes += user.quoteViewCount;
       }
 
@@ -168,17 +168,13 @@ export class QuotesWorker extends BaseWorker {
       });
     }
     
-    // Update stored quote views metric based on delta
+    // Update stored quote views metric by adding delta to existing value
     if (deltaQuoteViewsFromQuotes !== 0) {
-      // We don't have the previous stored value here, but we want to avoid
-      // expensive reads inside the worker. For now, we treat the delta as the
-      // new absolute value if it's the first run, or add on top for subsequent runs.
-      // To keep this simple and idempotent, we can rely on backfill for accurate
-      // totals and use delta updates just to keep things roughly in sync.
-      //
-      // For now (phase 1), we simply ensure the field exists by setting it to at least the delta.
-      // A later phase can refine this to be truly incremental with a read-modify-write.
-      await updateTweetQuoteViewsFromQuotes(tweetId, deltaQuoteViewsFromQuotes);
+      // Get current value and add the delta
+      const currentMetrics = await getTweetMetrics(tweetId);
+      const currentQuoteViews = (currentMetrics as any)?.quoteViewsFromQuotes || 0;
+      const newTotal = currentQuoteViews + deltaQuoteViewsFromQuotes;
+      await updateTweetQuoteViewsFromQuotes(tweetId, newTotal);
     }
 
     // Mark as successful
