@@ -625,22 +625,40 @@ export default function CampaignDashboardPage() {
           {/* Engagement Data Status Note */}
           {engagementLastUpdated && (
             <div className="glass rounded-xl p-4 border border-yellow-500/30 bg-yellow-500/10">
-              <p className="text-sm text-yellow-400">
+              <p className="text-sm text-black">
                 <span className="font-semibold">Note:</span> Engagement charts (Retweets, Replies, Quotes) show data up to{' '}
                 <span className="font-mono">
                   {engagementLastUpdated.toLocaleString()}
                 </span>
-                . New engagements will appear once workers process them.
+                . New engagements will appear once workers process them. For campaigns where metrics are collected
+                retrospectively, the charts for views, views from quote tweets, likes, and retweets may not be fully accurate
+                because we don't have a reliable timestamp for when those actions occurred.
               </p>
             </div>
           )}
           
-          {/* Quote Tweets Chart */}
+        {/* Quote Tweets Chart (Top Priority) */}
         <MetricChart
           title="Quote Tweets"
           metric="quotes"
           chartData={getFilteredChartData('quotes')}
           color="#fbbf24"
+        />
+
+        {/* Reply Count Chart (Top Priority) */}
+        <MetricChart
+          title="Replies"
+          metric="replies"
+          chartData={getFilteredChartData('replies')}
+          color="#fb923c"
+        />
+
+        {/* Retweet Count Chart */}
+        <MetricChart
+          title="Retweets"
+          metric="retweets"
+          chartData={getFilteredChartData('retweets')}
+          color="#34d399"
         />
 
         {/* Quote Views Chart */}
@@ -657,22 +675,6 @@ export default function CampaignDashboardPage() {
           metric="views"
           chartData={getFilteredChartData('views')}
           color="#a78bfa"
-        />
-
-        {/* Retweet Count Chart */}
-        <MetricChart
-          title="Retweets"
-          metric="retweets"
-          chartData={getFilteredChartData('retweets')}
-          color="#34d399"
-        />
-
-        {/* Reply Count Chart */}
-        <MetricChart
-          title="Replies"
-          metric="replies"
-          chartData={getFilteredChartData('replies')}
-          color="#fb923c"
         />
 
         {/* Like Count Chart */}
