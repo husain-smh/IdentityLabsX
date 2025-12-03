@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import { Trash2, Pause, Bell } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -137,6 +138,7 @@ export default function CampaignDashboardPage() {
   >([]);
   const [engagementLastUpdated, setEngagementLastUpdated] = useState<Date | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPauseConfirm, setShowPauseConfirm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   
   // Single global filter state for all charts
@@ -265,6 +267,7 @@ export default function CampaignDashboardPage() {
       
       if (result.success) {
         await fetchDashboard(); // Refresh data
+        setShowPauseConfirm(false);
         alert(`Campaign ${newStatus === 'paused' ? 'paused' : 'resumed'} successfully`);
       } else {
         alert(`Failed to update: ${result.error}`);
@@ -512,13 +515,21 @@ export default function CampaignDashboardPage() {
                   {data.campaign.status}
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => router.push(`/socap/campaigns/${campaignId}/alerts`)}
+                    className="px-4 py-2 border border-indigo-400 text-indigo-300 rounded-lg font-medium transition-colors hover:border-indigo-300 hover:text-indigo-200 flex items-center gap-2"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Alerts
+                  </button>
                   {data.campaign.status === 'active' ? (
                     <button
-                      onClick={() => updateCampaignStatus('paused')}
+                      onClick={() => setShowPauseConfirm(true)}
                       disabled={actionLoading}
-                      className="px-4 py-2 border border-yellow-400 text-yellow-300 rounded-lg font-medium transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-yellow-300 hover:text-yellow-200"
+                      className="p-2 border border-yellow-400 text-yellow-300 rounded-lg transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-yellow-300 hover:text-yellow-200 flex items-center justify-center"
+                      title="Pause Campaign"
                     >
-                      {actionLoading ? 'Pausing...' : 'Pause'}
+                      <Pause className="w-4 h-4" />
                     </button>
                   ) : data.campaign.status === 'paused' ? (
                     <button
@@ -538,9 +549,10 @@ export default function CampaignDashboardPage() {
                   <button
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={actionLoading}
-                    className="px-4 py-2 border border-red-500 text-red-400 rounded-lg font-medium transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-red-400 hover:text-red-300"
+                    className="p-2 border border-red-500 text-red-400 rounded-lg transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-red-400 hover:text-red-300 flex items-center justify-center"
+                    title="Delete Campaign"
                   >
-                    Delete
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -798,6 +810,34 @@ export default function CampaignDashboardPage() {
                     className="px-4 py-2 border border-red-500 text-red-400 rounded-lg hover:border-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {actionLoading ? 'Deleting...' : 'Delete Campaign'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pause Confirmation Modal */}
+          {showPauseConfirm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="glass rounded-2xl p-6 max-w-md w-full mx-4 border border-zinc-800">
+                <h2 className="text-2xl font-bold mb-4 text-yellow-400">Pause Campaign</h2>
+                <p className="mb-4 text-zinc-300">
+                  Are you sure you want to pause &quot;{data?.campaign.launch_name}&quot;? The campaign will stop processing new engagements.
+                </p>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setShowPauseConfirm(false)}
+                    className="px-4 py-2 border border-zinc-600 rounded-lg text-zinc-200 hover:border-zinc-400 hover:text-zinc-100 transition-colors"
+                    disabled={actionLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => updateCampaignStatus('paused')}
+                    disabled={actionLoading}
+                    className="px-4 py-2 border border-yellow-500 text-yellow-400 rounded-lg hover:border-yellow-400 hover:text-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {actionLoading ? 'Pausing...' : 'Pause Campaign'}
                   </button>
                 </div>
               </div>
