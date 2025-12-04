@@ -427,22 +427,15 @@ export async function fetchTweetQuotes(
                               (quoteTweet as any).quoted_tweet?.id_str ||
                               (quoteTweet as any).quotedTweet?.id_str;
         
-        // If we can verify the quoted tweet ID, ensure it matches what we requested
-        if (quotedTweetId) {
-          if (quotedTweetId !== tweetId) {
-            // This quote tweet is quoting a different tweet - skip it
-            console.warn(
-              `[fetchTweetQuotes] Skipping quote tweet ${quoteTweet.id} - it quotes tweet ${quotedTweetId}, not the requested tweet ${tweetId}`
-            );
-            continue;
-          }
-        } else {
-          // If quoted_tweet.id is missing, we can't verify this is the right quote
-          // Log a warning but still process it (some APIs might not include this field)
+        // Skip if quoted_tweet.id is missing or doesn't match the requested tweet
+        if (!quotedTweetId || quotedTweetId !== tweetId) {
           console.warn(
-            `[fetchTweetQuotes] Quote tweet ${quoteTweet.id} missing quoted_tweet.id field - cannot verify it quotes tweet ${tweetId}`
+            `[fetchTweetQuotes] Skipping quote tweet ${quoteTweet.id} - ` +
+            (quotedTweetId 
+              ? `it quotes tweet ${quotedTweetId}, not the requested tweet ${tweetId}`
+              : `missing quoted_tweet.id field, cannot verify it quotes tweet ${tweetId}`)
           );
-          // Continue processing - the validation in alerts API will catch if tweet_id doesn't match
+          continue;
         }
 
         // quoteTweet.createdAt is when the quote tweet was created
