@@ -943,6 +943,9 @@ export default function CampaignDashboardPage() {
                               {actionsToShow.map((action, idx) => {
                                 const tweetInfo = getTweetInfo(action.tweet_id);
                                 const tweetIdShort = action.tweet_id.slice(-8);
+                                const tweetUrl = tweetInfo?.author_username
+                                  ? `https://x.com/${tweetInfo.author_username}/status/${action.tweet_id}`
+                                  : `https://x.com/i/web/status/${action.tweet_id}`;
                                 
                                 return (
                                   <div key={idx} className="ml-2 text-xs text-zinc-700">
@@ -953,12 +956,14 @@ export default function CampaignDashboardPage() {
                                         {action.action_type === 'retweet' && 'Retweeted '}
                                         {action.action_type === 'quote' && 'Quoted '}
                                       </span>
-                                      <Link
-                                        href={`/tweets/${action.tweet_id}`}
+                                      <a
+                                        href={tweetUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="text-indigo-600 hover:text-indigo-700 hover:underline"
                                       >
                                         Tweet {tweetIdShort}
-                                      </Link>
+                                      </a>
                                     </div>
                                   </div>
                                 );

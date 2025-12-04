@@ -14,6 +14,9 @@
  *   tsx scripts/socap-worker.ts
  */
 
+// Load environment variables FIRST before any other imports
+import 'dotenv/config';
+
 import { WorkerOrchestrator } from '../src/lib/socap/workers/worker-orchestrator';
 
 const CONCURRENCY = parseInt(process.env.SOCAP_WORKER_CONCURRENCY || '5', 10);
