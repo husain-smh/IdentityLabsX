@@ -7,7 +7,7 @@ import { processEngagement } from '../engagement-processor';
 import { updateWorkerState } from '../../models/socap/worker-state';
 import { getEngagementsByTweet } from '../../models/socap/engagements';
 import { updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
-import { extractTotalQuoteTweetViews } from '../quote-views-extractor';
+import { getQuoteViewsFromN8N } from '../n8n-quote-views';
 
 /**
  * Quotes Worker
@@ -33,7 +33,7 @@ export class QuotesWorker extends BaseWorker {
   /**
    * Backfill all existing quote tweets
    * 
-   * Uses the standalone quote views extractor to get accurate totals,
+   * Uses N8N webhook to get accurate totals (proven to work correctly),
    * then processes engagements for tracking purposes.
    */
   private async backfillQuotes(
@@ -41,15 +41,15 @@ export class QuotesWorker extends BaseWorker {
     tweetId: string,
     _state: WorkerState
   ): Promise<void> {
-    // Step 1: Extract total views using the proven N8N-based logic
-    console.log(`[QuotesWorker] Extracting total quote tweet views for tweet ${tweetId}`);
-    const viewsResult = await extractTotalQuoteTweetViews(tweetId);
+    // Step 1: Get total views from N8N webhook (proven to work correctly)
+    console.log(`[QuotesWorker] Getting total quote tweet views from N8N for tweet ${tweetId}`);
+    const viewsResult = await getQuoteViewsFromN8N(tweetId);
     
     // Step 2: Update the stored total (replace, don't add)
     await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
     console.log(
       `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-      `(${viewsResult.totalQuotes} quotes across ${viewsResult.pagesFetched} pages)`
+      `(from N8N webhook)`
     );
 
     // Step 3: Process engagements for tracking (fetch all pages again for engagement records)
@@ -114,25 +114,25 @@ export class QuotesWorker extends BaseWorker {
   /**
    * Process delta (subsequent runs)
    * 
-   * Uses the standalone quote views extractor to recompute totals from scratch.
+   * Uses N8N webhook to recompute totals from scratch.
    * This ensures we always have accurate totals, even if quote tweet view counts
-   * have changed since the last run.
+   * have changed since the last run. N8N handles all the pagination and logic correctly.
    */
   private async processDelta(
     campaignId: string,
     tweetId: string,
     state: WorkerState
   ): Promise<void> {
-    // Step 1: Recompute total views using the proven N8N-based logic
-    // This replaces the old delta logic - we just recompute from scratch every time
-    console.log(`[QuotesWorker] Recomputing total quote tweet views for tweet ${tweetId}`);
-    const viewsResult = await extractTotalQuoteTweetViews(tweetId);
+    // Step 1: Get total views from N8N webhook (recomputes from scratch every time)
+    // This replaces the old delta logic - we just call N8N and get fresh totals
+    console.log(`[QuotesWorker] Getting total quote tweet views from N8N for tweet ${tweetId}`);
+    const viewsResult = await getQuoteViewsFromN8N(tweetId);
     
     // Step 2: Update the stored total (replace, don't add - this is the key fix)
     await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
     console.log(
       `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-      `(${viewsResult.totalQuotes} quotes across ${viewsResult.pagesFetched} pages)`
+      `(from N8N webhook)`
     );
 
     // Step 3: Process new/updated engagements for tracking
