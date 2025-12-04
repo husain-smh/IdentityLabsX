@@ -41,16 +41,25 @@ export class QuotesWorker extends BaseWorker {
     tweetId: string,
     _state: WorkerState
   ): Promise<void> {
-    // Step 1: Get total views (uses N8N webhook or extractor based on config)
-    console.log(`[QuotesWorker] Getting total quote tweet views for tweet ${tweetId}`);
-    const viewsResult = await getQuoteViews(tweetId);
+    console.log(`[QuotesWorker] ========== START BACKFILL for tweet ${tweetId} ==========`);
     
-    // Step 2: Update the stored total (replace, don't add)
-    await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
-    console.log(
-      `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-      `(backend: ${viewsResult.backend || 'unknown'})`
-    );
+    // Step 1: Get total views (uses N8N webhook or extractor based on config)
+    try {
+      console.log(`[QuotesWorker] BEFORE getQuoteViews for tweet ${tweetId}`);
+      const viewsResult = await getQuoteViews(tweetId);
+      console.log(`[QuotesWorker] AFTER getQuoteViews - got result:`, viewsResult);
+      
+      // Step 2: Update the stored total (replace, don't add)
+      console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
+      await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
+      console.log(
+        `[QuotesWorker] ✅ Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
+        `(backend: ${viewsResult.backend || 'unknown'})`
+      );
+    } catch (error) {
+      console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
+      // Don't throw - continue with engagement processing even if quote views calculation fails
+    }
 
     // Step 3: Process engagements for tracking (fetch all pages again for engagement records)
     let cursor: string | null = null;
@@ -123,17 +132,26 @@ export class QuotesWorker extends BaseWorker {
     tweetId: string,
     state: WorkerState
   ): Promise<void> {
+    console.log(`[QuotesWorker] ========== START DELTA for tweet ${tweetId} ==========`);
+    
     // Step 1: Get total views (uses N8N webhook or extractor based on config)
     // This replaces the old delta logic - we just get fresh totals every time
-    console.log(`[QuotesWorker] Getting total quote tweet views for tweet ${tweetId}`);
-    const viewsResult = await getQuoteViews(tweetId);
-    
-    // Step 2: Update the stored total (replace, don't add - this is the key fix)
-    await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
-    console.log(
-      `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-      `(backend: ${viewsResult.backend || 'unknown'})`
-    );
+    try {
+      console.log(`[QuotesWorker] BEFORE getQuoteViews for tweet ${tweetId}`);
+      const viewsResult = await getQuoteViews(tweetId);
+      console.log(`[QuotesWorker] AFTER getQuoteViews - got result:`, viewsResult);
+      
+      // Step 2: Update the stored total (replace, don't add - this is the key fix)
+      console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
+      await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
+      console.log(
+        `[QuotesWorker] ✅ Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
+        `(backend: ${viewsResult.backend || 'unknown'})`
+      );
+    } catch (error) {
+      console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
+      // Don't throw - continue with engagement processing even if quote views calculation fails
+    }
 
     // Step 3: Process new/updated engagements for tracking
     const response = await fetchTweetQuotes(tweetId, {
