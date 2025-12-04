@@ -47,7 +47,7 @@ async function getQuoteViewsFromN8NWebhook(
     maxRetries?: number; // Max retries for transient failures (default: 2)
     retryDelay?: number; // Delay between retries in ms (default: 2000)
   }
-): Promise<N8NQuoteViewsResult> {
+): Promise<QuoteViewsResult> {
   // Get tweet to retrieve tweet_url
   const tweet = await getTweetByTweetId(tweetId);
   
