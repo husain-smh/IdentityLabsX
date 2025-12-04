@@ -87,9 +87,25 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
     return null;
   };
 
+  // Determine if the chart spans multiple calendar days so we can decide
+  // whether to show date + time or just time on the X-axis.
+  const isMultiDay = (() => {
+    if (!chartData || chartData.length === 0) return false;
+    const first = new Date(chartData[0].time);
+    const last = new Date(chartData[chartData.length - 1].time);
+    if (Number.isNaN(first.getTime()) || Number.isNaN(last.getTime())) {
+      return false;
+    }
+    return (
+      first.getFullYear() !== last.getFullYear() ||
+      first.getMonth() !== last.getMonth() ||
+      first.getDate() !== last.getDate()
+    );
+  })();
+
   // Format X-axis ticks to avoid clutter when there are many data points.
   // We keep all data points (for accurate lines and tooltips) but only label
-  // a subset of them on the axis.
+  // a subset of them on the axis, with enough context to distinguish days.
   const formatXAxisTick = (value: string, index: number) => {
     if (!chartData || chartData.length === 0) return '';
 
@@ -109,7 +125,14 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
 
-    // Compact time label: "HH:MM". You could prepend a short date if needed.
+    if (isMultiDay) {
+      // Short date + time, e.g. "11/28 05:00"
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${month}/${day} ${hours}:${minutes}`;
+    }
+
+    // Single-day range: time-only is enough.
     return `${hours}:${minutes}`;
   };
 

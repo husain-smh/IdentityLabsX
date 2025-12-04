@@ -6,7 +6,8 @@ import { createOrUpdateEngagement } from '../../models/socap/engagements';
 import { processEngagement } from '../engagement-processor';
 import { updateWorkerState } from '../../models/socap/worker-state';
 import { getEngagementsByTweet } from '../../models/socap/engagements';
-import { updateTweetQuoteViewsFromQuotes, getTweetMetrics } from '../../models/socap/tweets';
+import { updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
+import { extractTotalQuoteTweetViews } from '../quote-views-extractor';
 
 /**
  * Quotes Worker
@@ -31,15 +32,29 @@ export class QuotesWorker extends BaseWorker {
   
   /**
    * Backfill all existing quote tweets
+   * 
+   * Uses the standalone quote views extractor to get accurate totals,
+   * then processes engagements for tracking purposes.
    */
   private async backfillQuotes(
     campaignId: string,
     tweetId: string,
     _state: WorkerState
   ): Promise<void> {
+    // Step 1: Extract total views using the proven N8N-based logic
+    console.log(`[QuotesWorker] Extracting total quote tweet views for tweet ${tweetId}`);
+    const viewsResult = await extractTotalQuoteTweetViews(tweetId);
+    
+    // Step 2: Update the stored total (replace, don't add)
+    await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
+    console.log(
+      `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
+      `(${viewsResult.totalQuotes} quotes across ${viewsResult.pagesFetched} pages)`
+    );
+
+    // Step 3: Process engagements for tracking (fetch all pages again for engagement records)
     let cursor: string | null = null;
     let allProcessed = 0;
-    let totalQuoteViewsFromQuotes = 0;
     
     while (true) {
       const response = await fetchTweetQuotes(tweetId, {
@@ -47,21 +62,11 @@ export class QuotesWorker extends BaseWorker {
         maxPages: 1, // Process one page at a time
       });
       
-      // Process each quote
+      // Process each quote for engagement tracking
       for (const user of response.data) {
-        // Accumulate quote tweet view counts (if present).
-        // IMPORTANT: For total views from quote tweets, we count every quote tweet
-        // returned by the API, regardless of which tweet it quotes.
-        if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
-          totalQuoteViewsFromQuotes += user.quoteViewCount;
-        }
-        
-        // Quotes API provides engagement timestamp
         const timestamp = user.engagementCreatedAt || new Date();
 
-        // For engagements, we want to stay STRICT and only treat this as a quote
-        // engagement if it actually quotes the target tweet. This keeps SOCAP
-        // engagement data clean while still allowing loose aggregation for views.
+        // Only create engagements for quotes that actually quote the target tweet
         if (user.quotedTweetId && user.quotedTweetId !== tweetId) {
           continue;
         }
@@ -75,9 +80,7 @@ export class QuotesWorker extends BaseWorker {
           user.engagementText
         );
         
-        // For backfill runs, we treat this as the initial baseline for the
-        // quote tweet's view count. Store the current quoteViewCount so that
-        // subsequent delta runs can compute non-negative per-quote deltas.
+        // Store the current quoteViewCount as baseline for future reference
         if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
           (engagementInput as any).quote_view_count = user.quoteViewCount;
         }
@@ -86,7 +89,6 @@ export class QuotesWorker extends BaseWorker {
         allProcessed++;
       }
       
-      // Update cursor
       cursor = response.nextCursor || null;
       
       // Update state after each page
@@ -99,14 +101,6 @@ export class QuotesWorker extends BaseWorker {
         break;
       }
     }
-    
-    // After processing all pages, persist the total quote views for this tweet
-    if (totalQuoteViewsFromQuotes > 0) {
-      await updateTweetQuoteViewsFromQuotes(tweetId, totalQuoteViewsFromQuotes);
-    } else {
-      // Ensure the field exists even if we saw zero or missing view counts
-      await updateTweetQuoteViewsFromQuotes(tweetId, 0);
-    }
 
     // Mark as successful
     await updateWorkerState(campaignId, tweetId, 'quotes', {
@@ -114,42 +108,58 @@ export class QuotesWorker extends BaseWorker {
       cursor,
     });
     
-    console.log(`Backfilled ${allProcessed} quotes for tweet ${tweetId}`);
+    console.log(`[QuotesWorker] Backfilled ${allProcessed} quote engagements for tweet ${tweetId}`);
   }
   
   /**
-   * Process delta (new quotes only)
+   * Process delta (subsequent runs)
+   * 
+   * Uses the standalone quote views extractor to recompute totals from scratch.
+   * This ensures we always have accurate totals, even if quote tweet view counts
+   * have changed since the last run.
    */
   private async processDelta(
     campaignId: string,
     tweetId: string,
     state: WorkerState
   ): Promise<void> {
-    // Fetch first page with stored cursor
+    // Step 1: Recompute total views using the proven N8N-based logic
+    // This replaces the old delta logic - we just recompute from scratch every time
+    console.log(`[QuotesWorker] Recomputing total quote tweet views for tweet ${tweetId}`);
+    const viewsResult = await extractTotalQuoteTweetViews(tweetId);
+    
+    // Step 2: Update the stored total (replace, don't add - this is the key fix)
+    await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
+    console.log(
+      `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
+      `(${viewsResult.totalQuotes} quotes across ${viewsResult.pagesFetched} pages)`
+    );
+
+    // Step 3: Process new/updated engagements for tracking
     const response = await fetchTweetQuotes(tweetId, {
       cursor: state.cursor || undefined,
-      maxPages: 1,
+      maxPages: 1, // Only fetch first page for engagement delta detection
     });
     
     // Get existing engagements to check timestamps
     const existingEngagements = await getEngagementsByTweet(tweetId);
     const existingQuotes = existingEngagements.filter((e) => e.action_type === 'quote');
     const existingUserIds = new Set(existingQuotes.map((e) => e.user_id));
-    // Map of user_id -> last known quote_view_count (if any)
-    const lastViewCountByUserId = new Map<string, number | undefined>();
-    for (const engagement of existingQuotes) {
-      lastViewCountByUserId.set(engagement.user_id, engagement.quote_view_count);
-    }
     const lastSuccessTime = state.last_success || new Date(0);
     
     let newCount = 0;
     let updatedCount = 0;
     let shouldStop = false;
-    let deltaQuoteViewsFromQuotes = 0;
     
-    // Process quotes (newest first)
+    // Process quotes (newest first) for engagement tracking
     for (const user of response.data) {
       const timestamp = user.engagementCreatedAt || new Date();
+      
+      // Only process quotes that actually quote the target tweet
+      if (user.quotedTweetId && user.quotedTweetId !== tweetId) {
+        continue;
+      }
+      
       const isNew = !existingUserIds.has(user.userId);
       
       // Stop condition: if we encounter a quote with timestamp older than last_success,
@@ -157,53 +167,6 @@ export class QuotesWorker extends BaseWorker {
       if (!isNew && timestamp < lastSuccessTime) {
         shouldStop = true;
         break;
-      }
-      
-      // Compute per-quote view delta in a way that:
-      // - Never double-counts existing views
-      // - Never decreases the aggregate total (non-negative deltas)
-      // - Seamlessly adopts existing engagements created before this change
-      //
-      // For *new* quotes:
-      //   previous = 0 → delta = current viewCount
-      //
-      // For *existing* quotes created before this change (no quote_view_count stored):
-      //   previous is undefined → we treat delta as 0 and set baseline to current
-      //
-      // For *existing* quotes with a stored baseline:
-      //   delta = max(current - previous, 0)
-      let currentViewCount = 0;
-      if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
-        currentViewCount = user.quoteViewCount;
-      }
-
-      let deltaForThisQuote = 0;
-      const previousViewCount = lastViewCountByUserId.get(user.userId);
-
-      if (typeof previousViewCount === 'number') {
-        const rawDelta = currentViewCount - previousViewCount;
-        if (rawDelta > 0) {
-          deltaForThisQuote = rawDelta;
-        }
-      } else if (isNew) {
-        // Brand new quote: we haven't counted any of its views yet.
-        deltaForThisQuote = currentViewCount;
-      } else {
-        // Existing quote with no stored baseline (created before this change).
-        // Do NOT add currentViewCount again (that would double-count).
-        // Instead, treat this as establishing the initial baseline.
-        deltaForThisQuote = 0;
-      }
-
-      if (deltaForThisQuote > 0) {
-        deltaQuoteViewsFromQuotes += deltaForThisQuote;
-      }
-
-      // For engagement records, enforce strict matching: only treat this as a quote
-      // of the target tweet if quotedTweetId matches. This preserves the original
-      // semantics of "who quoted this tweet" even though views are aggregated loosely.
-      if (user.quotedTweetId && user.quotedTweetId !== tweetId) {
-        continue;
       }
 
       const engagementInput = await processEngagement(
@@ -215,11 +178,9 @@ export class QuotesWorker extends BaseWorker {
         user.engagementText
       );
       
-      // Persist the latest per-quote baseline view count so future runs can
-      // compute non-negative deltas. This is safe for both new and existing
-      // quotes, as we clamp deltas above.
-      if (typeof currentViewCount === 'number' && !Number.isNaN(currentViewCount)) {
-        (engagementInput as any).quote_view_count = currentViewCount;
+      // Store the current quoteViewCount as baseline for future reference
+      if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
+        (engagementInput as any).quote_view_count = user.quoteViewCount;
       }
       
       await createOrUpdateEngagement(engagementInput);
@@ -237,15 +198,6 @@ export class QuotesWorker extends BaseWorker {
         cursor: response.nextCursor,
       });
     }
-    
-    // Update stored quote views metric by adding delta to existing value
-    if (deltaQuoteViewsFromQuotes !== 0) {
-      // Get current value and add the delta
-      const currentMetrics = await getTweetMetrics(tweetId);
-      const currentQuoteViews = (currentMetrics as any)?.quoteViewsFromQuotes || 0;
-      const newTotal = currentQuoteViews + deltaQuoteViewsFromQuotes;
-      await updateTweetQuoteViewsFromQuotes(tweetId, newTotal);
-    }
 
     // Mark as successful
     await updateWorkerState(campaignId, tweetId, 'quotes', {
@@ -253,7 +205,7 @@ export class QuotesWorker extends BaseWorker {
     });
     
     console.log(
-      `Delta processed for tweet ${tweetId}: ${newCount} new, ${updatedCount} updated quotes`
+      `[QuotesWorker] Delta processed for tweet ${tweetId}: ${newCount} new, ${updatedCount} updated quote engagements`
     );
   }
 }

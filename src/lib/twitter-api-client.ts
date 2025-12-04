@@ -80,7 +80,7 @@ async function scheduleGlobalRateLimit(config: ReturnType<typeof getTwitterApiCo
 /**
  * Make API request with retry logic
  */
-async function makeApiRequest(
+export async function makeApiRequest(
   url: string,
   config: ReturnType<typeof getTwitterApiConfig>,
   retries = 0
