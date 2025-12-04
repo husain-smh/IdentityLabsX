@@ -23,6 +23,14 @@ export interface Engagement {
   };
   importance_score: number;
   account_categories: string[]; // from categorizeEngager
+  /**
+   * For quote tweet engagements, stores the last known viewCount of the
+   * quote tweet itself. This allows the QuotesWorker to compute non-negative
+   * per-quote deltas over time without double-counting.
+   *
+   * Optional for backward compatibility and for non-quote engagements.
+   */
+  quote_view_count?: number;
   last_seen_at: Date;
   created_at: Date;
 }
@@ -46,6 +54,11 @@ export interface EngagementInput {
   };
   importance_score: number;
   account_categories: string[];
+  /**
+   * Optional last known view count for quote tweet engagements.
+   * Only relevant when action_type === 'quote'; ignored for others.
+   */
+  quote_view_count?: number;
 }
 
 // ===== Collection Getter =====
@@ -82,7 +95,7 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
   const collection = await getEngagementsCollection();
   
   // Prepare fields that should be updated on both insert and update
-  const updateFields = {
+  const updateFields: Partial<Engagement> = {
     campaign_id: input.campaign_id,
     tweet_id: input.tweet_id,
     tweet_category: input.tweet_category,
@@ -96,6 +109,14 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
     account_categories: input.account_categories,
     last_seen_at: new Date(), // Always update last_seen_at
   };
+  
+  // Only update quote_view_count when explicitly provided.
+  // This preserves any existing stored baseline when callers
+  // don't have a fresh view count (e.g. retweets / replies or
+  // older code paths).
+  if (typeof input.quote_view_count === 'number') {
+    updateFields.quote_view_count = input.quote_view_count;
+  }
   
   // CRITICAL: Include campaign_id in the match criteria to prevent cross-campaign contamination
   // This ensures engagements from different campaigns don't overwrite each other

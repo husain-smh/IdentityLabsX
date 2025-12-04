@@ -75,6 +75,13 @@ export class QuotesWorker extends BaseWorker {
           user.engagementText
         );
         
+        // For backfill runs, we treat this as the initial baseline for the
+        // quote tweet's view count. Store the current quoteViewCount so that
+        // subsequent delta runs can compute non-negative per-quote deltas.
+        if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
+          (engagementInput as any).quote_view_count = user.quoteViewCount;
+        }
+        
         await createOrUpdateEngagement(engagementInput);
         allProcessed++;
       }
@@ -128,6 +135,11 @@ export class QuotesWorker extends BaseWorker {
     const existingEngagements = await getEngagementsByTweet(tweetId);
     const existingQuotes = existingEngagements.filter((e) => e.action_type === 'quote');
     const existingUserIds = new Set(existingQuotes.map((e) => e.user_id));
+    // Map of user_id -> last known quote_view_count (if any)
+    const lastViewCountByUserId = new Map<string, number | undefined>();
+    for (const engagement of existingQuotes) {
+      lastViewCountByUserId.set(engagement.user_id, engagement.quote_view_count);
+    }
     const lastSuccessTime = state.last_success || new Date(0);
     
     let newCount = 0;
@@ -147,12 +159,44 @@ export class QuotesWorker extends BaseWorker {
         break;
       }
       
-      // Accumulate views only for NEW quotes (not updated ones, to avoid double-counting).
-      // Views aggregation is intentionally LOOSE: we include every quote tweet the API
-      // returns, regardless of which tweet it quotes. We rely on engagements below to
-      // enforce strict matching where needed.
-      if (isNew && typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
-        deltaQuoteViewsFromQuotes += user.quoteViewCount;
+      // Compute per-quote view delta in a way that:
+      // - Never double-counts existing views
+      // - Never decreases the aggregate total (non-negative deltas)
+      // - Seamlessly adopts existing engagements created before this change
+      //
+      // For *new* quotes:
+      //   previous = 0 → delta = current viewCount
+      //
+      // For *existing* quotes created before this change (no quote_view_count stored):
+      //   previous is undefined → we treat delta as 0 and set baseline to current
+      //
+      // For *existing* quotes with a stored baseline:
+      //   delta = max(current - previous, 0)
+      let currentViewCount = 0;
+      if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
+        currentViewCount = user.quoteViewCount;
+      }
+
+      let deltaForThisQuote = 0;
+      const previousViewCount = lastViewCountByUserId.get(user.userId);
+
+      if (typeof previousViewCount === 'number') {
+        const rawDelta = currentViewCount - previousViewCount;
+        if (rawDelta > 0) {
+          deltaForThisQuote = rawDelta;
+        }
+      } else if (isNew) {
+        // Brand new quote: we haven't counted any of its views yet.
+        deltaForThisQuote = currentViewCount;
+      } else {
+        // Existing quote with no stored baseline (created before this change).
+        // Do NOT add currentViewCount again (that would double-count).
+        // Instead, treat this as establishing the initial baseline.
+        deltaForThisQuote = 0;
+      }
+
+      if (deltaForThisQuote > 0) {
+        deltaQuoteViewsFromQuotes += deltaForThisQuote;
       }
 
       // For engagement records, enforce strict matching: only treat this as a quote
@@ -170,6 +214,13 @@ export class QuotesWorker extends BaseWorker {
         timestamp,
         user.engagementText
       );
+      
+      // Persist the latest per-quote baseline view count so future runs can
+      // compute non-negative deltas. This is safe for both new and existing
+      // quotes, as we clamp deltas above.
+      if (typeof currentViewCount === 'number' && !Number.isNaN(currentViewCount)) {
+        (engagementInput as any).quote_view_count = currentViewCount;
+      }
       
       await createOrUpdateEngagement(engagementInput);
       
