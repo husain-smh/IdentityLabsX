@@ -87,13 +87,44 @@ function MetricChart({ title, metric, chartData, color }: Omit<MetricChartProps,
     return null;
   };
 
+  // Format X-axis ticks to avoid clutter when there are many data points.
+  // We keep all data points (for accurate lines and tooltips) but only label
+  // a subset of them on the axis.
+  const formatXAxisTick = (value: string, index: number) => {
+    if (!chartData || chartData.length === 0) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+
+    const maxTicks = 8;
+    const step = Math.max(1, Math.ceil(chartData.length / maxTicks));
+
+    // Only show a label for every `step`-th point to space them out.
+    if (index % step !== 0) {
+      return '';
+    }
+
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    // Compact time label: "HH:MM". You could prepend a short date if needed.
+    return `${hours}:${minutes}`;
+  };
+
   return (
     <div className="glass rounded-2xl p-6">
       <h2 className="text-xl font-semibold text-white mb-4">{title}</h2>
       {chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
-            <XAxis dataKey="time" stroke="#9ca3af" />
+            <XAxis
+              dataKey="time"
+              stroke="#9ca3af"
+              tickFormatter={formatXAxisTick}
+              tickLine={false}
+            />
             <YAxis stroke="#9ca3af" />
             <Tooltip content={<CustomTooltip />} />
             <Line
@@ -234,7 +265,20 @@ export default function CampaignDashboardPage() {
           };
         });
 
-        setEngagementSeries(mapped);
+        // Trim leading buckets where there were no engagements yet to avoid
+        // long flat lines that hug the x-axis before the first real activity.
+        const firstNonZeroIndex = mapped.findIndex((point) => {
+          const hasRetweets = (point.retweets ?? 0) > 0;
+          const hasReplies = (point.replies ?? 0) > 0;
+          const hasQuotes = (point.quotes ?? 0) > 0;
+          const hasTotal = (point.total ?? 0) > 0;
+          return hasRetweets || hasReplies || hasQuotes || hasTotal;
+        });
+
+        const trimmedSeries =
+          firstNonZeroIndex > 0 ? mapped.slice(firstNonZeroIndex) : mapped;
+
+        setEngagementSeries(trimmedSeries);
         
         // Store last updated timestamp if available
         if (result.data?.last_updated) {
