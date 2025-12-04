@@ -24,10 +24,20 @@ export interface N8NQuoteViewsResult {
 /**
  * Call N8N webhook to get total views from quote tweets
  * 
+ * Handles long-running N8N calls (up to 10+ seconds) with proper timeout and retry logic.
+ * 
  * @param tweetId - Tweet ID (will be converted to tweet URL)
+ * @param options - Optional configuration
  * @returns Total views from all quote tweets
  */
-export async function getQuoteViewsFromN8N(tweetId: string): Promise<N8NQuoteViewsResult> {
+export async function getQuoteViewsFromN8N(
+  tweetId: string,
+  options?: {
+    timeout?: number; // Timeout in ms (default: 60000 = 60 seconds)
+    maxRetries?: number; // Max retries for transient failures (default: 2)
+    retryDelay?: number; // Delay between retries in ms (default: 2000)
+  }
+): Promise<N8NQuoteViewsResult> {
   // Get tweet to retrieve tweet_url
   const tweet = await getTweetByTweetId(tweetId);
   
@@ -42,46 +52,127 @@ export async function getQuoteViewsFromN8N(tweetId: string): Promise<N8NQuoteVie
   const webhookUrl = process.env.N8N_QUOTE_VIEWS_WEBHOOK_URL || 
                      'https://mdhusainil.app.n8n.cloud/webhook/totalQuoteTwtViews';
 
-  console.log(`[N8NQuoteViews] Calling N8N webhook for tweet ${tweetId} (${tweet.tweet_url})`);
+  const timeout = options?.timeout || 60000; // 60 seconds default (N8N can take 10+ seconds)
+  const maxRetries = options?.maxRetries ?? 2; // Retry up to 2 times for transient failures
+  const retryDelay = options?.retryDelay || 2000; // 2 seconds between retries
 
-  try {
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      // N8N workflow expects tweetUrl nested under 'body' property
-      body: JSON.stringify({ 
-        body: { tweetUrl: tweet.tweet_url }
-      }),
-    });
+  console.log(`[N8NQuoteViews] Calling N8N webhook for tweet ${tweetId} (${tweet.tweet_url}) - timeout: ${timeout}ms`);
 
-    if (!webhookResponse.ok) {
-      const errorText = await webhookResponse.text().catch(() => 'Unknown error');
-      throw new Error(`N8N webhook responded with status ${webhookResponse.status}: ${errorText}`);
+  let lastError: Error | null = null;
+
+  // Retry loop for transient failures
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (attempt > 0) {
+      console.log(`[N8NQuoteViews] Retry attempt ${attempt}/${maxRetries} for tweet ${tweetId}`);
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
 
-    const webhookData = await webhookResponse.json();
+    // Create AbortController for timeout handling (outside try so it's accessible in catch)
+    const controller = new AbortController();
+    let timeoutId: NodeJS.Timeout | null = null;
 
-    // Extract total views from N8N response
-    const totalViews = webhookData.statistics?.totalViewsAcrossAllQuoteTweets || 0;
-    const totalQuotes = webhookData.statistics?.uniqueUsersKept || 0; // This is actually unique users, not quote count
+    try {
+      timeoutId = setTimeout(() => {
+        controller.abort();
+      }, timeout);
 
-    console.log(
-      `[N8NQuoteViews] Success: ${totalViews.toLocaleString()} total views from ${totalQuotes} unique quote tweets`
-    );
+      const startTime = Date.now();
 
-    return {
-      totalViews: typeof totalViews === 'number' ? totalViews : parseInt(String(totalViews), 10) || 0,
-      totalQuotes: typeof totalQuotes === 'number' ? totalQuotes : parseInt(String(totalQuotes), 10) || 0,
-      success: webhookData.success !== false,
-      statistics: webhookData.statistics,
-    };
-  } catch (error) {
-    console.error(`[N8NQuoteViews] Error calling N8N webhook for tweet ${tweetId}:`, error);
-    throw new Error(
-      `Failed to get quote views from N8N: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // N8N workflow expects tweetUrl nested under 'body' property
+        body: JSON.stringify({ 
+          body: { tweetUrl: tweet.tweet_url }
+        }),
+        signal: controller.signal, // Enable timeout cancellation
+      });
+
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      const duration = Date.now() - startTime;
+      console.log(`[N8NQuoteViews] N8N webhook responded in ${duration}ms for tweet ${tweetId}`);
+
+      if (!webhookResponse.ok) {
+        const errorText = await webhookResponse.text().catch(() => 'Unknown error');
+        const error = new Error(`N8N webhook responded with status ${webhookResponse.status}: ${errorText}`);
+        
+        // 5xx errors are retryable, 4xx errors are not
+        if (webhookResponse.status >= 500 && attempt < maxRetries) {
+          console.warn(`[N8NQuoteViews] Server error ${webhookResponse.status}, will retry...`);
+          lastError = error;
+          continue;
+        }
+        
+        throw error;
+      }
+
+      const webhookData = await webhookResponse.json();
+
+      // Extract total views from N8N response
+      const totalViews = webhookData.statistics?.totalViewsAcrossAllQuoteTweets || 0;
+      const totalQuotes = webhookData.statistics?.uniqueUsersKept || 0; // This is actually unique users, not quote count
+
+      console.log(
+        `[N8NQuoteViews] Success: ${totalViews.toLocaleString()} total views from ${totalQuotes} unique quote tweets (took ${duration}ms)`
+      );
+
+      return {
+        totalViews: typeof totalViews === 'number' ? totalViews : parseInt(String(totalViews), 10) || 0,
+        totalQuotes: typeof totalQuotes === 'number' ? totalQuotes : parseInt(String(totalQuotes), 10) || 0,
+        success: webhookData.success !== false,
+        statistics: webhookData.statistics,
+      };
+    } catch (error) {
+      // Clean up timeout if still active
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      // Handle timeout/abort errors
+      if (error instanceof Error && error.name === 'AbortError') {
+        const timeoutError = new Error(
+          `N8N webhook timeout after ${timeout}ms for tweet ${tweetId}. N8N may be processing a large number of quotes.`
+        );
+        
+        // Timeout is retryable if we have attempts left
+        if (attempt < maxRetries) {
+          console.warn(`[N8NQuoteViews] Timeout on attempt ${attempt + 1}, will retry...`);
+          lastError = timeoutError;
+          continue;
+        }
+        
+        throw timeoutError;
+      }
+
+      // Handle network errors (retryable)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        if (attempt < maxRetries) {
+          console.warn(`[N8NQuoteViews] Network error on attempt ${attempt + 1}, will retry...`);
+          lastError = error as Error;
+          continue;
+        }
+      }
+
+      // If it's not a retryable error or we've exhausted retries, throw
+      if (attempt >= maxRetries) {
+        console.error(`[N8NQuoteViews] Error calling N8N webhook for tweet ${tweetId} after ${attempt + 1} attempts:`, error);
+        throw new Error(
+          `Failed to get quote views from N8N after ${attempt + 1} attempts: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+
+      lastError = error instanceof Error ? error : new Error('Unknown error');
+    }
   }
+
+  // Should never reach here, but TypeScript needs it
+  throw lastError || new Error(`Failed to get quote views from N8N for tweet ${tweetId}`);
 }
 
