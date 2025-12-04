@@ -201,8 +201,9 @@ export default function CampaignDashboardPage() {
   // Action type filter for engagements
   const [actionTypeFilter, setActionTypeFilter] = useState<'all' | 'retweet' | 'reply' | 'quote'>('all');
   
-  // Pagination for people
+  // Pagination for people - start with 20, increment by 20 each time
   const [peopleDisplayLimit, setPeopleDisplayLimit] = useState(20);
+  const incrementAmount = 20;
   
   // Track which people have expanded actions (show all vs show top 3)
   const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set());
@@ -614,8 +615,17 @@ export default function CampaignDashboardPage() {
       }
     }
 
-    // Convert to array and sort by importance_score (highest first)
-    return Array.from(groupedMap.values()).sort((a, b) => b.importance_score - a.importance_score);
+    // Convert to array and sort:
+    // 1. First by importance_score (highest first)
+    // 2. For accounts with same importance_score (especially 0), sort by followers (highest first)
+    return Array.from(groupedMap.values()).sort((a, b) => {
+      // Primary sort: importance_score (descending)
+      if (b.importance_score !== a.importance_score) {
+        return b.importance_score - a.importance_score;
+      }
+      // Secondary sort: followers (descending) - especially important for zero-importance accounts
+      return b.account_profile.followers - a.account_profile.followers;
+    });
   };
 
   const groupedEngagements = data ? groupEngagementsByUser(data.latest_engagements) : [];
@@ -1057,14 +1067,14 @@ export default function CampaignDashboardPage() {
                   );
                 })}
                 
-                {/* Load More Button */}
+                {/* Show More Button */}
                 {hasMorePeople && (
                   <div className="flex justify-center pt-4">
                     <button
-                      onClick={() => setPeopleDisplayLimit(prev => prev + 20)}
-                      className="px-6 py-2 border border-indigo-500 text-indigo-400 rounded-lg hover:border-indigo-400 hover:text-indigo-300 transition-colors"
+                      onClick={() => setPeopleDisplayLimit(prev => prev + incrementAmount)}
+                      className="px-6 py-2 border border-indigo-500 text-indigo-400 rounded-lg hover:border-indigo-400 hover:text-indigo-300 transition-colors font-medium"
                     >
-                      Load More ({groupedEngagements.length - peopleDisplayLimit} remaining)
+                      Show More ({groupedEngagements.length - peopleDisplayLimit} remaining)
                     </button>
                   </div>
                 )}

@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 import { getTweetsByCampaign } from '@/lib/models/socap/tweets';
 import {
-  getEngagementsByCampaign,
   getEngagementCountByCampaign,
   getUniqueEngagersByCampaign,
+  getAllUniqueEngagersByCampaign,
 } from '@/lib/models/socap/engagements';
 
 /**
@@ -54,11 +54,35 @@ export async function GET(
     const totalEngagements = await getEngagementCountByCampaign(id);
     const uniqueEngagers = await getUniqueEngagersByCampaign(id);
     
-    // Get latest engagements - fetch more to ensure we get at least 20 unique people
-    const latestEngagements = await getEngagementsByCampaign(id, {
-      limit: 200,
-      sort: 'importance_score',
-    });
+    // Get ALL unique engagers (one per user) with their aggregated data
+    // This ensures we can display all accounts that have engaged
+    const uniqueEngagersData = await getAllUniqueEngagersByCampaign(id);
+    
+    // We need to expand the _all_actions field back into individual engagement records
+    // so the frontend grouping logic works correctly
+    const latestEngagements: any[] = [];
+    for (const engager of uniqueEngagersData) {
+      const allActions = (engager as any)._all_actions || [];
+      if (allActions.length > 0) {
+        // Create one engagement record per action
+        for (const action of allActions) {
+          latestEngagements.push({
+            ...engager,
+            action_type: action.action_type,
+            tweet_id: action.tweet_id,
+            tweet_category: action.tweet_category,
+            timestamp: action.timestamp,
+            engagement_tweet_id: action.engagement_tweet_id,
+            // Remove the _all_actions field
+            _all_actions: undefined,
+          });
+        }
+      } else {
+        // Fallback: use the engager as a single engagement
+        const { _all_actions, ...engagement } = engager as any;
+        latestEngagements.push(engagement);
+      }
+    }
     
     // Calculate category breakdown
     const categoryCounts: Record<string, number> = {};

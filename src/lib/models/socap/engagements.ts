@@ -215,6 +215,95 @@ export async function getUniqueEngagersByCampaign(campaignId: string): Promise<n
 }
 
 /**
+ * Get all unique engagers for a campaign, grouped by user_id.
+ * Returns one record per user with their highest importance_score, follower count,
+ * and all their engagement actions.
+ * 
+ * This is optimized for displaying all accounts that have engaged with the campaign.
+ */
+export async function getAllUniqueEngagersByCampaign(
+  campaignId: string,
+  options?: {
+    action_type?: 'retweet' | 'reply' | 'quote';
+  }
+): Promise<Engagement[]> {
+  const collection = await getEngagementsCollection();
+  
+  const matchStage: any = { campaign_id: campaignId };
+  if (options?.action_type) {
+    matchStage.action_type = options.action_type;
+  }
+  
+  // Use aggregation to group by user_id and get the best record for each user
+  const pipeline: any[] = [
+    { $match: matchStage },
+    {
+      $sort: {
+        // Sort by importance_score first, then by followers for tie-breaking
+        importance_score: -1,
+        'account_profile.followers': -1,
+        timestamp: -1, // Most recent as final tie-breaker
+      },
+    },
+    {
+      $group: {
+        _id: '$user_id',
+        // Keep the first document (which has highest importance_score due to sort)
+        doc: { $first: '$$ROOT' },
+        // Collect all actions for this user
+        allActions: {
+          $push: {
+            action_type: '$action_type',
+            tweet_id: '$tweet_id',
+            tweet_category: '$tweet_category',
+            timestamp: '$timestamp',
+            engagement_tweet_id: '$engagement_tweet_id',
+          },
+        },
+        // Keep track of max importance_score and max followers
+        maxImportanceScore: { $max: '$importance_score' },
+        maxFollowers: { $max: '$account_profile.followers' },
+      },
+    },
+    {
+      $project: {
+        _id: '$doc._id',
+        campaign_id: '$doc.campaign_id',
+        tweet_id: '$doc.tweet_id', // Keep one tweet_id for reference
+        tweet_category: '$doc.tweet_category',
+        user_id: '$doc.user_id',
+        action_type: '$doc.action_type', // Keep one action_type for reference
+        timestamp: '$doc.timestamp',
+        text: '$doc.text',
+        engagement_tweet_id: '$doc.engagement_tweet_id',
+        account_profile: '$doc.account_profile',
+        // Use the max importance_score
+        importance_score: '$maxImportanceScore',
+        account_categories: '$doc.account_categories',
+        quote_view_count: '$doc.quote_view_count',
+        last_seen_at: '$doc.last_seen_at',
+        created_at: '$doc.created_at',
+        // Store all actions in a custom field (we'll handle this in frontend)
+        _all_actions: '$allActions',
+      },
+    },
+    {
+      $sort: {
+        // Sort by importance_score descending, then by followers descending for zero-importance accounts
+        importance_score: -1,
+        'account_profile.followers': -1,
+      },
+    },
+  ];
+  
+  const results = await collection.aggregate(pipeline).toArray();
+  
+  // Convert back to Engagement format, but we need to handle the _all_actions field
+  // The frontend will group these properly, so we return them as-is
+  return results as any[];
+}
+
+/**
  * Get time-bucketed engagement counts for a campaign.
  *
  * This is the core of the "robust chart vs time" system:
