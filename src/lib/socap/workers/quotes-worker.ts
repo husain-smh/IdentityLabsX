@@ -7,7 +7,7 @@ import { processEngagement } from '../engagement-processor';
 import { updateWorkerState } from '../../models/socap/worker-state';
 import { getEngagementsByTweet } from '../../models/socap/engagements';
 import { updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
-import { getQuoteViewsFromN8N } from '../n8n-quote-views';
+import { getQuoteViews } from '../n8n-quote-views';
 
 /**
  * Quotes Worker
@@ -41,15 +41,15 @@ export class QuotesWorker extends BaseWorker {
     tweetId: string,
     _state: WorkerState
   ): Promise<void> {
-    // Step 1: Get total views from N8N webhook (proven to work correctly)
-    console.log(`[QuotesWorker] Getting total quote tweet views from N8N for tweet ${tweetId}`);
-    const viewsResult = await getQuoteViewsFromN8N(tweetId);
+    // Step 1: Get total views (uses N8N webhook or extractor based on config)
+    console.log(`[QuotesWorker] Getting total quote tweet views for tweet ${tweetId}`);
+    const viewsResult = await getQuoteViews(tweetId);
     
     // Step 2: Update the stored total (replace, don't add)
     await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
     console.log(
       `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-      `(from N8N webhook)`
+      `(backend: ${viewsResult.backend || 'unknown'})`
     );
 
     // Step 3: Process engagements for tracking (fetch all pages again for engagement records)
@@ -123,16 +123,16 @@ export class QuotesWorker extends BaseWorker {
     tweetId: string,
     state: WorkerState
   ): Promise<void> {
-    // Step 1: Get total views from N8N webhook (recomputes from scratch every time)
-    // This replaces the old delta logic - we just call N8N and get fresh totals
-    console.log(`[QuotesWorker] Getting total quote tweet views from N8N for tweet ${tweetId}`);
-    const viewsResult = await getQuoteViewsFromN8N(tweetId);
+    // Step 1: Get total views (uses N8N webhook or extractor based on config)
+    // This replaces the old delta logic - we just get fresh totals every time
+    console.log(`[QuotesWorker] Getting total quote tweet views for tweet ${tweetId}`);
+    const viewsResult = await getQuoteViews(tweetId);
     
     // Step 2: Update the stored total (replace, don't add - this is the key fix)
     await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
     console.log(
       `[QuotesWorker] Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-      `(from N8N webhook)`
+      `(backend: ${viewsResult.backend || 'unknown'})`
     );
 
     // Step 3: Process new/updated engagements for tracking

@@ -1,28 +1,38 @@
 /**
- * N8N Quote Views Integration
+ * Quote Views Integration
  * 
- * Calls the proven N8N webhook to get total views from quote tweets.
- * This uses the same N8N workflow that's already working correctly.
+ * Unified interface for getting total views from quote tweets.
+ * Supports two backends:
+ * 1. N8N webhook (proven to work correctly)
+ * 2. Direct API extractor (standalone backend system)
+ * 
+ * Switch between them using QUOTE_VIEWS_BACKEND env var:
+ * - 'n8n' (default) - Uses N8N webhook
+ * - 'extractor' - Uses direct API extractor
  */
 
 import { getTweetByTweetId } from '../models/socap/tweets';
+import { extractTotalQuoteTweetViews } from './quote-views-extractor';
 
 /**
- * Result from N8N webhook
+ * Result from quote views extraction (unified interface)
  */
-export interface N8NQuoteViewsResult {
+export interface QuoteViewsResult {
   totalViews: number;
   totalQuotes: number;
   success: boolean;
   statistics?: {
-    totalViewsAcrossAllQuoteTweets: number;
-    uniqueUsersKept: number;
+    totalViewsAcrossAllQuoteTweets?: number;
+    uniqueUsersKept?: number;
     totalQuotes?: number;
+    pagesFetched?: number;
+    quotesProcessed?: number;
   };
+  backend?: 'n8n' | 'extractor'; // Which backend was used
 }
 
 /**
- * Call N8N webhook to get total views from quote tweets
+ * Get total views from quote tweets using N8N webhook
  * 
  * Handles long-running N8N calls (up to 10+ seconds) with proper timeout and retry logic.
  * 
@@ -30,7 +40,7 @@ export interface N8NQuoteViewsResult {
  * @param options - Optional configuration
  * @returns Total views from all quote tweets
  */
-export async function getQuoteViewsFromN8N(
+async function getQuoteViewsFromN8NWebhook(
   tweetId: string,
   options?: {
     timeout?: number; // Timeout in ms (default: 60000 = 60 seconds)
@@ -127,6 +137,7 @@ export async function getQuoteViewsFromN8N(
         totalQuotes: typeof totalQuotes === 'number' ? totalQuotes : parseInt(String(totalQuotes), 10) || 0,
         success: webhookData.success !== false,
         statistics: webhookData.statistics,
+        backend: 'n8n' as const,
       };
     } catch (error) {
       // Clean up timeout if still active
@@ -174,5 +185,78 @@ export async function getQuoteViewsFromN8N(
 
   // Should never reach here, but TypeScript needs it
   throw lastError || new Error(`Failed to get quote views from N8N for tweet ${tweetId}`);
+}
+
+/**
+ * Get total views from quote tweets using direct API extractor
+ * 
+ * Uses the standalone extractor function that directly calls the Twitter API.
+ * 
+ * @param tweetId - Tweet ID
+ * @returns Total views from all quote tweets
+ */
+async function getQuoteViewsFromExtractor(tweetId: string): Promise<QuoteViewsResult> {
+  console.log(`[QuoteViews] Using extractor backend for tweet ${tweetId}`);
+  
+  const result = await extractTotalQuoteTweetViews(tweetId);
+  
+  return {
+    totalViews: result.totalViews,
+    totalQuotes: result.totalQuotes,
+    success: true,
+    statistics: {
+      totalViewsAcrossAllQuoteTweets: result.totalViews,
+      totalQuotes: result.totalQuotes,
+      pagesFetched: result.pagesFetched,
+      quotesProcessed: result.quotesProcessed,
+    },
+    backend: 'extractor' as const,
+  };
+}
+
+/**
+ * Get total views from quote tweets (unified interface)
+ * 
+ * Automatically selects backend based on QUOTE_VIEWS_BACKEND env var:
+ * - 'n8n' (default) - Uses N8N webhook
+ * - 'extractor' - Uses direct API extractor
+ * 
+ * @param tweetId - Tweet ID
+ * @param options - Optional configuration (only used for N8N backend)
+ * @returns Total views from all quote tweets
+ */
+export async function getQuoteViews(
+  tweetId: string,
+  options?: {
+    timeout?: number;
+    maxRetries?: number;
+    retryDelay?: number;
+  }
+): Promise<QuoteViewsResult> {
+  // Determine which backend to use
+  const backend = (process.env.QUOTE_VIEWS_BACKEND || 'n8n').toLowerCase().trim();
+  
+  console.log(`[QuoteViews] Using backend: ${backend} for tweet ${tweetId}`);
+  
+  if (backend === 'extractor') {
+    return await getQuoteViewsFromExtractor(tweetId);
+  } else {
+    // Default to N8N webhook
+    return await getQuoteViewsFromN8NWebhook(tweetId, options);
+  }
+}
+
+/**
+ * @deprecated Use getQuoteViews() instead. This function is kept for backward compatibility.
+ */
+export async function getQuoteViewsFromN8N(
+  tweetId: string,
+  options?: {
+    timeout?: number;
+    maxRetries?: number;
+    retryDelay?: number;
+  }
+): Promise<QuoteViewsResult> {
+  return await getQuoteViews(tweetId, options);
 }
 
