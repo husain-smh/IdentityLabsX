@@ -42,7 +42,8 @@ export async function createJobQueueIndexes(): Promise<void> {
   const collection = await getJobQueueCollection();
   
   // Index for efficient job claiming
-  await collection.createIndex({ status: 1, priority: -1, created_at: 1 });
+  // NOTE: We primarily prioritize jobs by time (created_at), not by job type.
+  await collection.createIndex({ status: 1, created_at: 1, priority: 1 });
   
   // Unique constraint: one job per tweet/job_type combination
   await collection.createIndex(
@@ -264,7 +265,9 @@ export async function claimJob(workerId: string): Promise<Job | null> {
       },
     },
     {
-      sort: { priority: 1, created_at: 1 }, // Highest priority, oldest first
+      // Process strictly oldest jobs first across all job types.
+      // Job "priority" is now only a secondary tie-breaker when created_at is identical.
+      sort: { created_at: 1, priority: 1 },
       returnDocument: 'after',
     }
   );

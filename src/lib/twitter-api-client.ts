@@ -23,6 +23,12 @@ export interface FilteredUser {
    * specific quote tweet that produced this engagement. Other flows ignore it.
    */
   quoteViewCount?: number;
+  /**
+   * For quote tweet flows, the ID of the tweet that this quote is quoting
+   * (when provided by the upstream API). This allows callers to decide whether
+   * to enforce strict matching to a specific parent tweet.
+   */
+  quotedTweetId?: string;
 }
 
 export interface PaginatedResponse<T> {
@@ -420,23 +426,12 @@ export async function fetchTweetQuotes(
       for (const quoteTweet of data.tweets) {
         if (!quoteTweet.author) continue;
 
-        // CRITICAL: Verify that this quote tweet actually quotes the tweet we requested
-        // The API might return quote tweets that quote other tweets (nested quotes, API bugs, etc.)
+        // Capture which tweet this quote is quoting (if provided by the API).
+        // Callers can choose whether to enforce strict matching to tweetId or not.
         const quotedTweetId = (quoteTweet as any).quoted_tweet?.id || 
                               (quoteTweet as any).quotedTweet?.id ||
                               (quoteTweet as any).quoted_tweet?.id_str ||
                               (quoteTweet as any).quotedTweet?.id_str;
-        
-        // Skip if quoted_tweet.id is missing or doesn't match the requested tweet
-        if (!quotedTweetId || quotedTweetId !== tweetId) {
-          console.warn(
-            `[fetchTweetQuotes] Skipping quote tweet ${quoteTweet.id} - ` +
-            (quotedTweetId 
-              ? `it quotes tweet ${quotedTweetId}, not the requested tweet ${tweetId}`
-              : `missing quoted_tweet.id field, cannot verify it quotes tweet ${tweetId}`)
-          );
-          continue;
-        }
 
         // quoteTweet.createdAt is when the quote tweet was created
         const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
@@ -457,6 +452,7 @@ export async function fetchTweetQuotes(
           engagementId: quoteTweet.id,
           engagementText: quoteTweet.text || undefined,
           quoteViewCount,
+          quotedTweetId,
         });
       }
     }

@@ -49,12 +49,21 @@ export class QuotesWorker extends BaseWorker {
       
       // Process each quote
       for (const user of response.data) {
+        // Accumulate quote tweet view counts (if present).
+        // IMPORTANT: For total views from quote tweets, we count every quote tweet
+        // returned by the API, regardless of which tweet it quotes.
+        if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
+          totalQuoteViewsFromQuotes += user.quoteViewCount;
+        }
+        
         // Quotes API provides engagement timestamp
         const timestamp = user.engagementCreatedAt || new Date();
 
-        // Accumulate quote tweet view counts (if present)
-        if (typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
-          totalQuoteViewsFromQuotes += user.quoteViewCount;
+        // For engagements, we want to stay STRICT and only treat this as a quote
+        // engagement if it actually quotes the target tweet. This keeps SOCAP
+        // engagement data clean while still allowing loose aggregation for views.
+        if (user.quotedTweetId && user.quotedTweetId !== tweetId) {
+          continue;
         }
         
         const engagementInput = await processEngagement(
@@ -138,9 +147,19 @@ export class QuotesWorker extends BaseWorker {
         break;
       }
       
-      // Accumulate views only for NEW quotes (not updated ones, to avoid double-counting)
+      // Accumulate views only for NEW quotes (not updated ones, to avoid double-counting).
+      // Views aggregation is intentionally LOOSE: we include every quote tweet the API
+      // returns, regardless of which tweet it quotes. We rely on engagements below to
+      // enforce strict matching where needed.
       if (isNew && typeof user.quoteViewCount === 'number' && !Number.isNaN(user.quoteViewCount)) {
         deltaQuoteViewsFromQuotes += user.quoteViewCount;
+      }
+
+      // For engagement records, enforce strict matching: only treat this as a quote
+      // of the target tweet if quotedTweetId matches. This preserves the original
+      // semantics of "who quoted this tweet" even though views are aggregated loosely.
+      if (user.quotedTweetId && user.quotedTweetId !== tweetId) {
+        continue;
       }
 
       const engagementInput = await processEngagement(
