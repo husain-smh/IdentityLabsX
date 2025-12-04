@@ -13,7 +13,6 @@ import {
   Cell,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
@@ -645,21 +644,6 @@ export default function CampaignDashboardPage() {
       }
       return newSet;
     });
-  };
-
-  // Helper function to format action description
-  const formatActionDescription = (action: GroupedEngagement['actions'][0]) => {
-    const tweetInfo = getTweetInfo(action.tweet_id);
-    const tweetAuthor = tweetInfo?.author_username || 'tweet';
-    const categoryLabel = action.tweet_category === 'main_twt' ? 'main tweet' :
-                         action.tweet_category === 'influencer_twt' ? 'influencer tweet' :
-                         action.tweet_category === 'investor_twt' ? 'investor tweet' : 'tweet';
-    
-    const actionVerb = action.action_type === 'retweet' ? 'retweeted' :
-                       action.action_type === 'reply' ? 'replied to' :
-                       'quoted tweeted';
-    
-    return `${actionVerb} ${tweetAuthor}'s ${categoryLabel}`;
   };
 
   return (

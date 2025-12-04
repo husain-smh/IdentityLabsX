@@ -8,7 +8,7 @@ import {
  * GET /socap/system-settings
  * Get current system settings
  */
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const settings = await getSystemSettings();
     
