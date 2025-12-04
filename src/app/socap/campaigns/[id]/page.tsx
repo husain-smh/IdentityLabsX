@@ -942,19 +942,33 @@ export default function CampaignDashboardPage() {
                             <div className={`space-y-0.5 ${isExpanded && hasMoreActions ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
                               {actionsToShow.map((action, idx) => {
                                 const tweetInfo = getTweetInfo(action.tweet_id);
-                                const tweetIdShort = action.tweet_id.slice(-8);
-                                const tweetUrl = tweetInfo?.author_username
-                                  ? `https://x.com/${tweetInfo.author_username}/status/${action.tweet_id}`
-                                  : `https://x.com/i/web/status/${action.tweet_id}`;
+                                // Prefer linking to the engager's own tweet (quote/reply) when we have an engagement_tweet_id.
+                                const hasEngagementTweet =
+                                  (action.action_type === 'quote' || action.action_type === 'reply') &&
+                                  !!action.engagement_tweet_id;
+                                
+                                const baseUsername = hasEngagementTweet
+                                  ? person.account_profile.username
+                                  : tweetInfo?.author_username;
+                                
+                                const targetTweetId = hasEngagementTweet
+                                  ? action.engagement_tweet_id!
+                                  : action.tweet_id;
+                                
+                                const tweetIdShort = targetTweetId.slice(-8);
+                                
+                                const tweetUrl = baseUsername
+                                  ? `https://x.com/${baseUsername}/status/${targetTweetId}`
+                                  : `https://x.com/i/web/status/${targetTweetId}`;
                                 
                                 return (
                                   <div key={idx} className="ml-2 text-xs text-zinc-700">
                                     <div className="flex items-center gap-1">
                                       <span className="text-zinc-500">• </span>
                                       <span className="text-zinc-600">
-                                        {action.action_type === 'reply' && 'Replied to '}
+                                        {action.action_type === 'reply' && (hasEngagementTweet ? 'Replied ' : 'Replied to ')}
                                         {action.action_type === 'retweet' && 'Retweeted '}
-                                        {action.action_type === 'quote' && 'Quoted '}
+                                        {action.action_type === 'quote' && (hasEngagementTweet ? 'Quoted ' : 'Quoted tweet ')}
                                       </span>
                                       <a
                                         href={tweetUrl}
