@@ -6,7 +6,7 @@ import { createOrUpdateEngagement } from '../../models/socap/engagements';
 import { processEngagement } from '../engagement-processor';
 import { updateWorkerState } from '../../models/socap/worker-state';
 import { getEngagementsByTweet } from '../../models/socap/engagements';
-import { updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
+import { getTweetMetrics, updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
 import { getQuoteViews } from '../n8n-quote-views';
 
 /**
@@ -51,11 +51,7 @@ export class QuotesWorker extends BaseWorker {
       
       // Step 2: Update the stored total (replace, don't add)
       console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
-      await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
-      console.log(
-        `[QuotesWorker] ✅ Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-        `(backend: ${viewsResult.backend || 'unknown'})`
-      );
+      await this.updateQuoteViewsIfHigher(tweetId, viewsResult.totalViews, viewsResult.backend);
     } catch (error) {
       console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
       // Don't throw - continue with engagement processing even if quote views calculation fails
@@ -143,11 +139,7 @@ export class QuotesWorker extends BaseWorker {
       
       // Step 2: Update the stored total (replace, don't add - this is the key fix)
       console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
-      await updateTweetQuoteViewsFromQuotes(tweetId, viewsResult.totalViews);
-      console.log(
-        `[QuotesWorker] ✅ Updated quoteViewsFromQuotes to ${viewsResult.totalViews.toLocaleString()} ` +
-        `(backend: ${viewsResult.backend || 'unknown'})`
-      );
+      await this.updateQuoteViewsIfHigher(tweetId, viewsResult.totalViews, viewsResult.backend);
     } catch (error) {
       console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
       // Don't throw - continue with engagement processing even if quote views calculation fails
@@ -224,6 +216,42 @@ export class QuotesWorker extends BaseWorker {
     
     console.log(
       `[QuotesWorker] Delta processed for tweet ${tweetId}: ${newCount} new, ${updatedCount} updated quote engagements`
+    );
+  }
+
+  /**
+   * Only update stored quote views when the new total is higher than the current value.
+   * Prevents transient extractor hiccups from overwriting with lower/zero totals.
+   */
+  private async updateQuoteViewsIfHigher(
+    tweetId: string,
+    newTotalViews: number,
+    backend?: string
+  ): Promise<void> {
+    // Guard against NaN or non-number
+    if (typeof newTotalViews !== 'number' || Number.isNaN(newTotalViews)) {
+      console.warn(`[QuotesWorker] Skipping quoteViews update for ${tweetId}: invalid newTotalViews`, newTotalViews);
+      return;
+    }
+
+    const currentMetrics = await getTweetMetrics(tweetId);
+    const currentTotal =
+      (currentMetrics as any)?.quoteViewsFromQuotes && typeof (currentMetrics as any).quoteViewsFromQuotes === 'number'
+        ? (currentMetrics as any).quoteViewsFromQuotes
+        : 0;
+
+    if (newTotalViews <= currentTotal) {
+      console.log(
+        `[QuotesWorker] Skipping quoteViewsFromQuotes update for ${tweetId}: new total ` +
+        `${newTotalViews.toLocaleString()} is not higher than current ${currentTotal.toLocaleString()}`
+      );
+      return;
+    }
+
+    await updateTweetQuoteViewsFromQuotes(tweetId, newTotalViews);
+    console.log(
+      `[QuotesWorker] ✅ Updated quoteViewsFromQuotes to ${newTotalViews.toLocaleString()} ` +
+      `(backend: ${backend || 'unknown'}; previous: ${currentTotal.toLocaleString()})`
     );
   }
 }
