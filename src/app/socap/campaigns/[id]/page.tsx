@@ -501,15 +501,10 @@ export default function CampaignDashboardPage() {
 
     const data = baseChartData.map((item) => {
       let value: number;
+
       if (globalFilter === 'all') {
-        // For total views in "All (Combined)" view, include both base tweet views and quote tweet views
-        if (metric === 'views') {
-          const baseViews = item.views || 0;
-          const quoteViews = item.quoteViews || 0;
-          value = baseViews + quoteViews;
-        } else {
-          value = item[metric] || 0;
-        }
+        // Use the metric directly for combined view (do not blend quote views into tweet views)
+        value = item[metric] || 0;
       } else {
         // For quoteViews we don't yet have per-category breakdown, so fall back to total
         if (metric === 'quoteViews') {
@@ -533,6 +528,7 @@ export default function CampaignDashboardPage() {
           }
         }
       }
+
       return {
         time: item.time,
         timeRaw: item.timeRaw, // Keep for sorting
@@ -842,14 +838,6 @@ export default function CampaignDashboardPage() {
           metric="retweets"
           chartData={getFilteredChartData('retweets')}
           color="#34d399"
-        />
-
-        {/* Quote Views Chart */}
-        <MetricChart
-          title="Views from Quote Tweets"
-          metric="quoteViews"
-          chartData={getFilteredChartData('quoteViews')}
-          color="#f472b6"
         />
 
         {/* View Count Chart */}
