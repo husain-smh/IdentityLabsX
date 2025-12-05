@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
-import { Trash2, Pause, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -190,9 +190,6 @@ export default function CampaignDashboardPage() {
     }>
   >([]);
   const [engagementLastUpdated, setEngagementLastUpdated] = useState<Date | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showPauseConfirm, setShowPauseConfirm] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
   
   // Single global filter state for all charts
   const [globalFilter, setGlobalFilter] = useState<'all' | 'main_twt' | 'influencer_twt' | 'investor_twt'>('all');
@@ -329,57 +326,6 @@ export default function CampaignDashboardPage() {
     
     return () => clearInterval(interval);
   }, [campaignId, fetchDashboard, fetchMetrics, fetchEngagementSeries]);
-
-  async function updateCampaignStatus(newStatus: 'active' | 'paused') {
-    setActionLoading(true);
-    try {
-      const response = await fetch(`/api/socap/campaigns/${campaignId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        await fetchDashboard(); // Refresh data
-        setShowPauseConfirm(false);
-        alert(`Campaign ${newStatus === 'paused' ? 'paused' : 'resumed'} successfully`);
-      } else {
-        alert(`Failed to update: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-      alert('Failed to update campaign status');
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-
-  async function deleteCampaign() {
-    setActionLoading(true);
-    try {
-      const response = await fetch(`/api/socap/campaigns/${campaignId}`, {
-        method: 'DELETE',
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        alert('Campaign deleted successfully');
-        window.location.href = '/socap'; // Redirect to campaigns list
-      } else {
-        alert(`Failed to delete: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error deleting campaign:', error);
-      alert('Failed to delete campaign');
-    } finally {
-      setActionLoading(false);
-      setShowDeleteConfirm(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -649,19 +595,7 @@ export default function CampaignDashboardPage() {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
       
       <div className="relative z-10">
-        {/* Header Section */}
-        <div className="pt-24 pb-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Link href="/socap" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm mb-6 transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Campaigns
-            </Link>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
           {/* Campaign Header */}
           <div className="glass rounded-2xl p-6 mb-6">
             <div className="flex items-start justify-between">
@@ -681,47 +615,13 @@ export default function CampaignDashboardPage() {
                 }`}>
                   {data.campaign.status}
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => router.push(`/socap/campaigns/${campaignId}/alerts`)}
-                    className="px-4 py-2 border border-indigo-400 text-indigo-300 rounded-lg font-medium transition-colors hover:border-indigo-300 hover:text-indigo-200 flex items-center gap-2"
-                  >
-                    <Bell className="w-4 h-4" />
-                    Alerts
-                  </button>
-                  {data.campaign.status === 'active' ? (
-                    <button
-                      onClick={() => setShowPauseConfirm(true)}
-                      disabled={actionLoading}
-                      className="p-2 border border-yellow-400 text-yellow-300 rounded-lg transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-yellow-300 hover:text-yellow-200 flex items-center justify-center"
-                      title="Pause Campaign"
-                    >
-                      <Pause className="w-4 h-4" />
-                    </button>
-                  ) : data.campaign.status === 'paused' ? (
-                    <button
-                      onClick={() => updateCampaignStatus('active')}
-                      disabled={actionLoading}
-                      className="px-4 py-2 border border-emerald-400 text-emerald-300 rounded-lg font-medium transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-emerald-300 hover:text-emerald-200"
-                    >
-                      {actionLoading ? 'Resuming...' : 'Resume'}
-                    </button>
-                  ) : null}
-                  <button
-                    onClick={() => router.push(`/socap/campaigns/${campaignId}/edit`)}
-                    className="px-4 py-2 border border-indigo-400 text-indigo-300 rounded-lg font-medium transition-colors hover:border-indigo-300 hover:text-indigo-200"
-                  >
-                    Edit Campaign
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={actionLoading}
-                    className="p-2 border border-red-500 text-red-400 rounded-lg transition-colors disabled:border-zinc-700 disabled:text-zinc-600 disabled:cursor-not-allowed hover:border-red-400 hover:text-red-300 flex items-center justify-center"
-                    title="Delete Campaign"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => router.push(`/socap/campaigns/${campaignId}/alerts`)}
+                  className="px-4 py-2 border border-indigo-400 text-indigo-300 rounded-lg font-medium transition-colors hover:border-indigo-300 hover:text-indigo-200 flex items-center gap-2"
+                >
+                  <Bell className="w-4 h-4" />
+                  Alerts
+                </button>
               </div>
             </div>
           </div>
@@ -1060,61 +960,6 @@ export default function CampaignDashboardPage() {
             )}
           </div>
 
-          {/* Delete Confirmation Modal */}
-          {showDeleteConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="glass rounded-2xl p-6 max-w-md w-full mx-4 border border-zinc-800">
-                <h2 className="text-2xl font-bold mb-4 text-red-400">Delete Campaign</h2>
-                <p className="mb-4 text-zinc-300">
-                  Are you sure you want to delete &quot;{data?.campaign.launch_name}&quot;? This action cannot be undone.
-                </p>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => setShowDeleteConfirm(false)}
-                    className="px-4 py-2 border border-zinc-600 rounded-lg text-zinc-200 hover:border-zinc-400 hover:text-zinc-100 transition-colors"
-                    disabled={actionLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={deleteCampaign}
-                    disabled={actionLoading}
-                    className="px-4 py-2 border border-red-500 text-red-400 rounded-lg hover:border-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {actionLoading ? 'Deleting...' : 'Delete Campaign'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Pause Confirmation Modal */}
-          {showPauseConfirm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="glass rounded-2xl p-6 max-w-md w-full mx-4 border border-zinc-800">
-                <h2 className="text-2xl font-bold mb-4 text-yellow-400">Pause Campaign</h2>
-                <p className="mb-4 text-zinc-300">
-                  Are you sure you want to pause &quot;{data?.campaign.launch_name}&quot;? The campaign will stop processing new engagements.
-                </p>
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => setShowPauseConfirm(false)}
-                    className="px-4 py-2 border border-zinc-600 rounded-lg text-zinc-200 hover:border-zinc-400 hover:text-zinc-100 transition-colors"
-                    disabled={actionLoading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => updateCampaignStatus('paused')}
-                    disabled={actionLoading}
-                    className="px-4 py-2 border border-yellow-500 text-yellow-400 rounded-lg hover:border-yellow-400 hover:text-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {actionLoading ? 'Pausing...' : 'Pause Campaign'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
