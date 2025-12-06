@@ -11,6 +11,7 @@ import {
 } from '../src/lib/models/socap/tweets';
 import { processEngagement } from '../src/lib/socap/engagement-processor';
 import { createOrUpdateEngagement } from '../src/lib/models/socap/engagements';
+import { createOrUpdateQuoteTweet } from '../src/lib/models/socap/quote-tweets';
 
 type Category = 'main_twt' | 'influencer_twt' | 'investor_twt' | 'all';
 
@@ -76,14 +77,17 @@ type Totals = {
   bookmarks: number;
 };
 
-function addTotals(acc: Totals, metrics?: {
-  viewCount?: number;
-  likeCount?: number;
-  retweetCount?: number;
-  replyCount?: number;
-  quoteCount?: number;
-  bookmarkCount?: number;
-}): void {
+function addTotals(
+  acc: Totals,
+  metrics?: {
+    viewCount?: number;
+    likeCount?: number;
+    retweetCount?: number;
+    replyCount?: number;
+    quoteCount?: number;
+    bookmarkCount?: number;
+  }
+): void {
   if (!metrics) return;
   acc.views += metrics.viewCount ?? 0;
   acc.likes += metrics.likeCount ?? 0;
@@ -140,6 +144,29 @@ async function processParentTweet(options: {
     }
 
     await createOrUpdateEngagement(engagementInput);
+
+    // Also store as a first-class quote tweet document
+    if (user.engagementId) {
+      await createOrUpdateQuoteTweet({
+        campaign_id: campaignId,
+        parent_tweet_id: tweet.tweet_id,
+        parent_category: tweet.category,
+        quote_tweet_id: user.engagementId,
+        quote_tweet_url: `https://twitter.com/i/web/status/${user.engagementId}`,
+        text: user.engagementText,
+        author: {
+          user_id: user.userId,
+          username: user.username || '',
+          name: user.name || '',
+          bio: user.bio || undefined,
+          location: user.location || undefined,
+          followers: user.followers,
+          verified: user.verified,
+        },
+        metrics: user.quoteMetrics || { viewCount: user.quoteViewCount },
+        created_at: user.engagementCreatedAt || new Date(),
+      });
+    }
 
     addTotals(totals, user.quoteMetrics || { viewCount: user.quoteViewCount });
   }

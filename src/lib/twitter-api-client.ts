@@ -427,6 +427,7 @@ export async function fetchTweetQuotes(
   let hasMore = true;
 
   while (hasMore && pagesFetched < maxPages) {
+    const pageNumber = pagesFetched + 1;
     const url = new URL(`${config.apiUrl}/twitter/tweet/quotes`);
     url.searchParams.set('tweetId', tweetId);
     if (currentCursor) {
@@ -483,9 +484,30 @@ export async function fetchTweetQuotes(
       }
     }
 
-    // Check if there's more data
-    currentCursor = data.next_cursor;
-    hasMore = data.tweets && data.tweets.length > 0 && (data.has_next_page !== false) && !!currentCursor;
+    // Check if there's more data (align with follower pagination behavior)
+    const tweetsLen = Array.isArray(data.tweets) ? data.tweets.length : 0;
+    const nextCursor =
+      data.next_cursor ??
+      data.nextCursor ??
+      (data.meta && data.meta.next_token) ??
+      null;
+    const hasNextPageFlag =
+      data.has_next_page !== undefined ? Boolean(data.has_next_page) : data.hasNextPage ?? true;
+
+    // Debug pagination visibility to understand early stops
+    console.log(
+      `[fetchTweetQuotes] tweet=${tweetId} page=${pageNumber} tweets=${tweetsLen} next_cursor=${nextCursor ?? 'none'} has_next_page=${hasNextPageFlag}`
+    );
+
+    currentCursor = nextCursor || undefined;
+    const cursorPresent = !!nextCursor;
+    const shouldContinue = hasNextPageFlag && cursorPresent && tweetsLen > 0;
+    hasMore = shouldContinue;
+    if (!shouldContinue) {
+      console.log(
+        `[fetchTweetQuotes] stopping pagination for tweet=${tweetId} page=${pageNumber} (has_next_page=${hasNextPageFlag}, cursorPresent=${cursorPresent}, tweets=${tweetsLen})`
+      );
+    }
 
     pagesFetched++;
 
