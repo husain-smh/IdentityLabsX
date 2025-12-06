@@ -259,10 +259,12 @@ export async function fetchTweetReplies(
   options: {
     maxPages?: number;
     cursor?: string;
+    requestIntervalMs?: number;
   } = {}
 ): Promise<PaginatedResponse<FilteredUser>> {
   const config = getTwitterApiConfig();
   const maxPages = options.maxPages || config.maxPages.replies;
+  const requestIntervalMs = options.requestIntervalMs ?? config.rateLimitDelay;
   
   if (!config.apiKey) {
     throw new TwitterApiError(
@@ -489,7 +491,7 @@ export async function fetchTweetQuotes(
 
     // Rate limiting delay between pages
     if (hasMore && pagesFetched < maxPages) {
-      await sleep(config.rateLimitDelay);
+      await sleep(requestIntervalMs);
     }
   }
 
