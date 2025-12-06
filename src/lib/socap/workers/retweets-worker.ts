@@ -36,6 +36,8 @@ export class RetweetsWorker extends BaseWorker {
     tweetId: string,
     _state: WorkerState
   ): Promise<void> {
+    // State not needed in backfill; keep signature aligned with caller
+    void _state;
     let cursor: string | null = null;
     let allProcessed = 0;
     

@@ -11,6 +11,8 @@ import { updateWorkerState } from '../../models/socap/worker-state';
  */
 export class MetricsWorker extends BaseWorker {
   protected async processJob(job: Job, _state: WorkerState): Promise<void> {
+    // Mark state as intentionally unused; kept for interface compatibility
+    void _state;
     const tweetId = job.tweet_id;
     
     try {

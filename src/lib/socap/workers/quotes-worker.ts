@@ -41,6 +41,8 @@ export class QuotesWorker extends BaseWorker {
     tweetId: string,
     _state: WorkerState
   ): Promise<void> {
+    // State not needed in backfill; keep signature aligned with caller
+    void _state;
     console.log(`[QuotesWorker] ========== START BACKFILL for tweet ${tweetId} ==========`);
     
     // Step 1: Get total views (uses N8N webhook or extractor based on config)
