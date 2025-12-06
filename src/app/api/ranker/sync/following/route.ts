@@ -29,18 +29,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify this person is in our important people list
+    // Verify this person is in our important people list.
+    // Try by user_id first (preferred), then fall back to username to support first-time syncs
+    // where user_id was not yet stored.
     const collection = await getImportantPeopleCollection();
-    const importantPerson = await collection.findOne({
-      user_id: user_id,
-      is_active: true,
-    });
+    let importantPerson =
+      (await collection.findOne({
+        user_id: user_id,
+        is_active: true,
+      })) ||
+      (await collection.findOne({
+        username: username,
+        is_active: true,
+      }));
 
     if (!importantPerson) {
       return NextResponse.json(
         { error: 'This user is not in the important people list or is inactive' },
         { status: 404 }
       );
+    }
+
+    // If we matched by username and the stored user_id is missing, persist it so future syncs
+    // can be keyed by user_id directly.
+    if (!importantPerson.user_id) {
+      await collection.updateOne(
+        { username: importantPerson.username },
+        { $set: { user_id, updated_at: new Date() } }
+      );
+      importantPerson = {
+        ...importantPerson,
+        user_id,
+      };
     }
 
     // Validate following_list items

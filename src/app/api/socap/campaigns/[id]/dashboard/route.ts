@@ -32,22 +32,39 @@ export async function GET(
     // Get tweets
     const tweets = await getTweetsByCampaign(id);
     
-    // Calculate total metrics
+    // Calculate total metrics + per-category breakdown (for cards)
     let totalLikes = 0;
     let totalRetweets = 0;
     let totalQuotes = 0;
     let totalReplies = 0;
     let totalViews = 0;
     let totalQuoteViews = 0;
+
+    const categoryTotals = {
+      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+    };
     
     for (const tweet of tweets) {
-      totalLikes += tweet.metrics.likeCount;
-      totalRetweets += tweet.metrics.retweetCount;
-      totalQuotes += tweet.metrics.quoteCount;
-      totalReplies += tweet.metrics.replyCount;
-      totalViews += tweet.metrics.viewCount;
+      const metrics = tweet.metrics;
+      const category = tweet.category as keyof typeof categoryTotals;
+
+      totalLikes += metrics.likeCount;
+      totalRetweets += metrics.retweetCount;
+      totalQuotes += metrics.quoteCount;
+      totalReplies += metrics.replyCount;
+      totalViews += metrics.viewCount;
       // Safe access for older documents without quoteViewsFromQuotes
-      totalQuoteViews += (tweet.metrics as any).quoteViewsFromQuotes || 0;
+      totalQuoteViews += (metrics as any).quoteViewsFromQuotes || 0;
+
+      if (categoryTotals[category]) {
+        categoryTotals[category].likes += metrics.likeCount;
+        categoryTotals[category].retweets += metrics.retweetCount;
+        categoryTotals[category].quotes += metrics.quoteCount;
+        categoryTotals[category].replies += metrics.replyCount;
+        categoryTotals[category].views += metrics.viewCount;
+      }
     }
     
     // Get engagement counts
@@ -106,6 +123,7 @@ export async function GET(
           total_engagements: totalEngagements,
           unique_engagers: uniqueEngagers,
         },
+        category_totals: categoryTotals,
         tweets: tweets.map((t) => ({
           tweet_id: t.tweet_id,
           category: t.category,

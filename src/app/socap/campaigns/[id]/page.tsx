@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
@@ -30,12 +30,33 @@ interface DashboardData {
   };
   latest_engagements: any[];
   category_breakdown: Record<string, number>;
+  category_totals?: {
+    main_twt: CategoryMetrics;
+    influencer_twt: CategoryMetrics;
+    investor_twt: CategoryMetrics;
+  };
   tweets?: Array<{
     tweet_id: string;
     category: 'main_twt' | 'influencer_twt' | 'investor_twt';
     author_username: string;
+    metrics?: {
+      likeCount: number;
+      retweetCount: number;
+      quoteCount: number;
+      replyCount: number;
+      viewCount: number;
+      quoteViewsFromQuotes?: number;
+    };
   }>;
 }
+
+type CategoryMetrics = {
+  likes: number;
+  retweets: number;
+  quotes: number;
+  replies: number;
+  views: number;
+};
 
 const COLORS = ['#60a5fa', '#a78bfa', '#34d399', '#3b82f6', '#f472b6', '#fbbf24', '#fb923c', '#94a3b8'];
 
@@ -416,6 +437,44 @@ export default function CampaignDashboardPage() {
     };
   });
 
+  // Derive per-category totals for the summary section.
+  const categoryTotals = useMemo(() => {
+    const empty = {
+      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+    };
+
+    // Prefer backend-provided totals when available.
+    if (data?.category_totals) {
+      return data.category_totals;
+    }
+
+    if (!data?.tweets || data.tweets.length === 0) {
+      return empty;
+    }
+
+    const totals = {
+      main_twt: { ...empty.main_twt },
+      influencer_twt: { ...empty.influencer_twt },
+      investor_twt: { ...empty.investor_twt },
+    };
+
+    for (const tweet of data.tweets) {
+      const target = totals[tweet.category as keyof typeof totals];
+      if (!target) continue;
+
+      const metrics = (tweet as any).metrics || {};
+      target.likes += metrics.likeCount || 0;
+      target.retweets += metrics.retweetCount || 0;
+      target.quotes += metrics.quoteCount || 0;
+      target.replies += metrics.replyCount || 0;
+      target.views += metrics.viewCount || 0;
+    }
+
+    return totals;
+  }, [data]);
+
   // Helper function to calculate deltas between consecutive data points
   const calculateDeltas = <T extends { [key: string]: any }>(
     data: T[],
@@ -659,6 +718,47 @@ export default function CampaignDashboardPage() {
             <div className="glass rounded-xl p-4">
               <p className="text-sm text-zinc-400">Unique Engagers</p>
               <p className="text-2xl font-bold text-white mt-1">{data.metrics.unique_engagers.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Per-Category Metrics (non-intrusive, below existing totals) */}
+          <div className="glass rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-white">Metrics by Tweet Type</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {(
+                [
+                  { key: 'main_twt', label: 'Main Tweet' },
+                  { key: 'influencer_twt', label: 'Influencer Tweet' },
+                  { key: 'investor_twt', label: 'Investor Tweet' },
+                ] as const
+              ).map(({ key, label }) => {
+                const totals = categoryTotals[key];
+                const hasTweets = (data.tweets || []).some((t) => t.category === key);
+                return (
+                  <div key={key} className="glass rounded-xl p-4 border border-zinc-800">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm text-zinc-300 font-semibold">{label}</p>
+                      {!hasTweets && (
+                        <span className="text-xs text-zinc-500">No tweets yet</span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-zinc-400">
+                      <div>Likes</div>
+                      <div className="text-right text-white font-semibold">{(totals?.likes || 0).toLocaleString()}</div>
+                      <div>Retweets</div>
+                      <div className="text-right text-white font-semibold">{(totals?.retweets || 0).toLocaleString()}</div>
+                      <div>Replies</div>
+                      <div className="text-right text-white font-semibold">{(totals?.replies || 0).toLocaleString()}</div>
+                      <div>Quote Tweets</div>
+                      <div className="text-right text-white font-semibold">{(totals?.quotes || 0).toLocaleString()}</div>
+                      <div>Views</div>
+                      <div className="text-right text-white font-semibold">{(totals?.views || 0).toLocaleString()}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
