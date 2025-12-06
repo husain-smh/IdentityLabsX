@@ -29,11 +29,29 @@ import { getTwitterApiConfig } from '../src/lib/config/twitter-api-config';
  *   - MAX_REQUESTS (optional, default: 500)
  */
 
-const FOLLOWING_THRESHOLD = 6000;
+const FOLLOWING_THRESHOLD = 10000;
 const BASE_URL = process.env.AUTO_SYNC_BASE_URL || 'http://localhost:3000';
-const REQUEST_INTERVAL_MS = Number(process.env.REQUEST_INTERVAL_MS ?? 500);
-const MAX_REQUESTS = Number(process.env.MAX_REQUESTS ?? 500);
+// Loosen defaults to better handle large followings (e.g., 28k)
+const REQUEST_INTERVAL_MS = Number(process.env.REQUEST_INTERVAL_MS ?? 750);
+const MAX_REQUESTS = Number(process.env.MAX_REQUESTS ?? 3000);
 const MAX_RETRIES = 5;
+const args = process.argv.slice(2);
+let argUsername: string | undefined;
+for (let i = 0; i < args.length; i += 1) {
+  const arg = args[i];
+  if (arg === '--username' && typeof args[i + 1] === 'string') {
+    argUsername = args[i + 1];
+    break;
+  }
+  if (arg.startsWith('--username=')) {
+    argUsername = arg.split('=')[1];
+    break;
+  }
+}
+if (!argUsername && args.length > 0) {
+  argUsername = args[0];
+}
+const FORCED_USERNAME = argUsername ? argUsername.replace(/^@/, '').trim() : undefined;
 
 function ts(): string {
   return new Date().toISOString();
@@ -57,6 +75,12 @@ type CleanedFollowing = {
   followers_count?: number | null;
   description?: string | null;
   verified?: boolean | null;
+};
+
+type ProcessOptions = {
+  threshold: number;
+  allowHighFollowingOverride?: boolean;
+  onThresholdSkip?: (username: string, followingCount: number) => void;
 };
 
 async function fetchJsonWithRetry(url: string, headers: Record<string, string>): Promise<any> {
@@ -278,7 +302,10 @@ async function postToBackend(payload: {
   console.log(`[${ts()}] ✅ Sync complete`, data);
 }
 
-async function processUser(username: string): Promise<'synced' | 'skipped' | 'zero' | 'failed'> {
+async function processUser(
+  username: string,
+  options: ProcessOptions,
+): Promise<'synced' | 'skipped' | 'zero' | 'failed'> {
   // 1) Get following count
   const followingCount = await fetchFollowingCount(username);
   if (followingCount === null) {
@@ -315,11 +342,20 @@ async function processUser(username: string): Promise<'synced' | 'skipped' | 'ze
   }
 
   // 3) Threshold check
-  if (followingCount > FOLLOWING_THRESHOLD) {
+  const exceedsThreshold = followingCount > options.threshold;
+
+  if (exceedsThreshold && !options.allowHighFollowingOverride) {
+    options.onThresholdSkip?.(username, followingCount);
     console.log(
-      `   ⏭️  [${ts()}] Skipping @${username} (following_count ${followingCount} > ${FOLLOWING_THRESHOLD}).`,
+      `   ⏭️  [${ts()}] Skipping @${username} (following_count ${followingCount} > ${options.threshold}).`,
     );
     return 'skipped';
+  }
+
+  if (exceedsThreshold && options.allowHighFollowingOverride) {
+    console.log(
+      `   ✅ [${ts()}] Following count ${followingCount} exceeds threshold ${options.threshold}, but override is enabled. Continuing...`,
+    );
   }
 
   // 4) Fetch followings pages
@@ -350,6 +386,18 @@ async function main() {
   console.log('');
 
   try {
+    if (FORCED_USERNAME) {
+      console.log(`[${ts()}] 🎯 Forced single-user mode for @${FORCED_USERNAME}. Threshold override enabled.`);
+
+      const result = await processUser(FORCED_USERNAME, {
+        threshold: FOLLOWING_THRESHOLD,
+        allowHighFollowingOverride: true,
+      });
+
+      console.log(`[${ts()}] Result for @${FORCED_USERNAME}: ${result}`);
+      process.exit(0);
+    }
+
     const db = await rankerDbPromise;
     const collection = db.collection<ImportantPerson>('important_people');
 
@@ -380,6 +428,7 @@ async function main() {
 
     let processed = 0;
     let skippedHighFollowing = 0;
+    const skippedHighFollowingList: { username: string; followingCount: number }[] = [];
     let synced = 0;
     let failed = 0;
     let followingLookupFailed = 0;
@@ -397,7 +446,12 @@ async function main() {
       );
 
       try {
-        const result = await processUser(username);
+        const result = await processUser(username, {
+          threshold: FOLLOWING_THRESHOLD,
+          onThresholdSkip: (skippedUsername, followingCount) => {
+            skippedHighFollowingList.push({ username: skippedUsername, followingCount });
+          },
+        });
         if (result === 'synced') synced += 1;
         else if (result === 'zero') zeroFollowingMarkedSynced += 1;
         else if (result === 'skipped') skippedHighFollowing += 1;
@@ -424,6 +478,12 @@ async function main() {
     console.log(`   Zero-following synced: ${zeroFollowingMarkedSynced}`);
     console.log(`   Following lookup fail: ${followingLookupFailed}`);
     console.log(`   Sync failures:         ${failed}`);
+    if (skippedHighFollowingList.length > 0) {
+      console.log('\nSkipped users over threshold:');
+      for (const entry of skippedHighFollowingList) {
+        console.log(`   - @${entry.username} (following_count=${entry.followingCount})`);
+      }
+    }
 
     process.exit(0);
   } catch (error) {

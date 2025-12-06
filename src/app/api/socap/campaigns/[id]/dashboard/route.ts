@@ -79,12 +79,13 @@ export async function GET(
     // so the frontend grouping logic works correctly
     const latestEngagements: any[] = [];
     for (const engager of uniqueEngagersData) {
-      const allActions = (engager as any)._all_actions || [];
+      const { _all_actions: _ignoredActions, ...restEngager } = engager as any;
+      const allActions = _ignoredActions || [];
       if (allActions.length > 0) {
         // Create one engagement record per action
         for (const action of allActions) {
           latestEngagements.push({
-            ...engager,
+            ...restEngager,
             action_type: action.action_type,
             tweet_id: action.tweet_id,
             tweet_category: action.tweet_category,
@@ -96,7 +97,8 @@ export async function GET(
         }
       } else {
         // Fallback: use the engager as a single engagement
-        const { _all_actions, ...engagement } = engager as any;
+        const { _all_actions: _ignored, ...engagement } = engager as any;
+        void _ignored;
         latestEngagements.push(engagement);
       }
     }

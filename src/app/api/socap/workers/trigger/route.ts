@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getActiveCampaigns } from '@/lib/models/socap/campaigns';
 import { enqueueCampaignJobs } from '@/lib/socap/job-queue';

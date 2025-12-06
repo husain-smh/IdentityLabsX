@@ -116,7 +116,7 @@ export async function syncCampaignTweets(input: SyncCampaignTweetsInput): Promis
         created_at: new Date(),
       };
 
-      const insertResult = await tweetCollection.insertOne(newTweet);
+      await tweetCollection.insertOne(newTweet);
       const createdTweetId = resolvedTweet.tweet_id;
 
       // Create worker state rows for each job type so workers can pick this tweet up

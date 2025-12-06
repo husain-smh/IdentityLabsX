@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAlertsByCampaign } from '@/lib/models/socap/alert-queue';
 import { getEngagementById } from '@/lib/models/socap/engagements';
 import { getAlertHistoryByCampaign } from '@/lib/models/socap/alert-history';
-import { getTweetsByCampaign, getTweetByTweetId } from '@/lib/models/socap/tweets';
+import { getTweetsByCampaign } from '@/lib/models/socap/tweets';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 
 /**

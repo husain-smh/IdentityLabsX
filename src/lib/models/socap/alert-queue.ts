@@ -146,6 +146,7 @@ export async function markAlertAsSent(alertId: string): Promise<boolean> {
 }
 
 export async function markAlertAsSkipped(alertId: string, _reason?: string): Promise<boolean> {
+  void _reason;
   const collection = await getAlertQueueCollection();
   
   if (!ObjectId.isValid(alertId)) {

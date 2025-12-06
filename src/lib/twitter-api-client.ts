@@ -24,6 +24,17 @@ export interface FilteredUser {
    */
   quoteViewCount?: number;
   /**
+   * Optional full metrics for a quote tweet when available.
+   */
+  quoteMetrics?: {
+    viewCount?: number;
+    likeCount?: number;
+    retweetCount?: number;
+    replyCount?: number;
+    quoteCount?: number;
+    bookmarkCount?: number;
+  };
+  /**
    * For quote tweet flows, the ID of the tweet that this quote is quoting
    * (when provided by the upstream API). This allows callers to decide whether
    * to enforce strict matching to a specific parent tweet.
@@ -303,7 +314,7 @@ export async function fetchTweetReplies(
 
     // Rate limiting delay between pages
     if (hasMore && pagesFetched < maxPages) {
-      await sleep(config.rateLimitDelay);
+      await sleep(requestIntervalMs);
     }
   }
 
@@ -392,10 +403,12 @@ export async function fetchTweetQuotes(
   options: {
     maxPages?: number;
     cursor?: string;
+    requestIntervalMs?: number;
   } = {}
 ): Promise<PaginatedResponse<FilteredUser>> {
   const config = getTwitterApiConfig();
   const maxPages = options.maxPages || config.maxPages.quotes;
+  const requestIntervalMs = options.requestIntervalMs ?? config.rateLimitDelay;
   
   if (!config.apiKey) {
     throw new TwitterApiError(
@@ -437,7 +450,7 @@ export async function fetchTweetQuotes(
         const user = transformTweetAuthor(quoteTweet.author, quoteTweet.createdAt);
         if (!user) continue;
 
-        // quoteTweet.viewCount may be number or string (per twitterapi.io examples)
+        // Extract viewCount (number or string per twitterapi.io examples)
         let quoteViewCount = 0;
         const rawViewCount = (quoteTweet as any).viewCount;
         if (typeof rawViewCount === 'number') {
@@ -447,11 +460,22 @@ export async function fetchTweetQuotes(
           quoteViewCount = Number.isNaN(parsed) ? 0 : parsed;
         }
 
+        // Collect other metrics when present
+        const quoteMetrics = {
+          viewCount: quoteViewCount,
+          likeCount: typeof (quoteTweet as any).likeCount === 'number' ? (quoteTweet as any).likeCount : undefined,
+          retweetCount: typeof (quoteTweet as any).retweetCount === 'number' ? (quoteTweet as any).retweetCount : undefined,
+          replyCount: typeof (quoteTweet as any).replyCount === 'number' ? (quoteTweet as any).replyCount : undefined,
+          quoteCount: typeof (quoteTweet as any).quoteCount === 'number' ? (quoteTweet as any).quoteCount : undefined,
+          bookmarkCount: typeof (quoteTweet as any).bookmarkCount === 'number' ? (quoteTweet as any).bookmarkCount : undefined,
+        };
+
         allUsers.push({
           ...user,
           engagementId: quoteTweet.id,
           engagementText: quoteTweet.text || undefined,
           quoteViewCount,
+          quoteMetrics,
           quotedTweetId,
         });
       }

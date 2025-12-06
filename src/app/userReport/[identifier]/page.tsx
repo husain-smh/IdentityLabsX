@@ -211,7 +211,6 @@ export default async function UserReportPage({
   ];
 
   const hasTimeline = report.timeline.points.length > 0;
-  const _hasMomentum = report.timeline.momentum.length > 0;
 
   const postMetricConfig: {
     key: PostMetricKey;

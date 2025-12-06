@@ -120,7 +120,7 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
                     );
                   }}
                 >
-                  {pieData.map((entry, index) => {
+                  {pieData.map((entry) => {
                     const isActive =
                       selectedKey && entry.key === selectedKey;
                     return (

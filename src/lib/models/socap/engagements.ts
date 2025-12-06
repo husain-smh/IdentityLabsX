@@ -13,6 +13,7 @@ export interface Engagement {
   timestamp: Date;
   text?: string; // for replies/quotes
   engagement_tweet_id?: string; // ID of the actual quote/reply tweet (for quotes and replies)
+  engagement_tweet_url?: string; // Derived https://twitter.com/i/web/status/<id>
   account_profile: {
     username: string;
     name: string;
@@ -31,6 +32,17 @@ export interface Engagement {
    * Optional for backward compatibility and for non-quote engagements.
    */
   quote_view_count?: number;
+  /**
+   * Optional full metrics for the quote tweet when available.
+   */
+  quote_metrics?: {
+    viewCount?: number;
+    likeCount?: number;
+    retweetCount?: number;
+    replyCount?: number;
+    quoteCount?: number;
+    bookmarkCount?: number;
+  };
   last_seen_at: Date;
   created_at: Date;
 }
@@ -44,6 +56,7 @@ export interface EngagementInput {
   timestamp: Date;
   text?: string;
   engagement_tweet_id?: string; // ID of the actual quote/reply tweet
+  engagement_tweet_url?: string;
   account_profile: {
     username: string;
     name: string;
@@ -59,6 +72,17 @@ export interface EngagementInput {
    * Only relevant when action_type === 'quote'; ignored for others.
    */
   quote_view_count?: number;
+  /**
+   * Optional full metrics for the quote tweet when available.
+   */
+  quote_metrics?: {
+    viewCount?: number;
+    likeCount?: number;
+    retweetCount?: number;
+    replyCount?: number;
+    quoteCount?: number;
+    bookmarkCount?: number;
+  };
 }
 
 // ===== Collection Getter =====
@@ -104,6 +128,7 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
     timestamp: input.timestamp,
     text: input.text,
     engagement_tweet_id: input.engagement_tweet_id,
+    engagement_tweet_url: input.engagement_tweet_url,
     account_profile: input.account_profile,
     importance_score: input.importance_score,
     account_categories: input.account_categories,
@@ -116,6 +141,10 @@ export async function createOrUpdateEngagement(input: EngagementInput): Promise<
   // older code paths).
   if (typeof input.quote_view_count === 'number') {
     updateFields.quote_view_count = input.quote_view_count;
+  }
+  // Persist quote metrics only when provided
+  if (input.quote_metrics) {
+    updateFields.quote_metrics = input.quote_metrics;
   }
   
   // CRITICAL: Include campaign_id in the match criteria to prevent cross-campaign contamination

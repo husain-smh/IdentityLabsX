@@ -57,6 +57,7 @@ async function withRetry<T>(
  * List all campaigns
  */
 export async function GET(_request: NextRequest) {
+  void _request;
   try {
     const campaigns = await withRetry(() => getAllCampaigns(), 3, 1000);
     

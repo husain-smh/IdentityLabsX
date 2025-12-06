@@ -348,6 +348,44 @@ export default function CampaignDashboardPage() {
     return () => clearInterval(interval);
   }, [campaignId, fetchDashboard, fetchMetrics, fetchEngagementSeries]);
 
+  // Derive per-category totals for the summary section (runs every render; memoized by dependencies).
+  const categoryTotals = useMemo(() => {
+    const empty = {
+      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+    };
+
+    // Prefer backend-provided totals when available.
+    if (data?.category_totals) {
+      return data.category_totals;
+    }
+
+    if (!data?.tweets || data.tweets.length === 0) {
+      return empty;
+    }
+
+    const totals = {
+      main_twt: { ...empty.main_twt },
+      influencer_twt: { ...empty.influencer_twt },
+      investor_twt: { ...empty.investor_twt },
+    };
+
+    for (const tweet of data.tweets) {
+      const target = totals[tweet.category as keyof typeof totals];
+      if (!target) continue;
+
+      const metrics = (tweet as any).metrics || {};
+      target.likes += metrics.likeCount || 0;
+      target.retweets += metrics.retweetCount || 0;
+      target.quotes += metrics.quoteCount || 0;
+      target.replies += metrics.replyCount || 0;
+      target.views += metrics.viewCount || 0;
+    }
+
+    return totals;
+  }, [data]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
@@ -436,44 +474,6 @@ export default function CampaignDashboardPage() {
       },
     };
   });
-
-  // Derive per-category totals for the summary section.
-  const categoryTotals = useMemo(() => {
-    const empty = {
-      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-    };
-
-    // Prefer backend-provided totals when available.
-    if (data?.category_totals) {
-      return data.category_totals;
-    }
-
-    if (!data?.tweets || data.tweets.length === 0) {
-      return empty;
-    }
-
-    const totals = {
-      main_twt: { ...empty.main_twt },
-      influencer_twt: { ...empty.influencer_twt },
-      investor_twt: { ...empty.investor_twt },
-    };
-
-    for (const tweet of data.tweets) {
-      const target = totals[tweet.category as keyof typeof totals];
-      if (!target) continue;
-
-      const metrics = (tweet as any).metrics || {};
-      target.likes += metrics.likeCount || 0;
-      target.retweets += metrics.retweetCount || 0;
-      target.quotes += metrics.quoteCount || 0;
-      target.replies += metrics.replyCount || 0;
-      target.views += metrics.viewCount || 0;
-    }
-
-    return totals;
-  }, [data]);
 
   // Helper function to calculate deltas between consecutive data points
   const calculateDeltas = <T extends { [key: string]: any }>(
