@@ -715,6 +715,12 @@ export default function CampaignDashboardPage() {
               <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_views.toLocaleString()}</p>
             </div>
             <div className="glass rounded-xl p-4">
+              <p className="text-sm text-zinc-400">Total Views from Quote Twt</p>
+              <p className="text-2xl font-bold text-white mt-1">
+                {(data.metrics.total_quote_views ?? 0).toLocaleString()}
+              </p>
+            </div>
+            <div className="glass rounded-xl p-4">
               <p className="text-sm text-zinc-400">Total Engagements</p>
               <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_engagements.toLocaleString()}</p>
             </div>
