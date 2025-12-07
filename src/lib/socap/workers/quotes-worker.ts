@@ -9,6 +9,9 @@ import { getEngagementsByTweet } from '../../models/socap/engagements';
 import { getTweetMetrics, updateTweetQuoteViewsFromQuotes } from '../../models/socap/tweets';
 import { getQuoteViews } from '../n8n-quote-views';
 
+// Quote view updates are disabled by default; set SOCAP_ENABLE_QUOTE_VIEW_UPDATES=true to re-enable
+const QUOTE_VIEW_UPDATES_ENABLED = process.env.SOCAP_ENABLE_QUOTE_VIEW_UPDATES === 'true';
+
 /**
  * Quotes Worker
  * Fetches quote tweets and processes them with delta detection
@@ -45,18 +48,24 @@ export class QuotesWorker extends BaseWorker {
     void _state;
     console.log(`[QuotesWorker] ========== START BACKFILL for tweet ${tweetId} ==========`);
     
-    // Step 1: Get total views (uses N8N webhook or extractor based on config)
-    try {
-      console.log(`[QuotesWorker] BEFORE getQuoteViews for tweet ${tweetId}`);
-      const viewsResult = await getQuoteViews(tweetId);
-      console.log(`[QuotesWorker] AFTER getQuoteViews - got result:`, viewsResult);
-      
-      // Step 2: Update the stored total (replace, don't add)
-      console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
-      await this.updateQuoteViewsIfHigher(tweetId, viewsResult.totalViews, viewsResult.backend);
-    } catch (error) {
-      console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
-      // Don't throw - continue with engagement processing even if quote views calculation fails
+    // Step 1: Optionally refresh total quote views (disabled by default)
+    if (!QUOTE_VIEW_UPDATES_ENABLED) {
+      console.log(
+        `[QuotesWorker] Quote view updates disabled (SOCAP_ENABLE_QUOTE_VIEW_UPDATES not true); skipping total for ${tweetId}`
+      );
+    } else {
+      try {
+        console.log(`[QuotesWorker] BEFORE getQuoteViews for tweet ${tweetId}`);
+        const viewsResult = await getQuoteViews(tweetId);
+        console.log(`[QuotesWorker] AFTER getQuoteViews - got result:`, viewsResult);
+        
+        // Step 2: Update the stored total (replace, don't add)
+        console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
+        await this.updateQuoteViewsIfHigher(tweetId, viewsResult.totalViews, viewsResult.backend);
+      } catch (error) {
+        console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
+        // Don't throw - continue with engagement processing even if quote views calculation fails
+      }
     }
 
     // Step 3: Process engagements for tracking (fetch all pages again for engagement records)
@@ -132,19 +141,25 @@ export class QuotesWorker extends BaseWorker {
   ): Promise<void> {
     console.log(`[QuotesWorker] ========== START DELTA for tweet ${tweetId} ==========`);
     
-    // Step 1: Get total views (uses N8N webhook or extractor based on config)
-    // This replaces the old delta logic - we just get fresh totals every time
-    try {
-      console.log(`[QuotesWorker] BEFORE getQuoteViews for tweet ${tweetId}`);
-      const viewsResult = await getQuoteViews(tweetId);
-      console.log(`[QuotesWorker] AFTER getQuoteViews - got result:`, viewsResult);
-      
-      // Step 2: Update the stored total (replace, don't add - this is the key fix)
-      console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
-      await this.updateQuoteViewsIfHigher(tweetId, viewsResult.totalViews, viewsResult.backend);
-    } catch (error) {
-      console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
-      // Don't throw - continue with engagement processing even if quote views calculation fails
+    // Step 1: Optionally refresh total quote views (disabled by default)
+    if (!QUOTE_VIEW_UPDATES_ENABLED) {
+      console.log(
+        `[QuotesWorker] Quote view updates disabled (SOCAP_ENABLE_QUOTE_VIEW_UPDATES not true); skipping total for ${tweetId}`
+      );
+    } else {
+      // This replaces the old delta logic - we just get fresh totals every time
+      try {
+        console.log(`[QuotesWorker] BEFORE getQuoteViews for tweet ${tweetId}`);
+        const viewsResult = await getQuoteViews(tweetId);
+        console.log(`[QuotesWorker] AFTER getQuoteViews - got result:`, viewsResult);
+        
+        // Step 2: Update the stored total (replace, don't add - this is the key fix)
+        console.log(`[QuotesWorker] BEFORE updateTweetQuoteViewsFromQuotes`);
+        await this.updateQuoteViewsIfHigher(tweetId, viewsResult.totalViews, viewsResult.backend);
+      } catch (error) {
+        console.error(`[QuotesWorker] ❌ ERROR calculating quote views for tweet ${tweetId}:`, error);
+        // Don't throw - continue with engagement processing even if quote views calculation fails
+      }
     }
 
     // Step 3: Process new/updated engagements for tracking

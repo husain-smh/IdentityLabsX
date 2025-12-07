@@ -25,6 +25,7 @@ interface DashboardData {
     total_quotes: number;
     total_replies: number;
     total_views: number;
+    total_quote_views?: number;
     total_engagements: number;
     unique_engagers: number;
   };
@@ -56,6 +57,7 @@ type CategoryMetrics = {
   quotes: number;
   replies: number;
   views: number;
+  quote_views?: number;
 };
 
 const COLORS = ['#60a5fa', '#a78bfa', '#34d399', '#3b82f6', '#f472b6', '#fbbf24', '#fb923c', '#94a3b8'];
@@ -351,9 +353,9 @@ export default function CampaignDashboardPage() {
   // Derive per-category totals for the summary section (runs every render; memoized by dependencies).
   const categoryTotals = useMemo(() => {
     const empty = {
-      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0, quote_views: 0 },
+      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0, quote_views: 0 },
+      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0, quote_views: 0 },
     };
 
     // Prefer backend-provided totals when available.
@@ -381,6 +383,7 @@ export default function CampaignDashboardPage() {
       target.quotes += metrics.quoteCount || 0;
       target.replies += metrics.replyCount || 0;
       target.views += metrics.viewCount || 0;
+      target.quote_views += metrics.quoteViewsFromQuotes || 0;
     }
 
     return totals;
@@ -755,6 +758,10 @@ export default function CampaignDashboardPage() {
                       <div className="text-right text-white font-semibold">{(totals?.quotes || 0).toLocaleString()}</div>
                       <div>Views</div>
                       <div className="text-right text-white font-semibold">{(totals?.views || 0).toLocaleString()}</div>
+                      <div>Quote Views</div>
+                      <div className="text-right text-white font-semibold">
+                        {(totals?.quote_views || 0).toLocaleString()}
+                      </div>
                     </div>
                   </div>
                 );

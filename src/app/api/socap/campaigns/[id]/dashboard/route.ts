@@ -41,9 +41,9 @@ export async function GET(
     let totalQuoteViews = 0;
 
     const categoryTotals = {
-      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
-      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0 },
+      main_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0, quote_views: 0 },
+      influencer_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0, quote_views: 0 },
+      investor_twt: { likes: 0, retweets: 0, quotes: 0, replies: 0, views: 0, quote_views: 0 },
     };
     
     for (const tweet of tweets) {
@@ -64,6 +64,7 @@ export async function GET(
         categoryTotals[category].quotes += metrics.quoteCount;
         categoryTotals[category].replies += metrics.replyCount;
         categoryTotals[category].views += metrics.viewCount;
+        categoryTotals[category].quote_views += (metrics as any).quoteViewsFromQuotes || 0;
       }
     }
     
