@@ -134,6 +134,15 @@ export default function MonitoringDashboard() {
     QuoteTweets: snapshot.quoteTweetCount ?? 0,
   })) || [];
 
+  const metricCharts = [
+    { key: 'Likes', title: 'Likes Over Time', color: '#8b5cf6' },
+    { key: 'Retweets', title: 'Retweets Over Time', color: '#3b82f6' },
+    { key: 'Replies', title: 'Replies Over Time', color: '#10b981' },
+    { key: 'Quotes', title: 'Quotes Over Time', color: '#f59e0b' },
+    { key: 'Views', title: 'Views Over Time', color: '#ec4899' },
+    { key: 'Bookmarks', title: 'Bookmarks Over Time', color: '#a855f7' },
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
@@ -345,132 +354,41 @@ export default function MonitoringDashboard() {
 
             {/* Charts */}
             {chartData.length > 0 ? (
-              <div className="space-y-8">
-                {/* Engagement Metrics Chart */}
-                <div className="glass rounded-2xl p-6">
-                  <h2 className="text-white text-xl font-bold mb-6">Engagement Metrics</h2>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="time" 
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis 
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#18181b',
-                          border: '1px solid #3f3f46',
-                          borderRadius: '8px',
-                        }}
-                        labelStyle={{ color: '#fff' }}
-                      />
-                      <Legend 
-                        wrapperStyle={{ color: '#9ca3af' }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="Likes" 
-                        stroke="#8b5cf6" 
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="Retweets" 
-                        stroke="#3b82f6" 
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="Replies" 
-                        stroke="#10b981" 
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="Quotes" 
-                        stroke="#f59e0b" 
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Views Chart */}
-                <div className="glass rounded-2xl p-6">
-                  <h2 className="text-white text-xl font-bold mb-6">Views Over Time</h2>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="time" 
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis 
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#18181b',
-                          border: '1px solid #3f3f46',
-                          borderRadius: '8px',
-                        }}
-                        labelStyle={{ color: '#fff' }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="Views" 
-                        stroke="#ec4899" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Quote Views Chart */}
-                <div className="glass rounded-2xl p-6">
-                  <h2 className="text-white text-xl font-bold mb-6">Quote Views Over Time</h2>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                      <XAxis 
-                        dataKey="time" 
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis 
-                        stroke="#9ca3af"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: '#18181b',
-                          border: '1px solid #3f3f46',
-                          borderRadius: '8px',
-                        }}
-                        labelStyle={{ color: '#fff' }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="QuoteViews" 
-                        stroke="#06b6d4" 
-                        strokeWidth={3}
-                        dot={{ r: 4 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {metricCharts.map((cfg) => (
+                  <div key={cfg.key} className="glass rounded-2xl p-6">
+                    <h2 className="text-white text-lg font-bold mb-4">{cfg.title}</h2>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <LineChart data={chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                        <XAxis 
+                          dataKey="time" 
+                          stroke="#9ca3af"
+                          style={{ fontSize: '12px' }}
+                        />
+                        <YAxis 
+                          stroke="#9ca3af"
+                          style={{ fontSize: '12px' }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#18181b',
+                            border: '1px solid #3f3f46',
+                            borderRadius: '8px',
+                          }}
+                          labelStyle={{ color: '#fff' }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey={cfg.key} 
+                          stroke={cfg.color} 
+                          strokeWidth={3}
+                          dot={{ r: 3 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="glass rounded-2xl p-12 text-center">
