@@ -132,13 +132,15 @@ export default function MonitoringDashboard() {
     QuoteTweets: snapshot.quoteTweetCount ?? 0,
   })) || [];
 
+  const chartColor = '#3b82f6'; // medium blue for consistent lines and fills
+
   const metricCharts = [
-    { key: 'Likes', title: 'Likes Over Time', color: '#8b5cf6' },
-    { key: 'Retweets', title: 'Retweets Over Time', color: '#3b82f6' },
-    { key: 'Replies', title: 'Replies Over Time', color: '#10b981' },
-    { key: 'Quotes', title: 'Quotes Over Time', color: '#f59e0b' },
-    { key: 'Views', title: 'Views Over Time', color: '#ec4899' },
-    { key: 'Bookmarks', title: 'Bookmarks Over Time', color: '#a855f7' },
+    { key: 'Likes', title: 'Likes Over Time', color: chartColor },
+    { key: 'Retweets', title: 'Retweets Over Time', color: chartColor },
+    { key: 'Replies', title: 'Replies Over Time', color: chartColor },
+    { key: 'Quotes', title: 'Quotes Over Time', color: chartColor },
+    { key: 'Views', title: 'Views Over Time', color: chartColor },
+    { key: 'Bookmarks', title: 'Bookmarks Over Time', color: chartColor },
   ];
 
   if (loading) {

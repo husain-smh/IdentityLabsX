@@ -1,193 +1,46 @@
-# SOCAP Job Scheduler
+# Scripts Guide
 
-This directory contains standalone scripts for managing SOCAP jobs outside of N8N.
+Standalone SOCAP/ranker utilities you can run with `npx tsx scripts/<file> ...` unless otherwise noted.
 
-## 📁 Files
+## 🔧 Setup (once)
+- Node 18+ with native `fetch`.
+- `npm install` (repo root).
+- `.env` with: `MONGODB_URI` (both ranker & socap DBs), `TWITTER_API_KEY` (+ optional `TWITTER_API_URL`), `NEXT_PUBLIC_BASE_URL`, `AUTO_SYNC_BASE_URL` (defaults to `http://localhost:3000`), `OPENAIAPIKEY` for LLM scans.
+- Optional: `REQUEST_INTERVAL_MS`, `MAX_PAGES`, etc. to tune rate limits (see individual scripts).
 
-### `job-scheduler.ts`
-A Node.js cron scheduler that replaces N8N workflows for triggering and processing SOCAP jobs.
+## 📚 Script reference
 
-## 🚀 Quick Start
+### Data ingestion & aggregation
+- `aggregate-quote-metrics.ts` — Fetches quote tweets for campaign tweets and sums quote metrics into parent tweets. Args: `--campaign <id>`; optional `--category main|influencer|investor|all`, `--tweet <id>`, `--maxPages N` (default 60), `--intervalMs 500`. Run: `npx tsx scripts/aggregate-quote-metrics.ts --campaign <id>`.
+- `aggregate-nested-quote-metrics.ts` — Fetches quotes-of-quotes for stored quote tweets and updates nested metrics. Args: `--campaign <id>`; optional `--quote <quoteTweetId>`, `--maxPages N`, `--intervalMs ms`. Run: `npx tsx scripts/aggregate-nested-quote-metrics.ts --campaign <id>`.
+- `fetch-replies-logged.ts` — Logs and ingests replies for campaign tweets into engagements/replies collections. Args: `--campaign <id>`; optional `--category main|influencer|investor|all`, `--tweet <id>`, `--maxPages`, `--intervalMs`. Run: `npx tsx scripts/fetch-replies-logged.ts --campaign <id>`.
+- `fetch-nested-quotes-logged.ts` — Logs and ingests quotes-of-quotes for campaign quote tweets into nested quote collection. Args: `--campaign <id>`; optional `--parent <quoteTweetId>`, `--maxPages`, `--intervalMs`. Run: `npx tsx scripts/fetch-nested-quotes-logged.ts --campaign <id>`.
+- `populate-second-order-engagements.ts` — For each quote tweet in a campaign, fetches its retweets/replies and stores “second-order” engagements. Args: `--campaign <id>`; env: `SECOND_ORDER_MAX_PAGES` (default 10), `SECOND_ORDER_REQUEST_INTERVAL_MS` (default 500). Run: `npx tsx scripts/populate-second-order-engagements.ts --campaign <id>`.
 
-### 1. Install Dependencies
+### Narrative / LLM scans
+- `narrative-scan.ts` — LLM-filters quote tweets for a campaign and writes a JSON report. Args: `--campaign-id <id>`; optional `--batch-size`, `--max-quotes`, `--output <file>`. Env: `OPENAIAPIKEY`. Run: `npx tsx scripts/narrative-scan.ts --campaign-id <id>`.
+- `nested-narrative-scan.ts` — Same as above but for nested quote tweets. Args: `--campaign-id <id>`; optional `--batch-size`, `--max-quotes`, `--output`. Env: `OPENAIAPIKEY`. Run: `npx tsx scripts/nested-narrative-scan.ts --campaign-id <id>`.
+- `reply-narrative-scan.ts` — LLM-filters replies for a campaign and writes a JSON report. Args: `--campaign-id <id>`; optional `--batch-size`, `--max-replies`, `--output`. Env: `OPENAIAPIKEY`. Run: `npx tsx scripts/reply-narrative-scan.ts --campaign-id <id>`.
 
-```bash
-npm install node-cron dotenv
-npm install -D @types/node-cron tsx
-```
+### Sync & data hygiene (ranker)
+- `auto-sync-low-followers.ts` — Finds unsynced `important_people` with following count ≤6000 via twitterapi.io, then calls `/api/ranker/admin/sync-person`. Env: `MONGODB_URI`, `TWITTER_API_KEY`, `AUTO_SYNC_BASE_URL` (default `http://localhost:3000`). Run: `npx tsx scripts/auto-sync-low-followers.ts`.
+- `auto-sync-low-followers-local.ts` — Directly pages followings (up to threshold 10k by default) and posts cleaned list to `/api/ranker/sync/following`; supports `--username` to force one user. Env: `TWITTER_API_KEY`, `AUTO_SYNC_BASE_URL`, `REQUEST_INTERVAL_MS` (default 750), `MAX_REQUESTS` (default 3000). Run: `npx tsx scripts/auto-sync-low-followers-local.ts [--username <handle>]`.
+- `auto-sync-followers-local-backend.ts` — Single-user sync helper that pages followings locally and posts to `/api/ranker/sync/following`. Args: `--username <handle>`; env: `TWITTER_API_KEY`, `AUTO_SYNC_BASE_URL`, `REQUEST_INTERVAL_MS` (default 500), `MAX_REQUESTS` (default 500). Run: `npx tsx scripts/auto-sync-followers-local-backend.ts --username <handle>`.
+- `cleanup-malformed-usernames.ts` — Deletes `important_people` rows whose `username` contains commas (malformed bulk adds). **Destructive**; no args. Run: `npx tsx scripts/cleanup-malformed-usernames.ts`.
 
-### 2. Configure Environment
+### Alerts & campaign maintenance
+- `mark-invalid-alerts.ts` — Marks alerts as skipped when their engagement’s tweet_id is not in the campaign. Args: `<campaign-id>` or `--all`. Run: `npx tsx scripts/mark-invalid-alerts.ts <campaign-id>` or `--all`.
+- `regenerate-alerts.ts` — Re-runs alert detection for a campaign via `detectAndQueueAlerts`. Args: `<campaign-id>`. Run: `npx tsx scripts/regenerate-alerts.ts <campaign-id>`.
 
-Make sure your `.env` file has:
+### Worker & scheduling
+- `socap-worker.ts` — Long-running worker that pulls and processes SOCAP jobs. Env: `SOCAP_WORKER_CONCURRENCY` (default 5), `SOCAP_MAX_JOBS_PER_BATCH` (default 100) plus DB/API envs. Run: `npm run worker` or `npx tsx scripts/socap-worker.ts` (keep process alive, e.g., PM2/systemd).
+- `job-scheduler.ts` — Cron scheduler that hits SOCAP endpoints to enqueue/run workers. Env: `NEXT_PUBLIC_BASE_URL` (defaults to `https://identity-labs-x.vercel.app`). Run: `npx tsx scripts/job-scheduler.ts` (or `npm run scheduler`). PM2 example: `pm2 start scripts/job-scheduler.ts --interpreter=node --interpreter-args="--loader tsx"`.
 
-```env
-NEXT_PUBLIC_BASE_URL=https://identity-labs-x.vercel.app
-```
+Default schedule inside `job-scheduler.ts`:
+| Job | Endpoint | Interval | Purpose |
+|---|---|---|---|
+| Create Jobs | `/api/socap/workers/trigger` | */15 * * * * | Enqueue jobs for active campaigns |
+| Process Jobs | `/api/socap/workers/run` | */5 * * * * | Process queued jobs |
 
-Or set it when running the script:
-
-```bash
-NEXT_PUBLIC_BASE_URL=https://your-domain.com npx tsx scripts/job-scheduler.ts
-```
-
-### 3. Run the Scheduler
-
-**Development:**
-```bash
-npx tsx scripts/job-scheduler.ts
-```
-
-**Production (with PM2):**
-```bash
-# Install PM2 globally
-npm install -g pm2
-
-# Start scheduler
-pm2 start scripts/job-scheduler.ts --interpreter=node --interpreter-args="--loader tsx"
-
-# View logs
-pm2 logs job-scheduler
-
-# Stop
-pm2 stop job-scheduler
-
-# Restart
-pm2 restart job-scheduler
-
-# Auto-start on system boot
-pm2 startup
-pm2 save
-```
-
-## ⏰ Default Schedule
-
-| Job Name | Endpoint | Interval | Purpose |
-|----------|----------|----------|---------|
-| Create Jobs | `/api/socap/workers/trigger` | Every 15 minutes | Enqueues jobs for active campaigns |
-| Process Jobs | `/api/socap/workers/run` | Every 5 minutes | Processes pending jobs in queue |
-
-## 🔧 Customization
-
-### Adding New Jobs
-
-Edit `job-scheduler.ts` and add to the `JOBS` array:
-
-```typescript
-const JOBS: SchedulerConfig[] = [
-  // ... existing jobs ...
-  {
-    name: 'Custom Alert Job',
-    endpoint: `${API_BASE_URL}/api/socap/alerts/process`,
-    interval: '*/10 * * * *', // Every 10 minutes
-    method: 'POST',
-  },
-];
-```
-
-### Cron Interval Formats
-
-```
-┌────────────── minute (0 - 59)
-│ ┌──────────── hour (0 - 23)
-│ │ ┌────────── day of month (1 - 31)
-│ │ │ ┌──────── month (1 - 12)
-│ │ │ │ ┌────── day of week (0 - 6, Sunday = 0)
-│ │ │ │ │
-* * * * *
-```
-
-**Common Patterns:**
-- `*/2 * * * *` - Every 2 minutes
-- `*/5 * * * *` - Every 5 minutes
-- `*/15 * * * *` - Every 15 minutes
-- `0 * * * *` - Every hour (at minute 0)
-- `0 0 * * *` - Every day at midnight
-- `0 9 * * 1` - Every Monday at 9 AM
-
-### Changing Intervals
-
-Simply update the `interval` field:
-
-```typescript
-{
-  name: 'Process Jobs (Run Workers)',
-  endpoint: `${API_BASE_URL}/api/socap/workers/run`,
-  interval: '*/2 * * * *', // Changed from 5 to 2 minutes
-  method: 'POST',
-},
-```
-
-## 📊 Monitoring
-
-### View Logs
-The scheduler outputs detailed logs:
-- ✅ Success messages with duration
-- ❌ Error messages with details
-- 📊 Response data from APIs
-
-### Health Check
-Check if jobs are running:
-```bash
-# With PM2
-pm2 status
-
-# Manual (check process)
-ps aux | grep job-scheduler
-```
-
-## 🆚 Comparison: Node Script vs cron-job.org
-
-| Feature | Node Script | cron-job.org |
-|---------|-------------|--------------|
-| **Cost** | Free | Free |
-| **Setup Time** | 5 minutes | 10 minutes |
-| **Hosting** | Requires server/computer | Cloud-based |
-| **Flexibility** | Full control | Limited |
-| **Monitoring** | Custom logs | Built-in dashboard |
-| **Reliability** | Depends on host | Very reliable |
-
-**Recommendation:**
-- **Use Node Script** if you already have a server/VPS running 24/7
-- **Use cron-job.org** if you want zero maintenance and don't have hosting
-
-## 🐛 Troubleshooting
-
-### Issue: "fetch is not defined"
-**Solution:** Use Node.js 18+ which has native fetch support
-
-```bash
-node --version  # Should be v18.0.0 or higher
-```
-
-Or install node-fetch:
-```bash
-npm install node-fetch
-```
-
-### Issue: Jobs not running
-**Check:**
-1. Is the script still running? (`ps aux | grep job-scheduler`)
-2. Check logs for errors
-3. Verify API_BASE_URL is correct
-4. Test endpoints manually with curl
-
-### Issue: Connection errors
-**Possible causes:**
-- API is down
-- Wrong URL in `.env`
-- Firewall blocking requests
-- SSL certificate issues
-
-## 🔐 Security Notes
-
-- **Never commit** `.env` files with production URLs
-- Use environment variables for sensitive data
-- Consider adding API authentication if exposing endpoints publicly
-- Monitor logs for suspicious activity
-
-## 📚 Additional Resources
-
-- [node-cron documentation](https://www.npmjs.com/package/node-cron)
-- [PM2 Process Manager](https://pm2.keymetrics.io/)
-- [Cron expression generator](https://crontab.guru/)
+To change or add jobs, edit the `JOBS` array in `job-scheduler.ts` (cron syntax such as `*/5 * * * *` for every 5 minutes). Keep Node 18+ so `fetch` is available.
 
