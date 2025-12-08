@@ -559,22 +559,36 @@ export async function fetchQuoteMetricsAggregate(
     const data = await fetchTweetQuotesPage(tweetId, cursor);
     page += 1;
 
-    if (data.tweets && data.tweets.length > 0) {
-      for (const t of data.tweets) {
-        if (!t?.id || seen.has(t.id)) continue;
-        seen.add(t.id);
-        quoteTweetCount += 1;
-        quoteViewSum += t.viewCount || 0;
-      }
+    const tweets = data.tweets || [];
+    console.log(
+      `[quotes] page=${page} tweets=${tweets.length} cursor=${cursor ?? 'none'} has_next_page=${(data as any).has_next_page} next_cursor=${(data as any).next_cursor}`
+    );
+
+    if (tweets.length === 0) {
+      console.warn(`[quotes] empty tweets array for tweetId=${tweetId} on page=${page}`);
     }
 
-    hasNext = data.has_next_page === true && !!data.next_cursor;
+    for (const t of tweets) {
+      if (!t?.id) continue;
+      if (seen.has(t.id)) continue;
+      seen.add(t.id);
+      quoteTweetCount += 1;
+      const viewCount = (t as any).viewCount ?? 0;
+      quoteViewSum += typeof viewCount === 'number' ? viewCount : 0;
+    }
+
+    const hasNextPage = (data as any).has_next_page === true || (data as any).hasNextPage === true;
+    hasNext = hasNextPage && !!data.next_cursor;
     cursor = data.next_cursor;
 
     if (hasNext) {
       await new Promise(resolve => setTimeout(resolve, pageDelayMs));
     }
   }
+
+  console.log(
+    `[quotes] aggregate complete for tweetId=${tweetId}: quoteTweetCount=${quoteTweetCount}, quoteViewSum=${quoteViewSum}, pages=${page}, maxPagesCap=${maxPages}`
+  );
 
   return { quoteTweetCount, quoteViewSum };
 }
