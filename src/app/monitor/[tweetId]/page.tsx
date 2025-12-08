@@ -286,7 +286,7 @@ export default function MonitoringDashboard() {
 
             {/* Current Metrics */}
             {latestSnapshot && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                 <div className="glass rounded-xl p-4">
                   <p className="text-zinc-400 text-sm mb-1">Likes</p>
                   <p className="text-2xl font-bold text-white">{latestSnapshot.likeCount.toLocaleString()}</p>
@@ -327,24 +327,6 @@ export default function MonitoringDashboard() {
                   <p className="text-2xl font-bold text-white">{latestSnapshot.bookmarkCount.toLocaleString()}</p>
                   {firstSnapshot && latestSnapshot.bookmarkCount > firstSnapshot.bookmarkCount && (
                     <p className="text-green-400 text-xs mt-1">+{(latestSnapshot.bookmarkCount - firstSnapshot.bookmarkCount).toLocaleString()}</p>
-                  )}
-                </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-zinc-400 text-sm mb-1">Quote Views (sum)</p>
-                  <p className="text-2xl font-bold text-white">{(latestSnapshot.quoteViewSum ?? 0).toLocaleString()}</p>
-                  {firstSnapshot && (latestSnapshot.quoteViewSum ?? 0) > (firstSnapshot.quoteViewSum ?? 0) && (
-                    <p className="text-green-400 text-xs mt-1">
-                      +{(((latestSnapshot.quoteViewSum ?? 0) - (firstSnapshot.quoteViewSum ?? 0))).toLocaleString()}
-                    </p>
-                  )}
-                </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-zinc-400 text-sm mb-1">Quote Tweets</p>
-                  <p className="text-2xl font-bold text-white">{(latestSnapshot.quoteTweetCount ?? 0).toLocaleString()}</p>
-                  {firstSnapshot && (latestSnapshot.quoteTweetCount ?? 0) > (firstSnapshot.quoteTweetCount ?? 0) && (
-                    <p className="text-green-400 text-xs mt-1">
-                      +{(((latestSnapshot.quoteTweetCount ?? 0) - (firstSnapshot.quoteTweetCount ?? 0))).toLocaleString()}
-                    </p>
                   )}
                 </div>
               </div>

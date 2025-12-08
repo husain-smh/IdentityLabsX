@@ -417,10 +417,12 @@ export async function fetchTweetQuotesPage(
   }
 
   const apiUrl = process.env.TWITTER_API_URL || 'https://api.twitterapi.io';
-  const params = new URLSearchParams({ tweet_id: tweetId });
-  if (cursor) {
-    params.append('cursor', cursor);
-  }
+  // API expects tweetId (camel) and optional cursor; includeReplies defaults true
+  const params = new URLSearchParams({
+    tweetId,
+    includeReplies: 'true',
+    cursor: cursor ?? '',
+  });
   const url = `${apiUrl}/twitter/tweet/quotes?${params.toString()}`;
 
   for (let attempt = 0; attempt <= retries; attempt++) {

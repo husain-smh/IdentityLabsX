@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
     try {
       await storeMetricSnapshot(tweetId, {
         ...initialMetrics,
-        quoteTweetCount: initialQuoteAgg.quoteTweetCount,
+        // Fallback: if quotes API returns none, use the base tweet quoteCount as count
+        quoteTweetCount: initialQuoteAgg.quoteTweetCount || initialMetrics.quoteCount,
         quoteViewSum: initialQuoteAgg.quoteViewSum,
       });
     } catch (snapshotError) {

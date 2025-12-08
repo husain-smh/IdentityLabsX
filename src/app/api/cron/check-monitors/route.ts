@@ -48,7 +48,8 @@ export async function GET() {
         // Store snapshot with quote aggregates
         await storeMetricSnapshot(job.tweet_id, {
           ...metrics,
-          quoteTweetCount: quoteAgg.quoteTweetCount,
+          // Fallback: if quotes API returns none, use tweet's own quoteCount as the count
+          quoteTweetCount: quoteAgg.quoteTweetCount || metrics.quoteCount,
           quoteViewSum: quoteAgg.quoteViewSum,
         });
 
