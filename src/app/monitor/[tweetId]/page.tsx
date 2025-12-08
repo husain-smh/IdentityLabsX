@@ -5,13 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import {
-  LineChart,
-  Line,
+  ComposedChart,
+  Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -359,14 +357,19 @@ export default function MonitoringDashboard() {
                   <div key={cfg.key} className="glass rounded-2xl p-6">
                     <h2 className="text-white text-lg font-bold mb-4">{cfg.title}</h2>
                     <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                        <XAxis 
-                          dataKey="time" 
+                      <ComposedChart data={chartData}>
+                        <defs>
+                          <linearGradient id={`grad-${cfg.key}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={cfg.color} stopOpacity={0.35} />
+                            <stop offset="100%" stopColor={cfg.color} stopOpacity={0.05} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis
+                          dataKey="time"
                           stroke="#9ca3af"
                           style={{ fontSize: '12px' }}
                         />
-                        <YAxis 
+                        <YAxis
                           stroke="#9ca3af"
                           style={{ fontSize: '12px' }}
                         />
@@ -378,14 +381,16 @@ export default function MonitoringDashboard() {
                           }}
                           labelStyle={{ color: '#fff' }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey={cfg.key} 
-                          stroke={cfg.color} 
-                          strokeWidth={3}
-                          dot={{ r: 3 }}
+                        <Area
+                          type="monotone"
+                          dataKey={cfg.key}
+                          stroke={cfg.color}
+                          strokeWidth={2.5}
+                          fill={`url(#grad-${cfg.key})`}
+                          dot={{ r: 2, strokeWidth: 1 }}
+                          activeDot={{ r: 5 }}
                         />
-                      </LineChart>
+                      </ComposedChart>
                     </ResponsiveContainer>
                   </div>
                 ))}
