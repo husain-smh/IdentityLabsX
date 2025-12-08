@@ -1,0 +1,549 @@
+{
+  "campaign_id": "693149b6708b7bc463e17b7e",
+  "generated_at": "2025-12-08T10:56:38.470Z",
+  "scanned_replies": 2700,
+  "matched_replies": 54,
+  "total_views": 18792,
+  "matches": [
+    {
+      "tweet_id": "1996609230082802066",
+      "parent_tweet_id": "1996518988151706110",
+      "author_username": "grok",
+      "author_name": "Grok",
+      "importance_score": 56,
+      "view_count": 20,
+      "url": "https://twitter.com/i/web/status/1996609230082802066",
+      "text": "The tool appears to be Lovable (https://t.co/EIVRuWmTBl), an AI for building full apps from prompts. Per TechCrunch (Nov 2025), it's nearing 8M users with $100M ARR in 8 months. Forbes notes a rapid launch to $100M ARR. Valuation reached ~$1.8B after raising $200M soon after launch per LinkedIn reports. The post's exact stats ($2M ARR in 14 days, 700k users, $100M valuation in 8 weeks) aren't verified in sources and seem exaggerated, but the success is real."
+    },
+    {
+      "tweet_id": "1996302739316342867",
+      "parent_tweet_id": "1996302510278025273",
+      "author_username": "TheAIColony",
+      "author_name": "The AI Colony",
+      "importance_score": 2,
+      "view_count": 1946,
+      "url": "https://twitter.com/i/web/status/1996302739316342867",
+      "text": "Anything Max is the first AI software engineer that doesn't just write code.\nIt actually OPENS apps, clicks buttons, types in forms, and tests features like a real user would. https://t.co/1oDaBRDpOQ"
+    },
+    {
+      "tweet_id": "1996302805821194605",
+      "parent_tweet_id": "1996302510278025273",
+      "author_username": "TheAIColony",
+      "author_name": "The AI Colony",
+      "importance_score": 2,
+      "view_count": 1667,
+      "url": "https://twitter.com/i/web/status/1996302805821194605",
+      "text": "Here's what makes it insane:\nMost AI tools write code and hope it works. Max writes code, THEN uses the app to verify it actually works, THEN autonomously fixes what breaks.\nIt has eyes (sees the UI), hands (clicks/types), and a brain (runs for 30+ mins solo). https://t.co/4plxHcmLS4"
+    },
+    {
+      "tweet_id": "1996302878487560504",
+      "parent_tweet_id": "1996302510278025273",
+      "author_username": "TheAIColony",
+      "author_name": "The AI Colony",
+      "importance_score": 2,
+      "view_count": 1376,
+      "url": "https://twitter.com/i/web/status/1996302878487560504",
+      "text": "The autonomous part is wild:\nFounders can spin up 3 Max agents simultaneously. One building onboarding, another fixing checkout, a third adding team invites.\nThey all work in parallel for hours. Success rate on the hardest bugs: 97%+. https://t.co/9ilAci0Bot"
+    },
+    {
+      "tweet_id": "1996567242373583354",
+      "parent_tweet_id": "1996560669475528747",
+      "author_username": "rezkhere",
+      "author_name": "Rez Karim",
+      "importance_score": 2,
+      "view_count": 45,
+      "url": "https://twitter.com/i/web/status/1996567242373583354",
+      "text": "@TawohAwa Anything is one of the best for building MVPs!"
+    },
+    {
+      "tweet_id": "1996567535811264634",
+      "parent_tweet_id": "1996518988151706110",
+      "author_username": "rezkhere",
+      "author_name": "Rez Karim",
+      "importance_score": 2,
+      "view_count": 285,
+      "url": "https://twitter.com/i/web/status/1996567535811264634",
+      "text": "@darshal_ Anything is one of the best tools for building SaaS MVPs fr"
+    },
+    {
+      "tweet_id": "1996573898297471201",
+      "parent_tweet_id": "1996484976981016613",
+      "author_username": "rezkhere",
+      "author_name": "Rez Karim",
+      "importance_score": 2,
+      "view_count": 16,
+      "url": "https://twitter.com/i/web/status/1996573898297471201",
+      "text": "@details_with_ai Anything looks like a game changer!"
+    },
+    {
+      "tweet_id": "1996286318616207644",
+      "parent_tweet_id": "1996286090504736774",
+      "author_username": "systemdesignone",
+      "author_name": "Neo Kim",
+      "importance_score": 1,
+      "view_count": 620,
+      "url": "https://twitter.com/i/web/status/1996286318616207644",
+      "text": "And now they’re releasing Max: an autonomous AI software engineer.\n\nMax doesn’t just write code.\nIt uses your app like a human:\n\n✓ logs in + clicks around\n✓ fills forms + tests checkout\n✓ fixes what breaks\n\nIt can work independently for up to 4 hours, with 97%+ success.\n\nYou can even run 3 Max agents in parallel."
+    },
+    {
+      "tweet_id": "1996290208124596522",
+      "parent_tweet_id": "1996290196195909706",
+      "author_username": "JafarNajafov",
+      "author_name": "Jafar Najafov",
+      "importance_score": 1,
+      "view_count": 43,
+      "url": "https://twitter.com/i/web/status/1996290208124596522",
+      "text": "Every coding platform can help you make prototypes, but most can't create real apps when needed.\n\nAnything offers everything you need:\n- Databases and storage\n- Payment processing\n- Authentication\n- Easy App Store deployment"
+    },
+    {
+      "tweet_id": "1996290572584431948",
+      "parent_tweet_id": "1996290208015466863",
+      "author_username": "iam_chonchol",
+      "author_name": "Alamin",
+      "importance_score": 1,
+      "view_count": 549,
+      "url": "https://twitter.com/i/web/status/1996290572584431948",
+      "text": "My honest impressions:\n\nWhat blew my mind wasn’t just the speed.\nIt’s that Anything's Max agent is the only AI I’ve used that actually sees and uses the app it builds.\nIt clicks buttons, fills forms, logs in, gets stuck, fixes itself, and keeps building. The success rate on the hardest bugs is more than 97%.\nEvery other tool just guesses. This one behaves like a real engineer who works nonstop."
+    },
+    {
+      "tweet_id": "1996503541146644897",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "busines_corner",
+      "author_name": "Business Corner | Showcasing Entrepreneur",
+      "importance_score": 1,
+      "view_count": 13,
+      "url": "https://twitter.com/i/web/status/1996503541146644897",
+      "text": "@anything The fact you can spin up multiple agents working on different features simultaneously is genuinely insane."
+    },
+    {
+      "tweet_id": "1996286108355940753",
+      "parent_tweet_id": "1996286015552753722",
+      "author_username": "samuraipreneur",
+      "author_name": "The SamurAI",
+      "importance_score": 0,
+      "view_count": 1118,
+      "url": "https://twitter.com/i/web/status/1996286108355940753",
+      "text": "it’s called Anything Max (https://t.co/bEhv3SCJnJ)\n\nyou describe your app in plain english, it builds everything:\n\n* frontend\n* backend\n* auth\n* payments\n* database\n* hosting\n\nproduction ready. no code needed."
+    },
+    {
+      "tweet_id": "1996286120347496764",
+      "parent_tweet_id": "1996286015552753722",
+      "author_username": "samuraipreneur",
+      "author_name": "The SamurAI",
+      "importance_score": 0,
+      "view_count": 701,
+      "url": "https://twitter.com/i/web/status/1996286120347496764",
+      "text": "other AI tools *generate* code.\n\nMax actually uses your app like a human.\n\nit logs in, clicks buttons, fills forms\nthen finds what’s broken and fixes it\n\nit has “eyes” (sees the UI)\n“hands” (clicks + types)\n“brain” (runs for 30+ mins fixing bugs)"
+    },
+    {
+      "tweet_id": "1996286614952354292",
+      "parent_tweet_id": "1996285905431302222",
+      "author_username": "thisdudelikesAI",
+      "author_name": "Ryan Hart",
+      "importance_score": 0,
+      "view_count": 222,
+      "url": "https://twitter.com/i/web/status/1996286614952354292",
+      "text": "Anything Max is the closest thing to a real engineer:\n\n✔ writes code\n✔ opens your app\n✔ uses it like a human\n✔ finds what’s broken\n✔ fixes it automatically\n\nAND they are running a $100K hackathon right now.\n\nhttps://t.co/xegE3EmQ3J"
+    },
+    {
+      "tweet_id": "1996288005070618952",
+      "parent_tweet_id": "1996286090504736774",
+      "author_username": "DinaAl_Jamal",
+      "author_name": "Dina J",
+      "importance_score": 0,
+      "view_count": 23,
+      "url": "https://twitter.com/i/web/status/1996288005070618952",
+      "text": "@systemdesignone @anything 'Anything Max' is revolutionizing app building with AI autonomy. Imagine reshaping healthcare innovation and tech in the UAE with these tools! Let's lead the future wave."
+    },
+    {
+      "tweet_id": "1996288191431860234",
+      "parent_tweet_id": "1996287928369357256",
+      "author_username": "heyrobinai",
+      "author_name": "Robin Delta",
+      "importance_score": 0,
+      "view_count": 288,
+      "url": "https://twitter.com/i/web/status/1996288191431860234",
+      "text": "3. Turn $200 into a full product\n\nDev agencies charge $40,000 and take 3 months. Max costs $200 a month and builds in hours. If your app makes $1,000 MRR, Max pays for itself five times over. This is the cheapest way to build real production software. https://t.co/euZWO3VWP3"
+    },
+    {
+      "tweet_id": "1996288257404113070",
+      "parent_tweet_id": "1996287928369357256",
+      "author_username": "heyrobinai",
+      "author_name": "Robin Delta",
+      "importance_score": 0,
+      "view_count": 432,
+      "url": "https://twitter.com/i/web/status/1996288257404113070",
+      "text": "4. Anything owns the entire infrastructure. Frontend, backend, database, hosting.\n\nBecause of that, Max can securely log in, test features end to end, and see what actually happens at runtime.\n\nOther tools only read code and guess.\nMax sees what users see. https://t.co/Tkv4a1OvXk"
+    },
+    {
+      "tweet_id": "1996290366035652751",
+      "parent_tweet_id": "1996290196195909706",
+      "author_username": "sabir_huss50540",
+      "author_name": "sabir hussain",
+      "importance_score": 0,
+      "view_count": 13,
+      "url": "https://twitter.com/i/web/status/1996290366035652751",
+      "text": "@JafarNajafov This AI testing shift is absolutely massive"
+    },
+    {
+      "tweet_id": "1996297101773508807",
+      "parent_tweet_id": "1996296935091704214",
+      "author_username": "FutureStacked",
+      "author_name": "Future Stacked",
+      "importance_score": 0,
+      "view_count": 2000,
+      "url": "https://twitter.com/i/web/status/1996297101773508807",
+      "text": "It USES apps like a human tester\n\nMax logs in, clicks buttons, fills forms, tests checkout flows. When something breaks, it sees the error in real-time.\n\nIt works autonomously for hours\n\nSet a goal and Max runs for 30 mins to 4 hours straight. 97%+ success rate. Zero supervision needed."
+    },
+    {
+      "tweet_id": "1996297230047678533",
+      "parent_tweet_id": "1996296935091704214",
+      "author_username": "FutureStacked",
+      "author_name": "Future Stacked",
+      "importance_score": 0,
+      "view_count": 2757,
+      "url": "https://twitter.com/i/web/status/1996297230047678533",
+      "text": "The economics destroy traditional dev\n\n• Dev agencies: $40K + 3 months\n• Max: $200/month + ships in hours\nFor any app making $1K MRR, Max pays for itself 5x over. https://t.co/fUkNb3dJmL"
+    },
+    {
+      "tweet_id": "1996297968685629817",
+      "parent_tweet_id": "1996296935091704214",
+      "author_username": "FutureStacked",
+      "author_name": "Future Stacked",
+      "importance_score": 0,
+      "view_count": 2745,
+      "url": "https://twitter.com/i/web/status/1996297968685629817",
+      "text": "700K users. $2M ARR in 2 weeks. 20K new projects daily.\n\nThis isn't hype. People are shipping real apps.\n\nEven better: Anything is running a $100K hackathon right now.\n\n→ Build an app with Max\n→ Post on X tagging @anything\n→ Win cash prizes\nStart here: https://t.co/aLVh0ykTLj https://t.co/5EAINMWgJ1"
+    },
+    {
+      "tweet_id": "1996307113253974475",
+      "parent_tweet_id": "1996285905431302222",
+      "author_username": "growthhub_",
+      "author_name": "Growth Labs",
+      "importance_score": 0,
+      "view_count": 232,
+      "url": "https://twitter.com/i/web/status/1996307113253974475",
+      "text": "Lovable had its moment, but this is straight-up brutal 💀  \nAnything MAX just went from ‘cool demo’ to ‘I can ship a paid micro-SaaS before lunch’. Those 45-second builds are actually scary.  \nRIP every no-code tool that still spits out half-baked React with broken auth in 2025.  \nAlready cooking two of these prompts for real customers. See y’all on the leaderboard 🏆"
+    },
+    {
+      "tweet_id": "1996323489708474662",
+      "parent_tweet_id": "1996312316271546573",
+      "author_username": "sanscdm",
+      "author_name": "Santiago",
+      "importance_score": 0,
+      "view_count": 182,
+      "url": "https://twitter.com/i/web/status/1996323489708474662",
+      "text": "@svpino Is anything like just another lovable ?"
+    },
+    {
+      "tweet_id": "1996367687157792962",
+      "parent_tweet_id": "1996292874141683825",
+      "author_username": "elis",
+      "author_name": "Eli Schröder",
+      "importance_score": 0,
+      "view_count": 158,
+      "url": "https://twitter.com/i/web/status/1996367687157792962",
+      "text": "@godofprompt Just curious, how come when people mention text to app companies, everyone mentions lovable, bolt, etc but nobody really mentions Replit.\n\n@Replit very slept on. I use this thing every single day. Keep doing what you’re doing @amasad"
+    },
+    {
+      "tweet_id": "1996482711851286733",
+      "parent_tweet_id": "1996292950368923893",
+      "author_username": "KashifCh00",
+      "author_name": "Kashif Nadeem",
+      "importance_score": 0,
+      "view_count": 34,
+      "url": "https://twitter.com/i/web/status/1996482711851286733",
+      "text": "@nrqa__ RIP Lovable new AI Agent can open your app, test it like a human, and fix bugs in one click.\nMake an extra $1,000/month with Anything Max 5 examples giveaway"
+    },
+    {
+      "tweet_id": "1996485135227912295",
+      "parent_tweet_id": "1996484976981016613",
+      "author_username": "details_with_ai",
+      "author_name": "Rasel Hosen",
+      "importance_score": 0,
+      "view_count": 114,
+      "url": "https://twitter.com/i/web/status/1996485135227912295",
+      "text": "Introducing Max Agent:\n\nMax is your proactive software engineer with:\n\n- Eyes that explore your app in a real browser\n- Hands that seamlessly click, type, and test flows\n- A brain that autonomously resolves bugs in just 30-60 seconds\n\nUnlike other AI tools that only estimate code functionality, Max guarantees it."
+    },
+    {
+      "tweet_id": "1996485171043045389",
+      "parent_tweet_id": "1996484976981016613",
+      "author_username": "details_with_ai",
+      "author_name": "Rasel Hosen",
+      "importance_score": 0,
+      "view_count": 72,
+      "url": "https://twitter.com/i/web/status/1996485171043045389",
+      "text": "Traditional dev agency: $40,000 and 3 months.\n\nMax: Just $200/month, with builds completed in hours. When your app reaches $1,000 MRR, Max delivers incredible value, paying for itself five times over.\n\nExperience the power of \"One founder = Full engineering team\" for the first time."
+    },
+    {
+      "tweet_id": "1996485187874750956",
+      "parent_tweet_id": "1996484976981016613",
+      "author_username": "details_with_ai",
+      "author_name": "Rasel Hosen",
+      "importance_score": 0,
+      "view_count": 68,
+      "url": "https://twitter.com/i/web/status/1996485187874750956",
+      "text": "Max is made possible by Anything's complete ownership of the full stack—frontend, backend, database, hosting—allowing full visibility at runtime.\n\nThis sets a new standard for building software.\n\nTry it → build anything → let Max fix everything you don’t have time for. https://t.co/wx2YdCMSdO"
+    },
+    {
+      "tweet_id": "1996488047417086222",
+      "parent_tweet_id": "1996484976981016613",
+      "author_username": "JaynitMakwana",
+      "author_name": "Jaynit Makwana",
+      "importance_score": 0,
+      "view_count": 12,
+      "url": "https://twitter.com/i/web/status/1996488047417086222",
+      "text": "@details_with_ai Anything is amazing 🔥"
+    },
+    {
+      "tweet_id": "1996488639782826373",
+      "parent_tweet_id": "1996484976981016613",
+      "author_username": "ajaysharma_here",
+      "author_name": "Ajay Sharma",
+      "importance_score": 0,
+      "view_count": 24,
+      "url": "https://twitter.com/i/web/status/1996488639782826373",
+      "text": "@details_with_ai Building a full app from plain English is wild — those growth numbers prove it’s already a game-changer."
+    },
+    {
+      "tweet_id": "1996503240469557493",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "XBuildersSpace",
+      "author_name": "BuildersSpace",
+      "importance_score": 0,
+      "view_count": 6,
+      "url": "https://twitter.com/i/web/status/1996503240469557493",
+      "text": "@anything I've been burned by every 'AI builder' out there. Tried this expecting the same disappointment.\nBuilt a working checkout flow in 20 mins. What the hell bro"
+    },
+    {
+      "tweet_id": "1996503300146168130",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "BizMindful",
+      "author_name": "Business Mindful",
+      "importance_score": 0,
+      "view_count": 4,
+      "url": "https://twitter.com/i/web/status/1996503300146168130",
+      "text": "@anything So this can actually find bugs AND fix it? INSANE"
+    },
+    {
+      "tweet_id": "1996503368379089331",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "EntrepBuilder_",
+      "author_name": "EntrepBuilder",
+      "importance_score": 0,
+      "view_count": 7,
+      "url": "https://twitter.com/i/web/status/1996503368379089331",
+      "text": "@anything Finally an AI builder that has taste."
+    },
+    {
+      "tweet_id": "1996503407973236903",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "TBusinessaholic",
+      "author_name": "Businessaholic",
+      "importance_score": 0,
+      "view_count": 5,
+      "url": "https://twitter.com/i/web/status/1996503407973236903",
+      "text": "@anything The design doesn’t look like AI slop, crazy!"
+    },
+    {
+      "tweet_id": "1996512041092472935",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "Curious_one313",
+      "author_name": "Curious One",
+      "importance_score": 0,
+      "view_count": 10,
+      "url": "https://twitter.com/i/web/status/1996512041092472935",
+      "text": "@anything If you need to mention your competitors in your launch video you were not needed in the first place.\n\nThose fake case studies \"Anthony already makes $20k/mo\". \n...Yeah right. Nice try.\n\nAlso Bolt and Lovable are on the decline already.\nYour business is \"double not needed\"."
+    },
+    {
+      "tweet_id": "1996517550629286359",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "blkslymn",
+      "author_name": "Suly",
+      "importance_score": 0,
+      "view_count": 13,
+      "url": "https://twitter.com/i/web/status/1996517550629286359",
+      "text": "@anything @Lovable @antonosika @boltdotnew what do you think? I have been using loveable mostly because of I feel like it has the best UI output but i feel like it is horrible at app testing and good for MVPs. Bolt dissapoints me each time so i dont use it anymore. I will try \"Anything\"."
+    },
+    {
+      "tweet_id": "1996518309093912946",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "blkslymn",
+      "author_name": "Suly",
+      "importance_score": 0,
+      "view_count": 15,
+      "url": "https://twitter.com/i/web/status/1996518309093912946",
+      "text": "@anything Is it possible to build IOS apps for appstore? Will it use Swift or React Native or Flutter? I may switch from loveable. With loveable its almost impossible to build mobile apps. @Lovable @antonosika"
+    },
+    {
+      "tweet_id": "1996523650112200915",
+      "parent_tweet_id": "1996518988151706110",
+      "author_username": "JumaCJ1",
+      "author_name": "WiseOne",
+      "importance_score": 0,
+      "view_count": 85,
+      "url": "https://twitter.com/i/web/status/1996523650112200915",
+      "text": "@darshal_ @Drew_code0 It's taking over literally"
+    },
+    {
+      "tweet_id": "1996527992168910964",
+      "parent_tweet_id": "1996287996795166898",
+      "author_username": "DiamondZPetSpa",
+      "author_name": "Diamond",
+      "importance_score": 0,
+      "view_count": 85,
+      "url": "https://twitter.com/i/web/status/1996527992168910964",
+      "text": "@VermaAakash3 100%. Traditional dev cycles simply cannot compete with this speed for MVPs. \nI’m curious since it fixed its own bugs, did you find the final logic was cleaner than human written spaghetti code?"
+    },
+    {
+      "tweet_id": "1996528891146764412",
+      "parent_tweet_id": "1996518988151706110",
+      "author_username": "SparkifyAI",
+      "author_name": "TechSparksAl",
+      "importance_score": 0,
+      "view_count": 209,
+      "url": "https://twitter.com/i/web/status/1996528891146764412",
+      "text": "@darshal_ MAX"
+    },
+    {
+      "tweet_id": "1996529144222675318",
+      "parent_tweet_id": "1996518988151706110",
+      "author_username": "GrowAIHub",
+      "author_name": "GrowAIHub",
+      "importance_score": 0,
+      "view_count": 230,
+      "url": "https://twitter.com/i/web/status/1996529144222675318",
+      "text": "@darshal_ MAX"
+    },
+    {
+      "tweet_id": "1996551493445734837",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "Man_Vic_",
+      "author_name": "Victor Maven🎖️",
+      "importance_score": 0,
+      "view_count": 3,
+      "url": "https://twitter.com/i/web/status/1996551493445734837",
+      "text": "@anything Beats Lovable and Bolt?\n\nI’m already there. 🙂‍↔️\nLFBuild! 🚀"
+    },
+    {
+      "tweet_id": "1996560674647163186",
+      "parent_tweet_id": "1996560669475528747",
+      "author_username": "TawohAwa",
+      "author_name": "Awa K. Penn",
+      "importance_score": 0,
+      "view_count": 104,
+      "url": "https://twitter.com/i/web/status/1996560674647163186",
+      "text": "Anything vs Lovable:\n\n• Lovable nails the design\n• Anything builds the whole system\n• Lovable stops at UI\n• Anything adds database, auth, payments\n• Lovable needs manual fixes\n• Anything uses Max to test and repair https://t.co/1USTR44Kqp"
+    },
+    {
+      "tweet_id": "1996560672046665843",
+      "parent_tweet_id": "1996560669475528747",
+      "author_username": "TawohAwa",
+      "author_name": "Awa K. Penn",
+      "importance_score": 0,
+      "view_count": 148,
+      "url": "https://twitter.com/i/web/status/1996560672046665843",
+      "text": "Using @anything :\n\n• You describe the app in plain English\n• It builds the frontend, backend, and database\n• It sets up login, payments, and hosting\n• Max opens the app in a real browser\n• It clicks, types, tests, and finds errors https://t.co/kydeVKsXyF"
+    },
+    {
+      "tweet_id": "1996568584072401269",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "helenbzhang",
+      "author_name": "Helen Zhang",
+      "importance_score": 0,
+      "view_count": 1,
+      "url": "https://twitter.com/i/web/status/1996568584072401269",
+      "text": "@anything Can I port over an app that’s currently on Bolt?"
+    },
+    {
+      "tweet_id": "1996582235827228769",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "NishantSapru",
+      "author_name": "Nishfishdish",
+      "importance_score": 0,
+      "view_count": 3,
+      "url": "https://twitter.com/i/web/status/1996582235827228769",
+      "text": "@anything LFG, my hope is its definitely better than bland designs that come out of Lovable"
+    },
+    {
+      "tweet_id": "1996586178435285414",
+      "parent_tweet_id": "1996560669475528747",
+      "author_username": "KashifCh00",
+      "author_name": "Kashif Nadeem",
+      "importance_score": 0,
+      "view_count": 15,
+      "url": "https://twitter.com/i/web/status/1996586178435285414",
+      "text": "@TawohAwa Which AI can build and publish a mobile app from one prompt \nTested Lovable vs Anything last night  here’s who won Prompt Results"
+    },
+    {
+      "tweet_id": "1996628089645027787",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "MohitSi44211571",
+      "author_name": "unknown developer",
+      "importance_score": 0,
+      "view_count": 6,
+      "url": "https://twitter.com/i/web/status/1996628089645027787",
+      "text": "@anything Vibe coding just yeeted Lovable into the shadow realm. Agents that actually test like humans? Insane."
+    },
+    {
+      "tweet_id": "1996629263098040436",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "Renz_SOVRUN",
+      "author_name": "Renz | SOVRUN",
+      "importance_score": 0,
+      "view_count": 5,
+      "url": "https://twitter.com/i/web/status/1996629263098040436",
+      "text": "@anything Exciting news! Can't wait to see how Anything Max takes vibe coding to the next level—sounds like a game changer!"
+    },
+    {
+      "tweet_id": "1996657096465748190",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "4GconsuLte",
+      "author_name": "Magnus Johansson",
+      "importance_score": 0,
+      "view_count": 4,
+      "url": "https://twitter.com/i/web/status/1996657096465748190",
+      "text": "@anything I tried you the last time, and I did not come across convinced and fell back in love with loveable. But if what you claim in this post is even close to reality, I’m willing to give another shot."
+    },
+    {
+      "tweet_id": "1996788926661399008",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "LazyFuturist",
+      "author_name": "Brian",
+      "importance_score": 0,
+      "view_count": 8,
+      "url": "https://twitter.com/i/web/status/1996788926661399008",
+      "text": "@anything LFG, I’ve tried lovable and bolt as a non coder and never could get anything fully functional."
+    },
+    {
+      "tweet_id": "1996841726372446447",
+      "parent_tweet_id": "1996560669475528747",
+      "author_username": "JaynitMakwana",
+      "author_name": "Jaynit Makwana",
+      "importance_score": 0,
+      "view_count": 11,
+      "url": "https://twitter.com/i/web/status/1996841726372446447",
+      "text": "@TawohAwa Anything seems better.\n\nWhich one do you like?"
+    },
+    {
+      "tweet_id": "1997292839156465806",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "elhamteh_eth",
+      "author_name": "Elham",
+      "importance_score": 0,
+      "view_count": 13,
+      "url": "https://twitter.com/i/web/status/1997292839156465806",
+      "text": "@anything Anything Max is a total game-changer! \nFull-stack control and autonomous bug-fixing? Next level! Excited to see the hackathon results. \nLFG!"
+    },
+    {
+      "tweet_id": "1997317847174054237",
+      "parent_tweet_id": "1996279683932172751",
+      "author_username": "Ryanmrks",
+      "author_name": "Ryan Marks",
+      "importance_score": 0,
+      "view_count": 27,
+      "url": "https://twitter.com/i/web/status/1997317847174054237",
+      "text": "@anything Another vibecoding app after .\n- @Lovable\n- @cursor_ai\n- @vibecodeapp\n- @rork_app\n- @nativelyapp\n- @base_44\n- @emergentlabs\n- mgx(.)dev\n\nLet's try this too"
+    }
+  ]
+}

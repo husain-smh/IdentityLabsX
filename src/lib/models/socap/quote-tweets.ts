@@ -26,6 +26,19 @@ export interface QuoteTweet {
     quoteCount?: number;
     bookmarkCount?: number;
   };
+  /**
+   * Metrics aggregated from quotes-of-this-quote. Kept separate from the tweet's
+   * own metrics to avoid overwriting the source values.
+   */
+  nested_metrics?: {
+    viewCount?: number;
+    likeCount?: number;
+    retweetCount?: number;
+    replyCount?: number;
+    quoteCount?: number;
+    bookmarkCount?: number;
+    last_updated: Date;
+  };
   created_at: Date; // when the quote tweet was posted
   ingested_at: Date; // when we first saw it
   last_seen_at: Date; // last time we refreshed it
@@ -97,5 +110,41 @@ export async function createOrUpdateQuoteTweet(input: QuoteTweetInput): Promise<
   );
 
   return result as QuoteTweet;
+}
+
+export async function getQuoteTweetsByCampaign(campaignId: string): Promise<QuoteTweet[]> {
+  const collection = await getQuoteTweetsCollection();
+  return collection.find({ campaign_id: campaignId }).toArray();
+}
+
+export async function updateQuoteTweetNestedMetrics(
+  campaignId: string,
+  quoteTweetId: string,
+  nestedMetrics: {
+    viewCount?: number;
+    likeCount?: number;
+    retweetCount?: number;
+    replyCount?: number;
+    quoteCount?: number;
+    bookmarkCount?: number;
+  }
+): Promise<boolean> {
+  const collection = await getQuoteTweetsCollection();
+  const now = new Date();
+
+  const result = await collection.updateOne(
+    { campaign_id: campaignId, quote_tweet_id: quoteTweetId },
+    {
+      $set: {
+        nested_metrics: {
+          ...nestedMetrics,
+          last_updated: now,
+        },
+        last_seen_at: now,
+      },
+    }
+  );
+
+  return result.modifiedCount > 0;
 }
 

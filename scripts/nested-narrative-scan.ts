@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { OpenAI } from 'openai';
 
-import { getQuoteTweetsCollection } from '../src/lib/models/socap/quote-tweets';
+import { getNestedQuoteTweetsCollection } from '../src/lib/models/socap/nested-quote-tweets';
 import { calculateImportanceScore } from '../src/lib/socap/engagement-processor';
 
 type CliOptions = {
@@ -15,9 +15,10 @@ type CliOptions = {
   outputPath?: string;
 };
 
-type QuoteRecord = {
+type NestedQuoteRecord = {
   tweetId: string;
-  parentTweetId: string;
+  parentTweetId?: string;
+  parentQuoteTweetId: string;
   text: string;
   authorUsername: string;
   authorName?: string;
@@ -51,7 +52,7 @@ function parseArgs(): CliOptions {
 
   const campaignId = getArg('campaign-id') || getArg('campaignId');
   if (!campaignId) {
-    console.error('Usage: npx tsx scripts/narrative-scan.ts --campaign-id <id> [--batch-size 20] [--max-quotes 2000] [--output report.json]');
+    console.error('Usage: npx tsx scripts/nested-narrative-scan.ts --campaign-id <id> [--batch-size 20] [--max-quotes 2000] [--output report.json]');
     process.exit(1);
   }
 
@@ -75,7 +76,7 @@ function chunk<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-function buildLlmPrompt(batch: QuoteRecord[]): string {
+function buildLlmPrompt(batch: NestedQuoteRecord[]): string {
   const trimmed = batch.map((q) => ({
     tweet_id: q.tweetId,
     author_username: q.authorUsername,
@@ -105,7 +106,6 @@ function safeParseArray(raw: string): LlmMatch[] {
   } catch (err) {
     // fallthrough
   }
-  // Attempt to extract first JSON array in the string
   const match = raw.match(/\[([\s\S]*)\]/);
   if (match) {
     try {
@@ -118,7 +118,7 @@ function safeParseArray(raw: string): LlmMatch[] {
   return [];
 }
 
-async function filterMatchesWithLlm(batch: QuoteRecord[]): Promise<Set<string>> {
+async function filterMatchesWithLlm(batch: NestedQuoteRecord[]): Promise<Set<string>> {
   if (!openai) {
     throw new Error('OPENAIAPIKEY not set; cannot run LLM filtering');
   }
@@ -149,8 +149,7 @@ async function filterMatchesWithLlm(batch: QuoteRecord[]): Promise<Set<string>> 
   return ids;
 }
 
-async function enrichImportance(quotes: QuoteRecord[]): Promise<void> {
-  // Compute importance scores one-by-one; small enough for local runs.
+async function enrichImportance(quotes: NestedQuoteRecord[]): Promise<void> {
   for (const q of quotes) {
     if (!q.userId) {
       q.importanceScore = 0;
@@ -168,15 +167,15 @@ async function enrichImportance(quotes: QuoteRecord[]): Promise<void> {
 async function main() {
   const { campaignId, batchSize, maxQuotes, outputPath } = parseArgs();
 
-  console.log(`[${ts()}] 🚀 Narrative scan starting for campaign ${campaignId}`);
+  console.log(`[${ts()}] 🚀 Nested narrative scan starting for campaign ${campaignId}`);
 
-  const collection = await getQuoteTweetsCollection();
+  const collection = await getNestedQuoteTweetsCollection();
   const cursor = collection
     .find({ campaign_id: campaignId })
     .sort({ created_at: 1 });
 
-  const dedupQuoteIds = new Set<string>(); // across campaign
-  const quotes: QuoteRecord[] = [];
+  const dedupQuoteIds = new Set<string>();
+  const quotes: NestedQuoteRecord[] = [];
 
   for await (const doc of cursor) {
     const quoteId = doc.quote_tweet_id;
@@ -186,6 +185,7 @@ async function main() {
     quotes.push({
       tweetId: quoteId,
       parentTweetId: doc.parent_tweet_id,
+      parentQuoteTweetId: doc.parent_quote_tweet_id,
       text: doc.text || '',
       authorUsername: doc.author?.username || '',
       authorName: doc.author?.name,
@@ -201,11 +201,11 @@ async function main() {
   }
 
   console.log(
-    `[${ts()}] Loaded ${quotes.length} unique quotes from DB for campaign ${campaignId} (deduped by tweet_id).`
+    `[${ts()}] Loaded ${quotes.length} unique nested quotes from DB for campaign ${campaignId} (deduped by tweet_id).`
   );
 
   if (!quotes.length) {
-    console.log(`[${ts()}] No quotes collected; exiting.`);
+    console.log(`[${ts()}] No nested quotes collected; exiting.`);
     process.exit(0);
   }
 
@@ -239,6 +239,7 @@ async function main() {
     matches: matchedQuotes.map((q) => ({
       tweet_id: q.tweetId,
       parent_tweet_id: q.parentTweetId,
+      parent_quote_tweet_id: q.parentQuoteTweetId,
       author_username: q.authorUsername,
       author_name: q.authorName,
       importance_score: q.importanceScore ?? 0,
@@ -250,7 +251,7 @@ async function main() {
 
   const outPath =
     outputPath ||
-    path.join(process.cwd(), `narrative-report-${campaignId}-${Date.now()}.json`);
+    path.join(process.cwd(), `nested-narrative-report-${campaignId}-${Date.now()}.json`);
 
   fs.writeFileSync(outPath, JSON.stringify(report, null, 2), 'utf-8');
 
@@ -262,4 +263,5 @@ main().catch((err) => {
   console.error(`[${ts()}] ❌ Fatal error:`, err);
   process.exit(1);
 });
+
 

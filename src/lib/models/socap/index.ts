@@ -6,6 +6,8 @@
 
 export * from './campaigns';
 export * from './tweets';
+export * from './quote-tweets';
+export * from './nested-quote-tweets';
 export * from './engagements';
 export * from './worker-state';
 export * from './alert-queue';
@@ -16,6 +18,8 @@ export * from './utils';
 import {
   createCampaignIndexes,
   createTweetIndexes,
+  createQuoteTweetIndexes,
+  createNestedQuoteTweetIndexes,
   createEngagementIndexes,
   createWorkerStateIndexes,
   createAlertQueueIndexes,
@@ -36,6 +40,12 @@ export async function initializeSocapIndexes(): Promise<void> {
     
     await createTweetIndexes();
     console.log('✅ Tweet indexes created');
+
+    await createQuoteTweetIndexes();
+    console.log('✅ Quote tweet indexes created');
+
+    await createNestedQuoteTweetIndexes();
+    console.log('✅ Nested quote tweet indexes created');
     
     await createEngagementIndexes();
     console.log('✅ Engagement indexes created');

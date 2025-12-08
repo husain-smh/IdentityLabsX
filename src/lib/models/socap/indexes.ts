@@ -11,6 +11,14 @@ export {
 } from './tweets';
 
 export {
+  createQuoteTweetIndexes,
+} from './quote-tweets';
+
+export {
+  createNestedQuoteTweetIndexes,
+} from './nested-quote-tweets';
+
+export {
   createEngagementIndexes,
 } from './engagements';
 
