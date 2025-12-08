@@ -23,6 +23,8 @@ interface MetricSnapshot {
   quoteCount: number;
   viewCount: number;
   bookmarkCount: number;
+  quoteViewSum?: number;
+  quoteTweetCount?: number;
 }
 
 interface MonitoringData {
@@ -128,6 +130,8 @@ export default function MonitoringDashboard() {
     Quotes: snapshot.quoteCount,
     Views: snapshot.viewCount,
     Bookmarks: snapshot.bookmarkCount,
+    QuoteViews: snapshot.quoteViewSum ?? 0,
+    QuoteTweets: snapshot.quoteTweetCount ?? 0,
   })) || [];
 
   if (loading) {
@@ -275,7 +279,7 @@ export default function MonitoringDashboard() {
 
             {/* Current Metrics */}
             {latestSnapshot && (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-8 gap-4 mb-8">
                 <div className="glass rounded-xl p-4">
                   <p className="text-zinc-400 text-sm mb-1">Likes</p>
                   <p className="text-2xl font-bold text-white">{latestSnapshot.likeCount.toLocaleString()}</p>
@@ -316,6 +320,24 @@ export default function MonitoringDashboard() {
                   <p className="text-2xl font-bold text-white">{latestSnapshot.bookmarkCount.toLocaleString()}</p>
                   {firstSnapshot && latestSnapshot.bookmarkCount > firstSnapshot.bookmarkCount && (
                     <p className="text-green-400 text-xs mt-1">+{(latestSnapshot.bookmarkCount - firstSnapshot.bookmarkCount).toLocaleString()}</p>
+                  )}
+                </div>
+                <div className="glass rounded-xl p-4">
+                  <p className="text-zinc-400 text-sm mb-1">Quote Views (sum)</p>
+                  <p className="text-2xl font-bold text-white">{(latestSnapshot.quoteViewSum ?? 0).toLocaleString()}</p>
+                  {firstSnapshot && (latestSnapshot.quoteViewSum ?? 0) > (firstSnapshot.quoteViewSum ?? 0) && (
+                    <p className="text-green-400 text-xs mt-1">
+                      +{(((latestSnapshot.quoteViewSum ?? 0) - (firstSnapshot.quoteViewSum ?? 0))).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+                <div className="glass rounded-xl p-4">
+                  <p className="text-zinc-400 text-sm mb-1">Quote Tweets</p>
+                  <p className="text-2xl font-bold text-white">{(latestSnapshot.quoteTweetCount ?? 0).toLocaleString()}</p>
+                  {firstSnapshot && (latestSnapshot.quoteTweetCount ?? 0) > (firstSnapshot.quoteTweetCount ?? 0) && (
+                    <p className="text-green-400 text-xs mt-1">
+                      +{(((latestSnapshot.quoteTweetCount ?? 0) - (firstSnapshot.quoteTweetCount ?? 0))).toLocaleString()}
+                    </p>
                   )}
                 </div>
               </div>
@@ -415,6 +437,40 @@ export default function MonitoringDashboard() {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+
+                {/* Quote Views Chart */}
+                <div className="glass rounded-2xl p-6">
+                  <h2 className="text-white text-xl font-bold mb-6">Quote Views Over Time</h2>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                      <XAxis 
+                        dataKey="time" 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                      />
+                      <YAxis 
+                        stroke="#9ca3af"
+                        style={{ fontSize: '12px' }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#18181b',
+                          border: '1px solid #3f3f46',
+                          borderRadius: '8px',
+                        }}
+                        labelStyle={{ color: '#fff' }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="QuoteViews" 
+                        stroke="#06b6d4" 
+                        strokeWidth={3}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             ) : (
               <div className="glass rounded-2xl p-12 text-center">
@@ -426,7 +482,7 @@ export default function MonitoringDashboard() {
                 <h3 className="text-white text-lg font-semibold mb-2">No Data Yet</h3>
                 <p className="text-zinc-400">
                   {data.stats.is_active 
-                    ? 'Waiting for first metrics snapshot. N8N will collect data every 30 minutes.'
+                    ? 'Waiting for first metrics snapshot. Scheduler will collect data every few minutes.'
                     : 'Monitoring has completed. No snapshots were collected.'}
                 </p>
               </div>

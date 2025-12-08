@@ -49,6 +49,8 @@ export async function GET(
         quoteCount: s.quoteCount,
         viewCount: s.viewCount,
         bookmarkCount: s.bookmarkCount,
+        quoteViewSum: s.quoteViewSum,
+        quoteTweetCount: s.quoteTweetCount,
       })),
       stats: {
         total_snapshots: snapshots.length,

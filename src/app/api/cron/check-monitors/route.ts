@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActiveMonitoringJobs, completeMonitoringJob, storeMetricSnapshot } from '@/lib/models/monitoring';
-import { fetchTweetMetrics } from '@/lib/external-api';
+import { fetchTweetMetrics, fetchQuoteMetricsAggregate } from '@/lib/external-api';
 
 export async function GET() {
   try {
@@ -35,8 +35,22 @@ export async function GET() {
         // Fetch current metrics from external API
         const metrics = await fetchTweetMetrics(job.tweet_id);
 
-        // Store snapshot
-        await storeMetricSnapshot(job.tweet_id, metrics);
+        // Fetch quote aggregates (with pagination) and tolerate failures
+        let quoteAgg = { quoteTweetCount: 0, quoteViewSum: 0 };
+        try {
+          quoteAgg = await fetchQuoteMetricsAggregate(job.tweet_id);
+        } catch (quoteError) {
+          const msg = quoteError instanceof Error ? quoteError.message : 'Unknown quote fetch error';
+          console.error(`Quote fetch error for ${job.tweet_id}:`, quoteError);
+          errors.push(`Quote fetch error for ${job.tweet_id}: ${msg}`);
+        }
+
+        // Store snapshot with quote aggregates
+        await storeMetricSnapshot(job.tweet_id, {
+          ...metrics,
+          quoteTweetCount: quoteAgg.quoteTweetCount,
+          quoteViewSum: quoteAgg.quoteViewSum,
+        });
 
         processed++;
 

@@ -22,6 +22,8 @@ export interface MetricSnapshot {
   quoteCount: number;
   viewCount: number;
   bookmarkCount: number;
+  quoteViewSum: number;        // Sum of views across quote tweets at this time
+  quoteTweetCount: number;     // Number of quote tweets counted at this time
 }
 
 // ===== Collection Helpers =====
@@ -130,6 +132,8 @@ export async function storeMetricSnapshot(
     quoteCount: number;
     viewCount: number;
     bookmarkCount: number;
+    quoteViewSum?: number;
+    quoteTweetCount?: number;
   }
 ): Promise<MetricSnapshot> {
   const collection = await getMetricSnapshotsCollection();
@@ -138,6 +142,8 @@ export async function storeMetricSnapshot(
     tweet_id: tweetId,
     timestamp: new Date(),
     ...metrics,
+    quoteViewSum: metrics.quoteViewSum ?? 0,
+    quoteTweetCount: metrics.quoteTweetCount ?? 0,
   };
   
   await collection.insertOne(snapshot);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createMonitoringJob, getMonitoringJobByTweetId } from '@/lib/models/monitoring';
-import { fetchTweetMetrics } from '@/lib/external-api';
+import { createMonitoringJob, getMonitoringJobByTweetId, storeMetricSnapshot } from '@/lib/models/monitoring';
+import { fetchTweetMetrics, fetchQuoteMetricsAggregate } from '@/lib/external-api';
 import { extractTweetIdFromUrl } from '@/lib/utils/tweet-utils';
 
 export async function POST(request: NextRequest) {
@@ -47,8 +47,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate tweet exists by fetching it once
+    let initialMetrics: Awaited<ReturnType<typeof fetchTweetMetrics>>;
+    let initialQuoteAgg = { quoteTweetCount: 0, quoteViewSum: 0 };
     try {
-      await fetchTweetMetrics(tweetId);
+      initialMetrics = await fetchTweetMetrics(tweetId);
+
+      // Fetch quote aggregates (with pagination) so the first snapshot has quote views
+      try {
+        initialQuoteAgg = await fetchQuoteMetricsAggregate(tweetId);
+      } catch (quoteError) {
+        console.error('Error fetching initial quote aggregates:', quoteError);
+      }
     } catch (error) {
       console.error('Error validating tweet:', error);
       
@@ -88,6 +97,24 @@ export async function POST(request: NextRequest) {
 
     // Create monitoring job
     const job = await createMonitoringJob(tweetId, tweetUrl);
+
+    // Capture the first snapshot immediately so the user sees metrics right away
+    try {
+      await storeMetricSnapshot(tweetId, {
+        ...initialMetrics,
+        quoteTweetCount: initialQuoteAgg.quoteTweetCount,
+        quoteViewSum: initialQuoteAgg.quoteViewSum,
+      });
+    } catch (snapshotError) {
+      console.error('Error storing initial metric snapshot:', snapshotError);
+      return NextResponse.json(
+        {
+          error: 'Failed to store initial metrics snapshot',
+          details: snapshotError instanceof Error ? snapshotError.message : 'Unknown error',
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
