@@ -15,6 +15,11 @@ export interface Campaign {
     start_date: Date;
     end_date: Date;
   };
+  /**
+   * Optional minimum date for chart displays. When set, time-series
+   * queries should exclude data points before this timestamp.
+   */
+  chart_min_date?: Date;
   alert_preferences: {
     importance_threshold: number;
     channels: string[]; // ['slack', 'email']

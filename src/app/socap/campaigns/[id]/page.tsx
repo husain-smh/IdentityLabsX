@@ -96,9 +96,7 @@ type MetricKey =
   | 'quotes'
   | 'replies'
   | 'views'
-  | 'quoteViews'
-  | 'second_order_retweets'
-  | 'second_order_replies';
+  | 'quoteViews';
 
 type SecondDegreePoint = {
   time: string;
@@ -123,10 +121,9 @@ interface MetricChartProps {
   title: string;
   metric: MetricKey;
   chartData: Array<{ time: string; [key: string]: any }>;
-  color: string;
 }
 
-function MetricChart({ title, metric, chartData }: Omit<MetricChartProps, 'filter' | 'onFilterChange'>) {
+function MetricChart({ title, metric, chartData }: MetricChartProps) {
   // Custom tooltip to show cumulative value and delta
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -263,6 +260,7 @@ export default function CampaignDashboardPage() {
   const mainTweetContainerRef = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [chartMinDate, setChartMinDate] = useState<Date | null>(null);
   const [metricsData, setMetricsData] = useState<any[]>([]);
   const [engagementSeries, setEngagementSeries] = useState<
     Array<{
@@ -287,15 +285,6 @@ export default function CampaignDashboardPage() {
   const [influencerEngagementLastUpdated, setInfluencerEngagementLastUpdated] = useState<Date | null>(null);
 
   // Second-degree metrics (quote tweets + second-order engagements)
-  const [secondDegreeSeries, setSecondDegreeSeries] = useState<{
-    main_twt: SecondDegreePoint[];
-    influencer_twt: SecondDegreePoint[];
-    investor_twt: SecondDegreePoint[];
-  }>({
-    main_twt: [],
-    influencer_twt: [],
-    investor_twt: [],
-  });
   const [secondDegreeTotals, setSecondDegreeTotals] = useState<{
     main_twt: SecondDegreeTotals;
     influencer_twt: SecondDegreeTotals;
@@ -329,6 +318,13 @@ export default function CampaignDashboardPage() {
   
   // Single global filter state for all charts
   const [globalFilter, setGlobalFilter] = useState<'all' | 'main_twt' | 'influencer_twt' | 'investor_twt'>('all');
+
+  // Keep a ref to always have the latest chart min date for refresh intervals
+  const chartMinDateRef = useRef<Date | null>(null);
+  const mainTweetIdRef = useRef<string | null>(null);
+  const [mainQuoteViewSeries, setMainQuoteViewSeries] = useState<
+    Array<{ time: string; quoteViews: number; delta?: number }>
+  >([]);
   
 // Action type filter for engagements
 const [actionTypeFilter, setActionTypeFilter] = useState<'all' | 'retweet' | 'reply' | 'quote'>('all');
@@ -341,36 +337,59 @@ const [isLoadingEngagements, setIsLoadingEngagements] = useState(false);
 const [isLoadingMoreEngagements, setIsLoadingMoreEngagements] = useState(false);
 const [isMetricsLoading, setIsMetricsLoading] = useState(false);
 const [isEngagementSeriesLoading, setIsEngagementSeriesLoading] = useState(false);
-const [isSecondDegreeLoading, setIsSecondDegreeLoading] = useState(false);
 const engagementOffsetRef = useRef(0);
 
   // Track which people have expanded actions (show all vs show top 3)
   const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set());
+
+  // Important people list controls
+  const INITIAL_IMPORTANT_VISIBLE = 20;
+  const [importantPeopleOpen, setImportantPeopleOpen] = useState<{ main: boolean; influencer: boolean }>({
+    main: false,
+    influencer: false,
+  });
+  const [peopleVisibleCount, setPeopleVisibleCount] = useState<{ main: number; influencer: number }>({
+    main: INITIAL_IMPORTANT_VISIBLE,
+    influencer: INITIAL_IMPORTANT_VISIBLE,
+  });
   const mainTweet = useMemo(
     () => data?.tweets?.find((t) => t.category === 'main_twt'),
     [data]
   );
 
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (): Promise<Date | null> => {
     try {
       const response = await fetch(`/api/socap/campaigns/${campaignId}/dashboard`);
       const result = await response.json();
       
       if (result.success) {
         setData(result.data);
+        const minDate = result.data?.campaign?.chart_min_date
+          ? new Date(result.data.campaign.chart_min_date)
+          : null;
+        setChartMinDate(minDate);
+        chartMinDateRef.current = minDate;
+        return minDate;
       }
     } catch (error) {
       console.error('Error fetching dashboard:', error);
     } finally {
       setLoading(false);
     }
+    return null;
   }, [campaignId]);
 
-  const fetchMetrics = useCallback(async () => {
+  const fetchMetrics = useCallback(async (minDateOverride?: Date | null) => {
     setIsMetricsLoading(true);
     try {
+      const params = new URLSearchParams({ granularity: 'hour' });
+      const startDate = minDateOverride ?? chartMinDateRef.current;
+      if (startDate) {
+        params.set('start_date', startDate.toISOString());
+      }
+
       const response = await fetch(
-        `/api/socap/campaigns/${campaignId}/metrics?granularity=hour`
+        `/api/socap/campaigns/${campaignId}/metrics?${params.toString()}`
       );
       const result = await response.json();
       
@@ -428,11 +447,19 @@ const engagementOffsetRef = useRef(0);
     return firstNonZeroIndex > 0 ? mapped.slice(firstNonZeroIndex) : mapped;
   };
 
-  const fetchEngagementSeries = useCallback(async () => {
+  const fetchEngagementSeries = useCallback(async (minDateOverride?: Date | null) => {
     setIsEngagementSeriesLoading(true);
     try {
+      const params = new URLSearchParams({
+        granularity: 'half_hour',
+      });
+      const startDate = minDateOverride ?? chartMinDateRef.current;
+      if (startDate) {
+        params.set('start_date', startDate.toISOString());
+      }
+
       const response = await fetch(
-        `/api/socap/campaigns/${campaignId}/engagements/timeseries?granularity=half_hour`
+        `/api/socap/campaigns/${campaignId}/engagements/timeseries?${params.toString()}`
       );
       const result = await response.json();
 
@@ -464,10 +491,19 @@ const engagementOffsetRef = useRef(0);
   }, [campaignId]);
 
   const fetchCategoryEngagementSeries = useCallback(
-    async (category: 'main_twt' | 'influencer_twt') => {
+    async (category: 'main_twt' | 'influencer_twt', minDateOverride?: Date | null) => {
       try {
+        const params = new URLSearchParams({
+          granularity: 'half_hour',
+          category,
+        });
+        const startDate = minDateOverride ?? chartMinDateRef.current;
+        if (startDate) {
+          params.set('start_date', startDate.toISOString());
+        }
+
         const response = await fetch(
-          `/api/socap/campaigns/${campaignId}/engagements/timeseries?granularity=half_hour&category=${category}`
+          `/api/socap/campaigns/${campaignId}/engagements/timeseries?${params.toString()}`
         );
         const result = await response.json();
 
@@ -543,20 +579,54 @@ const engagementOffsetRef = useRef(0);
   );
 
   const fetchSecondDegree = useCallback(async () => {
-    setIsSecondDegreeLoading(true);
     try {
       const response = await fetch(`/api/socap/campaigns/${campaignId}/second-degree`);
       const result = await response.json();
       if (result.success) {
-        setSecondDegreeSeries(result.data.series);
         setSecondDegreeTotals(result.data.totals);
       }
     } catch (error) {
       console.error('Error fetching second-degree metrics:', error);
-    } finally {
-      setIsSecondDegreeLoading(false);
     }
   }, [campaignId]);
+
+  const fetchMainQuoteViewSeries = useCallback(
+    async (tweetIdOverride?: string) => {
+      const targetTweetId = tweetIdOverride ?? mainTweetIdRef.current;
+      if (!targetTweetId) {
+        setMainQuoteViewSeries([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/monitor-tweet/${targetTweetId}`);
+        const result = await response.json();
+
+        if (response.ok && result?.success && Array.isArray(result.snapshots)) {
+          let previous = 0;
+          const mapped = result.snapshots
+            .sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+            .map((snap: any) => {
+              const value = snap.quoteViewSum ?? 0;
+              const point = {
+                time: new Date(snap.timestamp).toLocaleString(),
+                quoteViews: value,
+                delta: value - previous,
+              };
+              previous = value;
+              return point;
+            });
+          setMainQuoteViewSeries(mapped);
+        } else {
+          setMainQuoteViewSeries([]);
+        }
+      } catch (error) {
+        console.error('Error fetching quote view series for main tweet:', error);
+        setMainQuoteViewSeries([]);
+      }
+    },
+    []
+  );
 
   // Track if initial load has happened to avoid double-fetching
   const initialLoadDoneRef = useRef(false);
@@ -567,17 +637,18 @@ const engagementOffsetRef = useRef(0);
     initialLoadDoneRef.current = false;
 
     const loadAll = async () => {
-      console.log('[Campaign] Starting parallel fetch...');
+      console.log('[Campaign] Starting fetch with chart min date awareness...');
       setLoading(true);
+      const minDate = await fetchDashboard();
       await Promise.all([
-        fetchDashboard(),
-        fetchMetrics(),
-        fetchEngagementSeries(),
-        fetchCategoryEngagementSeries('main_twt'),
-        fetchCategoryEngagementSeries('influencer_twt'),
+        fetchMetrics(minDate),
+        fetchEngagementSeries(minDate),
+        fetchCategoryEngagementSeries('main_twt', minDate),
+        fetchCategoryEngagementSeries('influencer_twt', minDate),
         fetchSecondDegree(),
+        fetchMainQuoteViewSeries(),
       ]);
-      console.log('[Campaign] Parallel fetch complete, now fetching engagements...');
+      console.log('[Campaign] Fetch complete, now fetching engagements...');
       // Fetch engagements separately (depends on actionTypeFilter but we want initial load)
       await fetchEngagementsPage(true);
       setLoading(false);
@@ -591,13 +662,15 @@ const engagementOffsetRef = useRef(0);
     console.log('[Campaign] Setting up refresh interval');
     const interval = setInterval(() => {
       console.log('[Campaign] Auto-refresh triggered');
+      const minDate = chartMinDateRef.current;
       Promise.all([
         fetchDashboard(),
-        fetchMetrics(),
-        fetchEngagementSeries(),
-        fetchCategoryEngagementSeries('main_twt'),
-        fetchCategoryEngagementSeries('influencer_twt'),
+        fetchMetrics(minDate),
+        fetchEngagementSeries(minDate),
+        fetchCategoryEngagementSeries('main_twt', minDate),
+        fetchCategoryEngagementSeries('influencer_twt', minDate),
         fetchSecondDegree(),
+        fetchMainQuoteViewSeries(),
       ]);
       // Don't auto-refresh engagements (user controls via Load More)
     }, REFRESH_INTERVAL_MS);
@@ -621,17 +694,39 @@ const engagementOffsetRef = useRef(0);
   }, [actionTypeFilter]); // Only re-run when filter changes
 
   useEffect(() => {
-    if (!mainTweet?.tweet_id || !mainTweetContainerRef.current) return;
+    if (!mainTweet?.tweet_id) {
+      mainTweetIdRef.current = null;
+      setMainQuoteViewSeries([]);
+      return;
+    }
+    mainTweetIdRef.current = mainTweet.tweet_id;
+    fetchMainQuoteViewSeries(mainTweet.tweet_id);
+    if (!mainTweetContainerRef.current) return;
     let cancelled = false;
 
     const renderEmbed = async () => {
       try {
         const twttr = await loadTwitterWidgets();
         if (!twttr || cancelled || !mainTweetContainerRef.current) return;
+
+        const parentWidth = mainTweetContainerRef.current.parentElement?.clientWidth ?? 700;
+        const width = Math.min(Math.max(parentWidth, 640), 900); // prefer ~700, allow wider if container allows
+
+        // Ensure the host container centers the embed
+        mainTweetContainerRef.current.style.display = 'flex';
+        mainTweetContainerRef.current.style.justifyContent = 'center';
+        mainTweetContainerRef.current.style.alignItems = 'center';
+        mainTweetContainerRef.current.style.width = '100%';
+        mainTweetContainerRef.current.style.maxWidth = '900px';
+        mainTweetContainerRef.current.style.margin = '0 auto';
+        mainTweetContainerRef.current.style.textAlign = 'center';
+
         mainTweetContainerRef.current.innerHTML = '';
         await twttr.widgets.createTweet(mainTweet.tweet_id, mainTweetContainerRef.current, {
           theme: 'dark',
           align: 'center',
+          conversation: 'none', // hide thread to keep height tighter
+          width,
         });
       } catch (error) {
         console.error('Error rendering Twitter embed:', error);
@@ -646,7 +741,7 @@ const engagementOffsetRef = useRef(0);
         mainTweetContainerRef.current.innerHTML = '';
       }
     };
-  }, [mainTweet?.tweet_id]);
+  }, [fetchMainQuoteViewSeries, mainTweet?.tweet_id]);
 
   // Derive per-category totals for the summary section (runs every render; memoized by dependencies).
   const categoryTotals = useMemo(() => {
@@ -791,20 +886,28 @@ const engagementOffsetRef = useRef(0);
 
   // Filtered chart data for each metric using global filter (combined view)
   const getFilteredChartData = (metric: MetricKey) => {
+    const minDate = chartMinDate ?? chartMinDateRef.current;
+
     // For engagement metrics (retweets / replies / quotes), prefer the
     // per-engagement time series based on actual engagement timestamps.
     if (metric === 'retweets' || metric === 'replies' || metric === 'quotes') {
-      const data = engagementSeries.map((point) => ({
+      let data = engagementSeries.map((point) => ({
         time: point.time,
         [metric]: point[metric],
         delta: metric === 'retweets' ? point.retweetsDelta : 
                metric === 'replies' ? point.repliesDelta : 
                point.quotesDelta,
       }));
+      if (minDate) {
+        data = data.filter((item) => {
+          const t = new Date(item.time);
+          return !Number.isNaN(t.getTime()) && t >= minDate;
+        });
+      }
       return data;
     }
 
-    const data = baseChartData.map((item) => {
+    let data = baseChartData.map((item) => {
       let value: number;
 
       if (globalFilter === 'all') {
@@ -843,14 +946,23 @@ const engagementOffsetRef = useRef(0);
       return timeA - timeB;
     });
 
+    if (minDate) {
+      data = data.filter((item) => {
+        const t = (item as any).timeRaw ?? new Date(item.time);
+        return t instanceof Date ? t >= minDate : false;
+      });
+    }
+
     return calculateDeltas(data, metric);
   };
 
   // Category-scoped chart data (used for main/influencer sections)
   const getCategoryChartData = (metric: MetricKey, category: 'main_twt' | 'influencer_twt') => {
+    const minDate = chartMinDate ?? chartMinDateRef.current;
+
     if (metric === 'retweets' || metric === 'replies' || metric === 'quotes') {
       const source = category === 'main_twt' ? mainEngagementSeries : influencerEngagementSeries;
-      return source.map((point) => ({
+      let data = source.map((point) => ({
         time: point.time,
         [metric]: point[metric],
         delta:
@@ -860,9 +972,16 @@ const engagementOffsetRef = useRef(0);
             ? point.repliesDelta
             : point.quotesDelta,
       }));
+      if (minDate) {
+        data = data.filter((item) => {
+          const t = new Date(item.time);
+          return !Number.isNaN(t.getTime()) && t >= minDate;
+        });
+      }
+      return data;
     }
 
-    const data = baseChartData.map((item) => {
+    let data = baseChartData.map((item) => {
       if (metric === 'quoteViews') {
         // Not available per category yet
         return { time: item.time, [metric]: 0 };
@@ -884,19 +1003,14 @@ const engagementOffsetRef = useRef(0);
       return timeA - timeB;
     });
 
-    return calculateDeltas(data, metric);
-  };
+    if (minDate) {
+      data = data.filter((item) => {
+        const t = (item as any).timeRaw ?? new Date(item.time);
+        return t instanceof Date ? t >= minDate : false;
+      });
+    }
 
-  const getSecondDegreeChartData = (
-    category: 'main_twt' | 'influencer_twt',
-    metric: keyof SecondDegreePoint
-  ) => {
-    const series = secondDegreeSeries[category] || [];
-    return series.map((p) => ({
-      time: new Date(p.time).toLocaleString(),
-      [metric]: p[metric] ?? 0,
-      delta: p[metric] ?? 0,
-    }));
+    return calculateDeltas(data, metric);
   };
 
   // Helper function to get tweet info by tweet_id
@@ -982,6 +1096,14 @@ const engagementOffsetRef = useRef(0);
       g.actions.some((a) => a.tweet_category === category)
     );
 
+  const importantPeopleMain = filterEngagementsByCategory('main_twt');
+  const importantPeopleInfluencer = filterEngagementsByCategory('influencer_twt');
+  const visibleImportantPeopleMain = importantPeopleMain.slice(0, peopleVisibleCount.main);
+  const visibleImportantPeopleInfluencer = importantPeopleInfluencer.slice(
+    0,
+    peopleVisibleCount.influencer
+  );
+
   // Helper to toggle expanded actions for a person
   const toggleExpandedActions = (userId: string) => {
     setExpandedActions(prev => {
@@ -993,6 +1115,35 @@ const engagementOffsetRef = useRef(0);
       }
       return newSet;
     });
+  };
+
+  // Collapsible + "show more people" controls for important people lists
+  const toggleImportantSection = (category: 'main' | 'influencer') => {
+    setImportantPeopleOpen((prev) => {
+      const nextOpen = !prev[category];
+      if (!nextOpen) {
+        // Reset visible count when collapsing
+        setPeopleVisibleCount((counts) => ({
+          ...counts,
+          [category]: INITIAL_IMPORTANT_VISIBLE,
+        }));
+      }
+      return { ...prev, [category]: nextOpen };
+    });
+  };
+
+  const showMorePeople = (category: 'main' | 'influencer', total: number) => {
+    setPeopleVisibleCount((prev) => ({
+      ...prev,
+      [category]: total,
+    }));
+  };
+
+  const showLessPeople = (category: 'main' | 'influencer') => {
+    setPeopleVisibleCount((prev) => ({
+      ...prev,
+      [category]: INITIAL_IMPORTANT_VISIBLE,
+    }));
   };
 
   return (
@@ -1041,8 +1192,10 @@ const engagementOffsetRef = useRef(0);
                 <div className="space-y-4">
                   <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
                     <p className="text-sm text-zinc-400 mb-2">Embedded tweet</p>
-                    <div className="bg-black rounded-lg p-4 border border-zinc-800">
-                      <div ref={mainTweetContainerRef} />
+                    <div className="bg-black rounded-lg p-4 border border-zinc-800 text-center">
+                      <div className="flex justify-center">
+                        <div className="max-w-5xl w-full flex justify-center mx-auto" ref={mainTweetContainerRef} />
+                      </div>
                       <div className="mt-3 text-right">
                         <a
                           href={
@@ -1061,39 +1214,39 @@ const engagementOffsetRef = useRef(0);
                   </div>
 
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                    <div className="glass rounded-xl p-4 border border-indigo-500/20">
-                      <p className="text-sm text-zinc-400">Views</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                    <div className="glass rounded-xl p-6 lg:col-span-2 md:col-span-2 border border-indigo-500/40 shadow-lg">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">Views</p>
+                      <p className="text-3xl font-black text-zinc-900 dark:text-white mt-2">
                         {(categoryTotals.main_twt?.views ?? 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="glass rounded-xl p-4">
-                      <p className="text-sm text-zinc-400">Likes</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                    <div className="glass rounded-lg p-3">
+                      <p className="text-xs text-zinc-500">Likes</p>
+                      <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                         {(categoryTotals.main_twt?.likes ?? 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="glass rounded-xl p-4">
-                      <p className="text-sm text-zinc-400">Retweets</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                    <div className="glass rounded-lg p-3">
+                      <p className="text-xs text-zinc-500">Retweets</p>
+                      <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                         {(categoryTotals.main_twt?.retweets ?? 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="glass rounded-xl p-4">
-                      <p className="text-sm text-zinc-400">Replies</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                    <div className="glass rounded-lg p-3">
+                      <p className="text-xs text-zinc-500">Replies</p>
+                      <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                         {(categoryTotals.main_twt?.replies ?? 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="glass rounded-xl p-4">
-                      <p className="text-sm text-zinc-400">Quote Tweets</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                    <div className="glass rounded-lg p-3">
+                      <p className="text-xs text-zinc-500">Quote Tweets</p>
+                      <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                         {(categoryTotals.main_twt?.quotes ?? 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="glass rounded-xl p-4">
-                      <p className="text-sm text-zinc-400">Quote Views</p>
-                      <p className="text-2xl font-bold text-white mt-1">
+                    <div className="glass rounded-lg p-3">
+                      <p className="text-xs text-zinc-500">Quote Views</p>
+                      <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                         {(categoryTotals.main_twt?.quote_views ?? 0).toLocaleString()}
                       </p>
                     </div>
@@ -1142,132 +1295,170 @@ const engagementOffsetRef = useRef(0);
                   <div className="glass rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-xl font-semibold text-white">Important People (Main)</h3>
-                      <span className="text-xs text-zinc-500">Sorted by importance, then followers</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-zinc-500">Sorted by importance, then followers</span>
+                        <button
+                          onClick={() => toggleImportantSection('main')}
+                          className="text-xs px-3 py-1 rounded-md border border-indigo-400 text-indigo-300 hover:text-indigo-200 hover:border-indigo-300 transition-colors"
+                        >
+                        <span
+                          className={`inline-block mr-1 transition-transform ${importantPeopleOpen.main ? 'rotate-90' : ''}`}
+                        >
+                          &gt;
+                        </span>
+                        {importantPeopleOpen.main ? 'Collapse' : 'Show more'}
+                        </button>
+                      </div>
                     </div>
-                    <div className="space-y-4">
-                      {filterEngagementsByCategory('main_twt').map((person) => {
-                        const isExpanded = expandedActions.has(person.user_id);
-                        const actionsToShow = isExpanded ? person.actions : person.actions.slice(0, 3);
-                        const hasMoreActions = person.actions.length > 3;
-                        const firstAction = person.actions[0];
-                        if (firstAction?.tweet_category !== 'main_twt') {
-                          // Skip if this person has no main tweet actions (safety)
-                        }
-                        return (
-                          <div
-                            key={person.user_id}
-                            className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
-                          >
-                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-sm font-semibold text-zinc-900">
-                                      {person.account_profile.name}
-                                    </span>
-                                    {person.account_profile.verified && (
-                                      <svg
-                                        className="w-4 h-4 text-indigo-500"
-                                        fill="currentColor"
-                                        viewBox="0 0 20 20"
-                                      >
-                                        <path
-                                          fillRule="evenodd"
-                                          d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                          clipRule="evenodd"
-                                        />
-                                      </svg>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="text-sm text-zinc-600 mb-1">@{person.account_profile.username}</div>
-                                {person.account_profile.bio && (
-                                  <div className="text-xs text-zinc-600 mb-2 line-clamp-2">
-                                    {person.account_profile.bio}
-                                  </div>
-                                )}
-                                <div className="text-xs text-zinc-500">
-                                  {person.account_profile.followers.toLocaleString()} followers
-                                </div>
-                              </div>
-
-                              <div className="md:w-2/5 flex flex-col gap-3 border-t border-zinc-200 pt-3 md:border-t-0 md:border-l md:pl-4">
-                                <div className="flex items-center justify-between md:justify-end">
-                                  <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                    Imp. Score - 
-                                  </span>
-                                  <span className="text-lg font-bold text-emerald-600">
-                                    {person.importance_score.toFixed(1)}
-                                  </span>
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between">
-                                    <div className="text-xs font-medium text-zinc-700">
-                                      Actions
+                    {importantPeopleOpen.main ? (
+                      <div className="space-y-4">
+                        {visibleImportantPeopleMain.map((person) => {
+                          const isExpanded = expandedActions.has(person.user_id);
+                          const actionsToShow = isExpanded ? person.actions : person.actions.slice(0, 3);
+                          const hasMoreActions = person.actions.length > 3;
+                          const firstAction = person.actions[0];
+                          if (firstAction?.tweet_category !== 'main_twt') {
+                            // Skip if this person has no main tweet actions (safety)
+                          }
+                          return (
+                            <div
+                              key={person.user_id}
+                              className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                            >
+                              <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm font-semibold text-zinc-900">
+                                        {person.account_profile.name}
+                                      </span>
+                                      {person.account_profile.verified && (
+                                        <svg
+                                          className="w-4 h-4 text-indigo-500"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                      )}
                                     </div>
-                                    {hasMoreActions && (
-                                      <button
-                                        onClick={() => toggleExpandedActions(person.user_id)}
-                                        className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
-                                      >
-                                        {isExpanded ? 'Show Less' : 'Show All'}
-                                      </button>
-                                    )}
                                   </div>
-                                  <div className={`space-y-0.5 ${isExpanded && hasMoreActions ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
-                                    {actionsToShow.map((action, idx) => {
-                                      if (action.tweet_category !== 'main_twt') return null;
-                                      const tweetInfo = getTweetInfo(action.tweet_id);
-                                      const hasEngagementTweet =
-                                        (action.action_type === 'quote' || action.action_type === 'reply') &&
-                                        !!action.engagement_tweet_id;
-                                      
-                                      const baseUsername = hasEngagementTweet
-                                        ? person.account_profile.username
-                                        : tweetInfo?.author_username;
-                                      
-                                      const targetTweetId = hasEngagementTweet
-                                        ? action.engagement_tweet_id!
-                                        : action.tweet_id;
-                                      
-                                      const tweetIdShort = targetTweetId.slice(-8);
-                                      
-                                      const tweetUrl = baseUsername
-                                        ? `https://x.com/${baseUsername}/status/${targetTweetId}`
-                                        : `https://x.com/i/web/status/${targetTweetId}`;
-                                      
-                                      return (
-                                        <div key={idx} className="ml-2 text-xs text-zinc-700">
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-zinc-500">• </span>
-                                            <span className="text-zinc-600">
-                                              {action.action_type === 'reply' && (hasEngagementTweet ? 'Replied ' : 'Replied to ')}
-                                              {action.action_type === 'retweet' && 'Retweeted '}
-                                              {action.action_type === 'quote' && (hasEngagementTweet ? 'Quoted ' : 'Quoted tweet ')}
-                                            </span>
-                                            <a
-                                              href={tweetUrl}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="text-indigo-600 hover:text-indigo-700 hover:underline"
-                                            >
-                                              Tweet {tweetIdShort}
-                                            </a>
+                                  <div className="text-sm text-zinc-600 mb-1">@{person.account_profile.username}</div>
+                                  {person.account_profile.bio && (
+                                    <div className="text-xs text-zinc-600 mb-2 line-clamp-2">
+                                      {person.account_profile.bio}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-zinc-500">
+                                    {person.account_profile.followers.toLocaleString()} followers
+                                  </div>
+                                </div>
+
+                                <div className="md:w-2/5 flex flex-col gap-3 border-t border-zinc-200 pt-3 md:border-t-0 md:border-l md:pl-4">
+                                  <div className="flex items-center justify-between md:justify-end">
+                                    <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                                      Imp. Score - 
+                                    </span>
+                                    <span className="text-lg font-bold text-emerald-600">
+                                      {person.importance_score.toFixed(1)}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                      <div className="text-xs font-medium text-zinc-700">
+                                        Actions
+                                      </div>
+                                      {hasMoreActions && (
+                                        <button
+                                          onClick={() => toggleExpandedActions(person.user_id)}
+                                          className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
+                                        >
+                                          {isExpanded ? 'Show Less' : 'Show All'}
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className={`space-y-0.5 ${isExpanded && hasMoreActions ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
+                                      {actionsToShow.map((action, idx) => {
+                                        if (action.tweet_category !== 'main_twt') return null;
+                                        const tweetInfo = getTweetInfo(action.tweet_id);
+                                        const hasEngagementTweet =
+                                          (action.action_type === 'quote' || action.action_type === 'reply') &&
+                                          !!action.engagement_tweet_id;
+                                        
+                                        const baseUsername = hasEngagementTweet
+                                          ? person.account_profile.username
+                                          : tweetInfo?.author_username;
+                                        
+                                        const targetTweetId = hasEngagementTweet
+                                          ? action.engagement_tweet_id!
+                                          : action.tweet_id;
+                                        
+                                        const tweetIdShort = targetTweetId.slice(-8);
+                                        
+                                        const tweetUrl = baseUsername
+                                          ? `https://x.com/${baseUsername}/status/${targetTweetId}`
+                                          : `https://x.com/i/web/status/${targetTweetId}`;
+                                        
+                                        return (
+                                          <div key={idx} className="ml-2 text-xs text-zinc-700">
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-zinc-500">• </span>
+                                              <span className="text-zinc-600">
+                                                {action.action_type === 'reply' && (hasEngagementTweet ? 'Replied ' : 'Replied to ')}
+                                                {action.action_type === 'retweet' && 'Retweeted '}
+                                                {action.action_type === 'quote' && (hasEngagementTweet ? 'Quoted ' : 'Quoted tweet ')}
+                                              </span>
+                                              <a
+                                                href={tweetUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-indigo-600 hover:text-indigo-700 hover:underline"
+                                              >
+                                                Tweet {tweetIdShort}
+                                              </a>
+                                            </div>
                                           </div>
-                                        </div>
-                                      );
-                                    })}
+                                        );
+                                      })}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
+                          );
+                        })}
+                        {importantPeopleMain.length === 0 && (
+                          <div className="text-center text-zinc-500">No engagements on main tweet yet.</div>
+                        )}
+                        {importantPeopleMain.length > visibleImportantPeopleMain.length && (
+                          <div className="text-center">
+                            <button
+                              onClick={() => showMorePeople('main', importantPeopleMain.length)}
+                              className="text-sm text-indigo-400 hover:text-indigo-300"
+                            >
+                              Show more people
+                            </button>
                           </div>
-                        );
-                      })}
-                      {filterEngagementsByCategory('main_twt').length === 0 && (
-                        <div className="text-center text-zinc-500">No engagements on main tweet yet.</div>
-                      )}
-                    </div>
+                        )}
+                        {importantPeopleMain.length > INITIAL_IMPORTANT_VISIBLE &&
+                          importantPeopleMain.length === visibleImportantPeopleMain.length && (
+                            <div className="text-center">
+                              <button
+                                onClick={() => showLessPeople('main')}
+                                className="text-sm text-indigo-400 hover:text-indigo-300"
+                              >
+                                Show less
+                              </button>
+                            </div>
+                          )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-zinc-500">Collapsed. Click “Show more” to view important people.</div>
+                    )}
                   </div>
 
                   <div className="glass rounded-2xl p-6 border border-zinc-800">
@@ -1314,36 +1505,11 @@ const engagementOffsetRef = useRef(0);
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div className="mt-4">
                       <MetricChart
-                        title="Quote Views (Main)"
-                        metric="views"
-                        chartData={getSecondDegreeChartData('main_twt', 'views')}
-                      />
-                      <MetricChart
-                        title="Quote Likes (Main)"
-                        metric="likes"
-                        chartData={getSecondDegreeChartData('main_twt', 'likes')}
-                      />
-                      <MetricChart
-                        title="Quote Retweets (Main)"
-                        metric="retweets"
-                        chartData={getSecondDegreeChartData('main_twt', 'retweets')}
-                      />
-                      <MetricChart
-                        title="Quote Replies (Main)"
-                        metric="replies"
-                        chartData={getSecondDegreeChartData('main_twt', 'replies')}
-                      />
-                      <MetricChart
-                        title="2nd Order Retweets (Main)"
-                        metric="second_order_retweets"
-                        chartData={getSecondDegreeChartData('main_twt', 'second_order_retweets')}
-                      />
-                      <MetricChart
-                        title="2nd Order Replies (Main)"
-                        metric="second_order_replies"
-                        chartData={getSecondDegreeChartData('main_twt', 'second_order_replies')}
+                        title="Quote Views from Quote Tweets (Main)"
+                        metric="quoteViews"
+                        chartData={mainQuoteViewSeries}
                       />
                     </div>
                   </div>
@@ -1359,39 +1525,39 @@ const engagementOffsetRef = useRef(0);
             <div className="glass rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Influencer Tweets</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-                <div className="glass rounded-xl p-4 border border-indigo-500/20">
-                  <p className="text-sm text-zinc-400">Views</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                <div className="glass rounded-xl p-6 lg:col-span-2 md:col-span-2 border border-indigo-500/40 shadow-lg">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">Views</p>
+                  <p className="text-3xl font-black text-zinc-900 dark:text-white mt-2">
                     {(categoryTotals.influencer_twt?.views ?? 0).toLocaleString()}
                   </p>
                 </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-sm text-zinc-400">Likes</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                <div className="glass rounded-lg p-3">
+                  <p className="text-xs text-zinc-500">Likes</p>
+                  <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                     {(categoryTotals.influencer_twt?.likes ?? 0).toLocaleString()}
                   </p>
                 </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-sm text-zinc-400">Retweets</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                <div className="glass rounded-lg p-3">
+                  <p className="text-xs text-zinc-500">Retweets</p>
+                  <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                     {(categoryTotals.influencer_twt?.retweets ?? 0).toLocaleString()}
                   </p>
                 </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-sm text-zinc-400">Replies</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                <div className="glass rounded-lg p-3">
+                  <p className="text-xs text-zinc-500">Replies</p>
+                  <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                     {(categoryTotals.influencer_twt?.replies ?? 0).toLocaleString()}
                   </p>
                 </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-sm text-zinc-400">Quote Tweets</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                <div className="glass rounded-lg p-3">
+                  <p className="text-xs text-zinc-500">Quote Tweets</p>
+                  <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                     {(categoryTotals.influencer_twt?.quotes ?? 0).toLocaleString()}
                   </p>
                 </div>
-                <div className="glass rounded-xl p-4">
-                  <p className="text-sm text-zinc-400">Quote Views</p>
-                  <p className="text-2xl font-bold text-white mt-1">
+                <div className="glass rounded-lg p-3">
+                  <p className="text-xs text-zinc-500">Quote Views</p>
+                  <p className="text-xl font-semibold text-zinc-800 dark:text-white/80 mt-1">
                     {(categoryTotals.influencer_twt?.quote_views ?? 0).toLocaleString()}
                   </p>
                 </div>
@@ -1440,128 +1606,166 @@ const engagementOffsetRef = useRef(0);
               <div className="glass rounded-2xl p-6 mt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xl font-semibold text-white">Important People (Influencer)</h3>
-                  <span className="text-xs text-zinc-500">Sorted by importance, then followers</span>
-                </div>
-                <div className="space-y-4">
-                  {filterEngagementsByCategory('influencer_twt').map((person) => {
-                    const isExpanded = expandedActions.has(person.user_id);
-                    const actionsToShow = isExpanded ? person.actions : person.actions.slice(0, 3);
-                    const hasMoreActions = person.actions.length > 3;
-                    return (
-                      <div
-                        key={person.user_id}
-                        className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-zinc-500">Sorted by importance, then followers</span>
+                    <button
+                      onClick={() => toggleImportantSection('influencer')}
+                      className="text-xs px-3 py-1 rounded-md border border-indigo-400 text-indigo-300 hover:text-indigo-200 hover:border-indigo-300 transition-colors"
+                    >
+                      <span
+                        className={`inline-block mr-1 transition-transform ${importantPeopleOpen.influencer ? 'rotate-90' : ''}`}
                       >
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm font-semibold text-zinc-900">
-                                  {person.account_profile.name}
-                                </span>
-                                {person.account_profile.verified && (
-                                  <svg
-                                    className="w-4 h-4 text-indigo-500"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-sm text-zinc-600 mb-1">@{person.account_profile.username}</div>
-                            {person.account_profile.bio && (
-                              <div className="text-xs text-zinc-600 mb-2 line-clamp-2">
-                                {person.account_profile.bio}
-                              </div>
-                            )}
-                            <div className="text-xs text-zinc-500">
-                              {person.account_profile.followers.toLocaleString()} followers
-                            </div>
-                          </div>
-
-                          <div className="md:w-2/5 flex flex-col gap-3 border-t border-zinc-200 pt-3 md:border-t-0 md:border-l md:pl-4">
-                            <div className="flex items-center justify-between md:justify-end">
-                              <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
-                                Imp. Score - 
-                              </span>
-                              <span className="text-lg font-bold text-emerald-600">
-                                {person.importance_score.toFixed(1)}
-                              </span>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="flex items-center justify-between">
-                                <div className="text-xs font-medium text-zinc-700">
-                                  Actions
+                        &gt;
+                      </span>
+                      {importantPeopleOpen.influencer ? 'Collapse' : 'Show more'}
+                    </button>
+                  </div>
+                </div>
+                {importantPeopleOpen.influencer ? (
+                  <div className="space-y-4">
+                    {visibleImportantPeopleInfluencer.map((person) => {
+                      const isExpanded = expandedActions.has(person.user_id);
+                      const actionsToShow = isExpanded ? person.actions : person.actions.slice(0, 3);
+                      const hasMoreActions = person.actions.length > 3;
+                      return (
+                        <div
+                          key={person.user_id}
+                          className="rounded-xl border border-zinc-200 bg-zinc-50 p-4"
+                        >
+                          <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-sm font-semibold text-zinc-900">
+                                    {person.account_profile.name}
+                                  </span>
+                                  {person.account_profile.verified && (
+                                    <svg
+                                      className="w-4 h-4 text-indigo-500"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                  )}
                                 </div>
-                                {hasMoreActions && (
-                                  <button
-                                    onClick={() => toggleExpandedActions(person.user_id)}
-                                    className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
-                                  >
-                                    {isExpanded ? 'Show Less' : 'Show All'}
-                                  </button>
-                                )}
                               </div>
-                              <div className={`space-y-0.5 ${isExpanded && hasMoreActions ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
-                                {actionsToShow.map((action, idx) => {
-                                  if (action.tweet_category !== 'influencer_twt') return null;
-                                  const tweetInfo = getTweetInfo(action.tweet_id);
-                                  const hasEngagementTweet =
-                                    (action.action_type === 'quote' || action.action_type === 'reply') &&
-                                    !!action.engagement_tweet_id;
-                                  
-                                  const baseUsername = hasEngagementTweet
-                                    ? person.account_profile.username
-                                    : tweetInfo?.author_username;
-                                  
-                                  const targetTweetId = hasEngagementTweet
-                                    ? action.engagement_tweet_id!
-                                    : action.tweet_id;
-                                  
-                                  const tweetIdShort = targetTweetId.slice(-8);
-                                  
-                                  const tweetUrl = baseUsername
-                                    ? `https://x.com/${baseUsername}/status/${targetTweetId}`
-                                    : `https://x.com/i/web/status/${targetTweetId}`;
-                                  
-                                  return (
-                                    <div key={idx} className="ml-2 text-xs text-zinc-700">
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-zinc-500">• </span>
-                                        <span className="text-zinc-600">
-                                          {action.action_type === 'reply' && (hasEngagementTweet ? 'Replied ' : 'Replied to ')}
-                                          {action.action_type === 'retweet' && 'Retweeted '}
-                                          {action.action_type === 'quote' && (hasEngagementTweet ? 'Quoted ' : 'Quoted tweet ')}
-                                        </span>
-                                        <a
-                                          href={tweetUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-indigo-600 hover:text-indigo-700 hover:underline"
-                                        >
-                                          Tweet {tweetIdShort}
-                                        </a>
+                              <div className="text-sm text-zinc-600 mb-1">@{person.account_profile.username}</div>
+                              {person.account_profile.bio && (
+                                <div className="text-xs text-zinc-600 mb-2 line-clamp-2">
+                                  {person.account_profile.bio}
+                                </div>
+                              )}
+                              <div className="text-xs text-zinc-500">
+                                {person.account_profile.followers.toLocaleString()} followers
+                              </div>
+                            </div>
+
+                            <div className="md:w-2/5 flex flex-col gap-3 border-t border-zinc-200 pt-3 md:border-t-0 md:border-l md:pl-4">
+                              <div className="flex items-center justify-between md:justify-end">
+                                <span className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                                  Imp. Score - 
+                                </span>
+                                <span className="text-lg font-bold text-emerald-600">
+                                  {person.importance_score.toFixed(1)}
+                                </span>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-xs font-medium text-zinc-700">
+                                    Actions
+                                  </div>
+                                  {hasMoreActions && (
+                                    <button
+                                      onClick={() => toggleExpandedActions(person.user_id)}
+                                      className="text-xs text-indigo-600 hover:text-indigo-700 transition-colors"
+                                    >
+                                      {isExpanded ? 'Show Less' : 'Show All'}
+                                    </button>
+                                  )}
+                                </div>
+                                <div className={`space-y-0.5 ${isExpanded && hasMoreActions ? 'max-h-96 overflow-y-auto pr-2' : ''}`}>
+                                  {actionsToShow.map((action, idx) => {
+                                    if (action.tweet_category !== 'influencer_twt') return null;
+                                    const tweetInfo = getTweetInfo(action.tweet_id);
+                                    const hasEngagementTweet =
+                                      (action.action_type === 'quote' || action.action_type === 'reply') &&
+                                      !!action.engagement_tweet_id;
+                                    
+                                    const baseUsername = hasEngagementTweet
+                                      ? person.account_profile.username
+                                      : tweetInfo?.author_username;
+                                    
+                                    const targetTweetId = hasEngagementTweet
+                                      ? action.engagement_tweet_id!
+                                      : action.tweet_id;
+                                    
+                                    const tweetIdShort = targetTweetId.slice(-8);
+                                    
+                                    const tweetUrl = baseUsername
+                                      ? `https://x.com/${baseUsername}/status/${targetTweetId}`
+                                      : `https://x.com/i/web/status/${targetTweetId}`;
+                                    
+                                    return (
+                                      <div key={idx} className="ml-2 text-xs text-zinc-700">
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-zinc-500">• </span>
+                                          <span className="text-zinc-600">
+                                            {action.action_type === 'reply' && (hasEngagementTweet ? 'Replied ' : 'Replied to ')}
+                                            {action.action_type === 'retweet' && 'Retweeted '}
+                                            {action.action_type === 'quote' && (hasEngagementTweet ? 'Quoted ' : 'Quoted tweet ')}
+                                          </span>
+                                          <a
+                                            href={tweetUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-indigo-600 hover:text-indigo-700 hover:underline"
+                                          >
+                                            Tweet {tweetIdShort}
+                                          </a>
+                                        </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
+                      );
+                    })}
+                    {importantPeopleInfluencer.length === 0 && (
+                      <div className="text-center text-zinc-500">No engagements on influencer tweets yet.</div>
+                    )}
+                    {importantPeopleInfluencer.length > visibleImportantPeopleInfluencer.length && (
+                      <div className="text-center">
+                        <button
+                          onClick={() => showMorePeople('influencer', importantPeopleInfluencer.length)}
+                          className="text-sm text-indigo-400 hover:text-indigo-300"
+                        >
+                          Show more people
+                        </button>
                       </div>
-                    );
-                  })}
-                  {filterEngagementsByCategory('influencer_twt').length === 0 && (
-                    <div className="text-center text-zinc-500">No engagements on influencer tweets yet.</div>
-                  )}
-                </div>
+                    )}
+                    {importantPeopleInfluencer.length > INITIAL_IMPORTANT_VISIBLE &&
+                      importantPeopleInfluencer.length === visibleImportantPeopleInfluencer.length && (
+                        <div className="text-center">
+                          <button
+                            onClick={() => showLessPeople('influencer')}
+                            className="text-sm text-indigo-400 hover:text-indigo-300"
+                          >
+                            Show less
+                          </button>
+                        </div>
+                      )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-zinc-500">Collapsed. Click “Show more” to view important people.</div>
+                )}
               </div>
 
               <div className="glass rounded-2xl p-6 border border-zinc-800 mt-6">
@@ -1608,38 +1812,6 @@ const engagementOffsetRef = useRef(0);
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  <MetricChart
-                    title="Quote Views (Influencer)"
-                    metric="views"
-                    chartData={getSecondDegreeChartData('influencer_twt', 'views')}
-                  />
-                  <MetricChart
-                    title="Quote Likes (Influencer)"
-                    metric="likes"
-                    chartData={getSecondDegreeChartData('influencer_twt', 'likes')}
-                  />
-                  <MetricChart
-                    title="Quote Retweets (Influencer)"
-                    metric="retweets"
-                    chartData={getSecondDegreeChartData('influencer_twt', 'retweets')}
-                  />
-                  <MetricChart
-                    title="Quote Replies (Influencer)"
-                    metric="replies"
-                    chartData={getSecondDegreeChartData('influencer_twt', 'replies')}
-                  />
-                  <MetricChart
-                    title="2nd Order Retweets (Influencer)"
-                    metric="second_order_retweets"
-                    chartData={getSecondDegreeChartData('influencer_twt', 'second_order_retweets')}
-                  />
-                  <MetricChart
-                    title="2nd Order Replies (Influencer)"
-                    metric="second_order_replies"
-                    chartData={getSecondDegreeChartData('influencer_twt', 'second_order_replies')}
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -1648,6 +1820,18 @@ const engagementOffsetRef = useRef(0);
           <div className="glass rounded-2xl p-6 mb-6">
             <h2 className="text-xl font-semibold text-white mb-4">Combined Metrics</h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+              <div className="glass rounded-xl p-6 lg:col-span-2 md:col-span-2 border border-indigo-500/40 shadow-lg">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white">First-degree Views</p>
+                <p className="text-3xl font-black text-zinc-900 dark:text-white mt-2">
+                  {data.metrics.total_views.toLocaleString()}
+                </p>
+              </div>
+              <div className="glass rounded-xl p-4">
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Total Views from Quote Twt</p>
+                <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-1">
+                  {(data.metrics.total_quote_views ?? 0).toLocaleString()}
+                </p>
+              </div>
               <div className="glass rounded-xl p-4">
                 <p className="text-sm text-zinc-400">Total Likes</p>
                 <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_likes.toLocaleString()}</p>
@@ -1666,16 +1850,6 @@ const engagementOffsetRef = useRef(0);
                 <p className="text-sm text-zinc-400">Total Quote Tweets</p>
                 <p className="text-2xl font-bold text-white mt-1">
                   {data.metrics.total_quotes.toLocaleString()}
-                </p>
-              </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">Total Views</p>
-                <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_views.toLocaleString()}</p>
-              </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">Total Views from Quote Twt</p>
-                <p className="text-2xl font-bold text-white mt-1">
-                  {(data.metrics.total_quote_views ?? 0).toLocaleString()}
                 </p>
               </div>
               <div className="glass rounded-xl p-4">

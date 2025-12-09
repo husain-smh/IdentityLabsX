@@ -3,6 +3,7 @@ import {
   getEngagementTimeSeriesByCampaign,
   getLatestEngagementTimestamp,
 } from '@/lib/models/socap/engagements';
+import { getCampaignById } from '@/lib/models/socap/campaigns';
 
 /**
  * GET /socap/campaigns/:id/engagements/timeseries
@@ -32,7 +33,19 @@ export async function GET(
     const startDateParam = searchParams.get('start_date');
     const endDateParam = searchParams.get('end_date');
 
-    const startDate = startDateParam ? new Date(startDateParam) : undefined;
+    const campaign = await getCampaignById(id);
+    if (!campaign) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign not found' },
+        { status: 404 }
+      );
+    }
+
+    const startDate = startDateParam
+      ? new Date(startDateParam)
+      : campaign.chart_min_date
+      ? new Date(campaign.chart_min_date)
+      : undefined;
     const endDate = endDateParam ? new Date(endDateParam) : undefined;
 
     const actionType = searchParams.get('action_type') as

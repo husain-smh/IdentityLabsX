@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getQuoteTweetsCollection } from '@/lib/models/socap/quote-tweets';
 import { getSecondOrderEngagementsCollection } from '@/lib/models/socap/second-order-engagements';
+import { getCampaignById } from '@/lib/models/socap/campaigns';
 
 type Category = 'main_twt' | 'influencer_twt' | 'investor_twt' | undefined;
 
@@ -44,12 +45,27 @@ export async function GET(
   try {
     const { id: campaignId } = await params;
 
+    const campaign = await getCampaignById(campaignId);
+    if (!campaign) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign not found' },
+        { status: 404 }
+      );
+    }
+
+    const minDate = campaign.chart_min_date ? new Date(campaign.chart_min_date) : null;
+
     const quoteTweetsCol = await getQuoteTweetsCollection();
     const secondOrderCol = await getSecondOrderEngagementsCollection();
 
     const quoteAgg = await quoteTweetsCol
       .aggregate([
-        { $match: { campaign_id: campaignId } },
+        {
+          $match: {
+            campaign_id: campaignId,
+            ...(minDate ? { created_at: { $gte: minDate } } : {}),
+          },
+        },
         {
           $addFields: {
             bucket: { $dateTrunc: { date: '$created_at', unit: 'hour' } },
@@ -69,7 +85,12 @@ export async function GET(
 
     const secondAgg = await secondOrderCol
       .aggregate([
-        { $match: { campaign_id: campaignId } },
+        {
+          $match: {
+            campaign_id: campaignId,
+            ...(minDate ? { timestamp: { $gte: minDate } } : {}),
+          },
+        },
         {
           $addFields: {
             bucket: { $dateTrunc: { date: '$timestamp', unit: 'hour' } },

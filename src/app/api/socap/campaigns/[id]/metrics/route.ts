@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMetricSnapshotsByCampaign } from '@/lib/models/socap/metric-snapshots';
+import { getCampaignById } from '@/lib/models/socap/campaigns';
 
 /**
  * GET /socap/campaigns/:id/metrics
@@ -16,6 +17,14 @@ export async function GET(
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
     
+    const campaign = await getCampaignById(id);
+    if (!campaign) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign not found' },
+        { status: 404 }
+      );
+    }
+
     const options: {
       startDate?: Date;
       endDate?: Date;
@@ -26,6 +35,8 @@ export async function GET(
     
     if (startDate) {
       options.startDate = new Date(startDate);
+    } else if (campaign.chart_min_date) {
+      options.startDate = new Date(campaign.chart_min_date);
     }
     
     if (endDate) {
