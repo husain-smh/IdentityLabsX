@@ -68,7 +68,7 @@ export default function TwitterEngagement() {
       if (response.ok) {
         setMessage({
           type: 'success',
-          text: data.message || 'Monitoring started successfully! Metrics will be collected every 30 minutes for 24 hours.'
+          text: data.message || 'Monitoring started successfully! Metrics will be collected every 5 minutes for 72 hours.'
         });
         // Extract tweet ID and navigate to monitoring dashboard
         const tweetIdMatch = tweetUrl.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/i);
@@ -514,7 +514,7 @@ export default function TwitterEngagement() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Start 24h Monitoring
+                    Start 72h Monitoring
                     </>
                   )}
                 </button>

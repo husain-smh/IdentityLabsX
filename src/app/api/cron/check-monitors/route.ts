@@ -20,13 +20,14 @@ export async function GET() {
     // Process each active job
     for (const job of activeJobs) {
       try {
-        // Check if monitoring period (24 hours) has passed
+        // Check if monitoring period (72 hours) has passed
         const startedAt = new Date(job.started_at);
-        const endTime = new Date(startedAt.getTime() + 24 * 60 * 60 * 1000);
+        const monitorDurationMs = 72 * 60 * 60 * 1000;
+        const endTime = new Date(startedAt.getTime() + monitorDurationMs);
         const shouldComplete = now >= endTime;
 
         if (shouldComplete) {
-          // Mark as completed if 24 hours have passed
+          // Mark as completed if 72 hours have passed
           await completeMonitoringJob(job.tweet_id);
           completed++;
           continue;
@@ -57,7 +58,7 @@ export async function GET() {
 
         // Check again after storing (in case it took time)
         const checkAgain = new Date();
-        const endTimeAfter = new Date(startedAt.getTime() + 24 * 60 * 60 * 1000);
+        const endTimeAfter = new Date(startedAt.getTime() + monitorDurationMs);
         if (checkAgain >= endTimeAfter) {
           await completeMonitoringJob(job.tweet_id);
           completed++;

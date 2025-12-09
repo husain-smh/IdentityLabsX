@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 import { getTweetsByCampaign } from '@/lib/models/socap/tweets';
-import {
-  getEngagementCountByCampaign,
-  getUniqueEngagersByCampaign,
-  getAllUniqueEngagersByCampaign,
-} from '@/lib/models/socap/engagements';
+import { getAllUniqueEngagersByCampaign } from '@/lib/models/socap/engagements';
 
 /**
  * GET /socap/campaigns/:id/dashboard
@@ -68,9 +64,8 @@ export async function GET(
       }
     }
     
-    // Get engagement counts
-    const totalEngagements = await getEngagementCountByCampaign(id);
-    const uniqueEngagers = await getUniqueEngagersByCampaign(id);
+    // Engagement total = interactions (likes, retweets, replies, quote tweets)
+    const totalEngagements = totalLikes + totalRetweets + totalReplies + totalQuotes;
     
     // Get ALL unique engagers (one per user) with their aggregated data
     // This ensures we can display all accounts that have engaged
@@ -124,7 +119,6 @@ export async function GET(
           total_views: totalViews,
           total_quote_views: totalQuoteViews,
           total_engagements: totalEngagements,
-          unique_engagers: uniqueEngagers,
         },
         category_totals: categoryTotals,
         tweets: tweets.map((t) => ({

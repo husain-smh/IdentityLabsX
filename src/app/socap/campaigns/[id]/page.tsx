@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
+import SocapNavbar from '@/components/SocapNavbar';
 import { Bell } from 'lucide-react';
 import {
   ComposedChart,
@@ -51,7 +51,6 @@ interface DashboardData {
     total_views: number;
     total_quote_views?: number;
     total_engagements: number;
-    unique_engagers: number;
   };
   latest_engagements: any[];
   category_breakdown: Record<string, number>;
@@ -644,7 +643,8 @@ const engagementOffsetRef = useRef(0);
         fetchMetrics(minDate),
         fetchEngagementSeries(minDate),
         fetchCategoryEngagementSeries('main_twt', minDate),
-        fetchCategoryEngagementSeries('influencer_twt', minDate),
+        // NOTE: influencer-specific fetch paused temporarily to avoid hitting the DB
+        // fetchCategoryEngagementSeries('influencer_twt', minDate),
         fetchSecondDegree(),
         fetchMainQuoteViewSeries(),
       ]);
@@ -668,7 +668,8 @@ const engagementOffsetRef = useRef(0);
         fetchMetrics(minDate),
         fetchEngagementSeries(minDate),
         fetchCategoryEngagementSeries('main_twt', minDate),
-        fetchCategoryEngagementSeries('influencer_twt', minDate),
+        // NOTE: influencer-specific fetch paused temporarily to avoid hitting the DB
+        // fetchCategoryEngagementSeries('influencer_twt', minDate),
         fetchSecondDegree(),
         fetchMainQuoteViewSeries(),
       ]);
@@ -785,7 +786,7 @@ const engagementOffsetRef = useRef(0);
   if (loading) {
     return (
       <div className="min-h-screen bg-black">
-        <Navbar />
+        <SocapNavbar />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
         <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
           <div className="text-center">
@@ -800,7 +801,7 @@ const engagementOffsetRef = useRef(0);
   if (!data) {
     return (
       <div className="min-h-screen bg-black">
-        <Navbar />
+        <SocapNavbar />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
         <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
           <div className="text-center">
@@ -1148,7 +1149,7 @@ const engagementOffsetRef = useRef(0);
 
   return (
     <div className="min-h-screen bg-black">
-      <Navbar />
+      <SocapNavbar />
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
       
@@ -1491,18 +1492,6 @@ const engagementOffsetRef = useRef(0);
                           {(secondDegreeTotals.main_twt.replies || 0).toLocaleString()}
                         </p>
                       </div>
-                      <div className="glass rounded-xl p-3">
-                        <p className="text-xs text-zinc-400">2nd Retweets</p>
-                        <p className="text-xl font-bold text-white mt-1">
-                          {(secondDegreeTotals.main_twt.second_order_retweets || 0).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="glass rounded-xl p-3">
-                        <p className="text-xs text-zinc-400">2nd Replies</p>
-                        <p className="text-xl font-bold text-white mt-1">
-                          {(secondDegreeTotals.main_twt.second_order_replies || 0).toLocaleString()}
-                        </p>
-                      </div>
                     </div>
 
                     <div className="mt-4">
@@ -1520,7 +1509,8 @@ const engagementOffsetRef = useRef(0);
             </div>
           </div>
 
-          {/* ===== Influencer Tweets Section ===== */}
+          {/* ===== Influencer Tweets Section (temporarily hidden; keep for quick restore) ===== */}
+          {/*
           <div className="space-y-6 mb-10">
             <div className="glass rounded-2xl p-6">
               <h2 className="text-xl font-semibold text-white mb-4">Influencer Tweets</h2>
@@ -1798,23 +1788,12 @@ const engagementOffsetRef = useRef(0);
                       {(secondDegreeTotals.influencer_twt.replies || 0).toLocaleString()}
                     </p>
                   </div>
-                  <div className="glass rounded-xl p-3">
-                    <p className="text-xs text-zinc-400">2nd Retweets</p>
-                    <p className="text-xl font-bold text-white mt-1">
-                      {(secondDegreeTotals.influencer_twt.second_order_retweets || 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="glass rounded-xl p-3">
-                    <p className="text-xs text-zinc-400">2nd Replies</p>
-                    <p className="text-xl font-bold text-white mt-1">
-                      {(secondDegreeTotals.influencer_twt.second_order_replies || 0).toLocaleString()}
-                    </p>
-                  </div>
                 </div>
 
               </div>
             </div>
           </div>
+          */}
 
           {/* ===== Combined Metrics (kept) ===== */}
           <div className="glass rounded-2xl p-6 mb-6">
@@ -1855,10 +1834,6 @@ const engagementOffsetRef = useRef(0);
               <div className="glass rounded-xl p-4">
                 <p className="text-sm text-zinc-400">Total Engagements</p>
                 <p className="text-2xl font-bold text-white mt-1">{data.metrics.total_engagements.toLocaleString()}</p>
-              </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">Unique Engagers</p>
-                <p className="text-2xl font-bold text-white mt-1">{data.metrics.unique_engagers.toLocaleString()}</p>
               </div>
             </div>
 

@@ -55,14 +55,14 @@ export default function Home() {
     },
     {
       name: 'Monitored Tweets',
-      description: 'Track real-time engagement metrics for tweets over 24 hours. View all active and completed monitoring jobs.',
+      description: 'Track real-time engagement metrics for tweets over 72 hours. View all active and completed monitoring jobs.',
       href: '/monitor',
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      features: ['24h monitoring', 'Real-time metrics', 'Active jobs tracking'],
+      features: ['72h monitoring', 'Real-time metrics', 'Active jobs tracking'],
       gradient: 'from-pink-500 to-rose-500'
     }
   ];

@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Monitoring started successfully. Metrics will be collected every 30 minutes for 24 hours.',
+    message: 'Monitoring started successfully. Metrics will be collected every 5 minutes for 72 hours.',
       tweet_id: tweetId,
       job: {
         tweet_id: job.tweet_id,

@@ -200,7 +200,7 @@ export default function MonitoringDashboard() {
                   Tweet Monitoring
                 </h1>
                 <p className="text-zinc-400">
-                  Real-time engagement metrics over 24 hours
+                  Real-time engagement metrics over 72 hours
                 </p>
               </div>
               <div className="flex items-center gap-3">

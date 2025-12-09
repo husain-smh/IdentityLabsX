@@ -62,18 +62,19 @@ export async function createMonitoringJob(
 }
 
 /**
- * Get active monitoring jobs that are still within 24-hour window
+ * Get active monitoring jobs that are still within 72-hour window
  */
 export async function getActiveMonitoringJobs(): Promise<MonitoringJob[]> {
   const collection = await getMonitoringJobsCollection();
   const now = new Date();
-  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const monitorDurationMs = 72 * 60 * 60 * 1000;
+  const windowStart = new Date(now.getTime() - monitorDurationMs);
   
-  // Find jobs that are active and started within the last 24 hours
+  // Find jobs that are active and started within the last 72 hours
   return await collection
     .find({
       status: 'active',
-      started_at: { $gte: twentyFourHoursAgo }
+      started_at: { $gte: windowStart }
     })
     .toArray();
 }

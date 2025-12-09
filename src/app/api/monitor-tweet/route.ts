@@ -14,9 +14,9 @@ export async function GET(request: NextRequest) {
     const jobsWithStats = await Promise.all(
       jobs.map(async (job) => {
         const startedAt = new Date(job.started_at);
-        const twentyFourHours = 24 * 60 * 60 * 1000;
+        const monitorDurationMs = 72 * 60 * 60 * 1000;
         const elapsed = now.getTime() - startedAt.getTime();
-        const remaining = Math.max(0, twentyFourHours - elapsed);
+        const remaining = Math.max(0, monitorDurationMs - elapsed);
         const isActive = job.status === 'active' && remaining > 0;
 
         // Get snapshot count
