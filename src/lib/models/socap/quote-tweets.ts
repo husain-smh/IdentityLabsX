@@ -73,6 +73,8 @@ export async function createQuoteTweetIndexes(): Promise<void> {
 
   await collection.createIndex({ parent_tweet_id: 1, created_at: -1 });
   await collection.createIndex({ 'author.user_id': 1, campaign_id: 1 });
+  await collection.createIndex({ campaign_id: 1, parent_category: 1, created_at: 1 });
+  await collection.createIndex({ campaign_id: 1, parent_category: 1, ingested_at: 1 });
 }
 
 export async function createOrUpdateQuoteTweet(input: QuoteTweetInput): Promise<QuoteTweet> {

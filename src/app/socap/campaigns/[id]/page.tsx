@@ -17,6 +17,30 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 
+declare global {
+  interface Window {
+    twttr?: any;
+  }
+}
+
+let twitterWidgetsPromise: Promise<any> | null = null;
+const loadTwitterWidgets = () => {
+  if (typeof window === 'undefined') return Promise.resolve(null);
+  if (window.twttr?.widgets) return Promise.resolve(window.twttr);
+  if (twitterWidgetsPromise) return twitterWidgetsPromise;
+
+  twitterWidgetsPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://platform.twitter.com/widgets.js';
+    script.async = true;
+    script.onload = () => resolve(window.twttr);
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+
+  return twitterWidgetsPromise;
+};
+
 interface DashboardData {
   campaign: any;
   metrics: {
@@ -187,6 +211,9 @@ function MetricChart({ title, metric, chartData }: Omit<MetricChartProps, 'filte
     return `${hours}:${minutes}`;
   };
 
+  // Generate unique gradient ID - remove special chars to avoid CSS issues
+  const gradientId = `grad-${metric}-${title.replace(/[^a-zA-Z0-9]/g, '')}`;
+
   return (
     <div className="glass rounded-2xl p-4">
       <h2 className="text-xl font-semibold text-white mb-4">{title}</h2>
@@ -194,9 +221,11 @@ function MetricChart({ title, metric, chartData }: Omit<MetricChartProps, 'filte
         <ResponsiveContainer width="100%" height={220}>
           <ComposedChart data={chartData}>
             <defs>
-              <linearGradient id={`grad-${metric}-${title}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={CHART_BLUE} stopOpacity={0.35} />
-                <stop offset="100%" stopColor={CHART_BLUE} stopOpacity={0.05} />
+              {/* Light blue gradient fill - fades from semi-opaque to transparent */}
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#93c5fd" stopOpacity={0.8} />
+                <stop offset="40%" stopColor="#93c5fd" stopOpacity={0.4} />
+                <stop offset="100%" stopColor="#93c5fd" stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <XAxis
@@ -212,7 +241,7 @@ function MetricChart({ title, metric, chartData }: Omit<MetricChartProps, 'filte
               dataKey={metric}
               stroke={CHART_BLUE}
               strokeWidth={2.5}
-              fill={`url(#grad-${metric}-${title})`}
+              fill={`url(#${gradientId})`}
               dot={{ r: 2, strokeWidth: 1 }}
               activeDot={{ r: 5 }}
             />
@@ -231,6 +260,7 @@ export default function CampaignDashboardPage() {
   const params = useParams();
   const router = useRouter();
   const campaignId = params.id as string;
+  const mainTweetContainerRef = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [metricsData, setMetricsData] = useState<any[]>([]);
@@ -316,6 +346,10 @@ const engagementOffsetRef = useRef(0);
 
   // Track which people have expanded actions (show all vs show top 3)
   const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set());
+  const mainTweet = useMemo(
+    () => data?.tweets?.find((t) => t.category === 'main_twt'),
+    [data]
+  );
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -585,6 +619,34 @@ const engagementOffsetRef = useRef(0);
     fetchEngagementsPage(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionTypeFilter]); // Only re-run when filter changes
+
+  useEffect(() => {
+    if (!mainTweet?.tweet_id || !mainTweetContainerRef.current) return;
+    let cancelled = false;
+
+    const renderEmbed = async () => {
+      try {
+        const twttr = await loadTwitterWidgets();
+        if (!twttr || cancelled || !mainTweetContainerRef.current) return;
+        mainTweetContainerRef.current.innerHTML = '';
+        await twttr.widgets.createTweet(mainTweet.tweet_id, mainTweetContainerRef.current, {
+          theme: 'dark',
+          align: 'center',
+        });
+      } catch (error) {
+        console.error('Error rendering Twitter embed:', error);
+      }
+    };
+
+    renderEmbed();
+
+    return () => {
+      cancelled = true;
+      if (mainTweetContainerRef.current) {
+        mainTweetContainerRef.current.innerHTML = '';
+      }
+    };
+  }, [mainTweet?.tweet_id]);
 
   // Derive per-category totals for the summary section (runs every render; memoized by dependencies).
   const categoryTotals = useMemo(() => {
@@ -980,14 +1042,21 @@ const engagementOffsetRef = useRef(0);
                   <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800">
                     <p className="text-sm text-zinc-400 mb-2">Embedded tweet</p>
                     <div className="bg-black rounded-lg p-4 border border-zinc-800">
-                      <blockquote className="twitter-tweet">
+                      <div ref={mainTweetContainerRef} />
+                      <div className="mt-3 text-right">
                         <a
-                          href={`https://x.com/${data.tweets.find((t) => t.category === 'main_twt')?.author_username}/status/${data.tweets.find((t) => t.category === 'main_twt')?.tweet_id}`}
-                          className="text-indigo-400 hover:text-indigo-300 text-sm break-all"
+                          href={
+                            mainTweet
+                              ? `https://x.com/${mainTweet.author_username || 'i/web'}/status/${mainTweet.tweet_id}`
+                              : '#'
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-400 hover:text-indigo-300 text-sm"
                         >
-                          View Main Tweet
+                          Open in Twitter
                         </a>
-                      </blockquote>
+                      </div>
                     </div>
                   </div>
 

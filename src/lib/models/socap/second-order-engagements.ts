@@ -62,6 +62,8 @@ export async function createSecondOrderEngagementIndexes(): Promise<void> {
   await collection.createIndex({ campaign_id: 1, parent_category: 1, timestamp: -1 });
   await collection.createIndex({ campaign_id: 1, importance_score: -1 });
   await collection.createIndex({ user_id: 1, campaign_id: 1 });
+  await collection.createIndex({ campaign_id: 1, action_type: 1, timestamp: -1 });
+  await collection.createIndex({ campaign_id: 1, parent_category: 1, action_type: 1, timestamp: -1 });
 }
 
 export async function createOrUpdateSecondOrderEngagement(

@@ -61,6 +61,7 @@ export async function createTweetIndexes(): Promise<void> {
   );
 
   await collection.createIndex({ campaign_id: 1, category: 1 });
+  await collection.createIndex({ campaign_id: 1, category: 1, author_username: 1 });
 }
 
 // ===== CRUD Operations =====
