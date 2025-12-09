@@ -1495,11 +1495,13 @@ const engagementOffsetRef = useRef(0);
                     </div>
 
                     <div className="mt-4">
-                      <MetricChart
-                        title="Quote Views from Quote Tweets (Main)"
-                        metric="quoteViews"
-                        chartData={mainQuoteViewSeries}
-                      />
+                      <div className="w-full lg:w-1/2 mx-auto">
+                        <MetricChart
+                          title="Quote Views from Quote Tweets (Main)"
+                          metric="quoteViews"
+                          chartData={mainQuoteViewSeries}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
