@@ -138,6 +138,7 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
 
 /**
  * Enqueue jobs for all tweets in a campaign
+ * OPTIMIZED: Uses MongoDB bulkWrite instead of individual operations
  */
 export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
   const { getTweetsByCampaign, getCampaignTweetsCollection } = await import('../models/socap/tweets');
@@ -191,41 +192,67 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
     'metrics',
   ];
   
-  let enqueued = 0;
-  const skipped = 0;
-  let errors = 0;
-  
   console.log(`Enqueuing jobs for campaign ${campaignId}: ${tweets.length} tweets × ${jobTypes.length} job types = ${tweets.length * jobTypes.length} total jobs`);
   
-  for (const tweet of tweets) {
-    for (const jobType of jobTypes) {
-      try {
-        await enqueueJob({
+  // Build bulk operations array - ONE DB call instead of N*4 calls
+  const collection = await getJobQueueCollection();
+  const now = new Date();
+  
+  const bulkOps = tweets.flatMap(tweet => 
+    jobTypes.map(jobType => ({
+      updateOne: {
+        filter: {
           campaign_id: campaignId,
           tweet_id: tweet.tweet_id,
           job_type: jobType,
-        });
-        enqueued++;
-      } catch (error) {
-        errors++;
-        // Log error details for debugging with structured logger
-        logger.error(
-          'Failed to enqueue job',
-          error,
-          {
+        },
+        update: {
+          $setOnInsert: {
             campaign_id: campaignId,
             tweet_id: tweet.tweet_id,
             job_type: jobType,
-            operation: 'enqueueCampaignJobs',
-          }
-        );
-      }
-    }
+            created_at: now,
+          },
+          $set: {
+            status: 'pending',
+            priority: getJobPriority(jobType),
+            claimed_by: null,
+            claimed_at: null,
+            retry_count: 0,
+            retry_after: null,
+            max_retries: 3,
+            updated_at: now,
+          },
+        },
+        upsert: true,
+      },
+    }))
+  );
+  
+  if (bulkOps.length === 0) {
+    console.log(`Campaign ${campaignId}: No jobs to enqueue`);
+    return 0;
   }
   
-  console.log(`Campaign ${campaignId}: ${enqueued} jobs enqueued, ${skipped} skipped, ${errors} errors`);
-  
-  return enqueued;
+  try {
+    const result = await collection.bulkWrite(bulkOps, { ordered: false });
+    const enqueued = result.upsertedCount + result.modifiedCount;
+    
+    console.log(`Campaign ${campaignId}: ${enqueued} jobs enqueued via bulkWrite (${result.upsertedCount} new, ${result.modifiedCount} updated)`);
+    
+    return enqueued;
+  } catch (error) {
+    logger.error(
+      'Failed to bulk enqueue jobs',
+      error,
+      {
+        campaign_id: campaignId,
+        total_operations: bulkOps.length,
+        operation: 'enqueueCampaignJobs',
+      }
+    );
+    throw error;
+  }
 }
 
 /**

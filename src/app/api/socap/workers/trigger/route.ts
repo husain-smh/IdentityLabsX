@@ -4,20 +4,28 @@ import { getActiveCampaigns } from '@/lib/models/socap/campaigns';
 import { enqueueCampaignJobs } from '@/lib/socap/job-queue';
 import { checkAndCompleteCampaigns } from '@/lib/socap/campaign-completion';
 
+// Extend timeout for Vercel Pro (default is 10s for hobby, 60s for pro)
+// This route can take longer due to bulk DB operations
+export const maxDuration = 60; // seconds
+
 /**
  * POST /socap/workers/trigger
  * Trigger job processing for all active campaigns
  * Called by N8N on schedule (default: every 30 minutes, configurable)
+ * 
+ * OPTIMIZED: Uses bulk operations and parallel processing
  */
 export async function POST() {
+  const startTime = Date.now();
+  
   try {
-    // First, check and complete campaigns that have ended
-    const completionStats = await checkAndCompleteCampaigns();
+    // Run campaign completion check and get active campaigns in parallel
+    const [completionStats, activeCampaigns] = await Promise.all([
+      checkAndCompleteCampaigns(),
+      getActiveCampaigns(),
+    ]);
+    
     console.log(`Campaign completion check: ${completionStats.completed} completed, ${completionStats.errors} errors`);
-    
-    // Get all active campaigns within monitor window
-    const activeCampaigns = await getActiveCampaigns();
-    
     console.log(`Worker trigger: Found ${activeCampaigns.length} active campaigns`);
     
     if (activeCampaigns.length === 0) {
@@ -27,50 +35,54 @@ export async function POST() {
         data: {
           campaigns_processed: 0,
           jobs_enqueued: 0,
+          duration_ms: Date.now() - startTime,
         },
       });
     }
     
-    // Enqueue jobs for each campaign
-    let totalJobsEnqueued = 0;
-    const results = [];
-    
-    for (const campaign of activeCampaigns) {
+    // Process all campaigns in parallel (each uses bulkWrite internally)
+    const campaignPromises = activeCampaigns.map(async (campaign) => {
+      const rawId = campaign._id as unknown;
+      const campaignId = (rawId instanceof ObjectId ? rawId.toString() : String(campaign._id || ''));
+      
+      if (!campaignId) {
+        return {
+          campaign_id: '',
+          campaign_name: campaign.launch_name,
+          jobs_enqueued: 0,
+          status: 'error' as const,
+          error: 'Campaign ID is missing',
+        };
+      }
+      
       try {
-        // Convert campaign._id to string (MongoDB returns ObjectId at runtime, but tweets store campaign_id as string)
-        // Type assertion needed: interface says string but MongoDB actually returns ObjectId
-        const rawId = campaign._id as unknown;
-        const campaignId = (rawId instanceof ObjectId ? rawId.toString() : String(campaign._id || ''));
-        
-        if (!campaignId) {
-          throw new Error('Campaign ID is missing');
-        }
-        
         console.log(`Processing campaign: ${campaign.launch_name} (${campaignId})`);
         const jobsEnqueued = await enqueueCampaignJobs(campaignId);
-        totalJobsEnqueued += jobsEnqueued;
-        results.push({
+        console.log(`✓ Campaign ${campaign.launch_name}: ${jobsEnqueued} jobs enqueued`);
+        
+        return {
           campaign_id: campaignId,
           campaign_name: campaign.launch_name,
           jobs_enqueued: jobsEnqueued,
-          status: 'success',
-        });
-        console.log(`✓ Campaign ${campaign.launch_name}: ${jobsEnqueued} jobs enqueued`);
+          status: 'success' as const,
+        };
       } catch (error) {
-        const rawId = campaign._id as unknown;
-        const campaignId = (rawId instanceof ObjectId ? rawId.toString() : String(campaign._id || ''));
         console.error(`✗ Error enqueuing jobs for campaign ${campaignId}:`, error);
-        results.push({
+        return {
           campaign_id: campaignId,
           campaign_name: campaign.launch_name,
           jobs_enqueued: 0,
-          status: 'error',
+          status: 'error' as const,
           error: error instanceof Error ? error.message : 'Unknown error',
-        });
+        };
       }
-    }
+    });
     
-    console.log(`Worker trigger complete: ${totalJobsEnqueued} total jobs enqueued across ${activeCampaigns.length} campaigns`);
+    const results = await Promise.all(campaignPromises);
+    const totalJobsEnqueued = results.reduce((sum, r) => sum + r.jobs_enqueued, 0);
+    const duration = Date.now() - startTime;
+    
+    console.log(`Worker trigger complete: ${totalJobsEnqueued} total jobs enqueued across ${activeCampaigns.length} campaigns in ${duration}ms`);
     
     return NextResponse.json({
       success: true,
@@ -78,6 +90,7 @@ export async function POST() {
       data: {
         campaigns_processed: activeCampaigns.length,
         jobs_enqueued: totalJobsEnqueued,
+        duration_ms: duration,
         results,
       },
     });
@@ -88,6 +101,7 @@ export async function POST() {
         success: false,
         error: 'Failed to trigger workers',
         details: error instanceof Error ? error.message : 'Unknown error',
+        duration_ms: Date.now() - startTime,
       },
       { status: 500 }
     );
