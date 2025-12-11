@@ -214,7 +214,7 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
             created_at: now,
           },
           $set: {
-            status: 'pending',
+            status: 'pending' as const,
             priority: getJobPriority(jobType),
             claimed_by: null,
             claimed_at: null,
