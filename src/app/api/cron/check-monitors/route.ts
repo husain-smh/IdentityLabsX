@@ -20,9 +20,9 @@ export async function GET() {
     // Process each active job
     for (const job of activeJobs) {
       try {
-        // Check if monitoring period (72 hours) has passed
+        // Check if monitoring period (5 days) has passed
         const startedAt = new Date(job.started_at);
-        const monitorDurationMs = 72 * 60 * 60 * 1000;
+        const monitorDurationMs = 5 * 24 * 60 * 60 * 1000; // 5 days
         const endTime = new Date(startedAt.getTime() + monitorDurationMs);
         const shouldComplete = now >= endTime;
 
