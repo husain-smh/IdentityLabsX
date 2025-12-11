@@ -14,6 +14,12 @@ export interface WorkerState {
   last_error: string | null;
   retry_count: number;
   updated_at: Date;
+  /**
+   * True when initial backfill has completed (fetched all pages).
+   * Used to distinguish between interrupted backfills and completed ones.
+   * If false/undefined with a cursor, backfill should resume.
+   */
+  backfill_complete?: boolean;
 }
 
 export interface CreateWorkerStateInput {
@@ -98,7 +104,7 @@ export async function updateWorkerState(
   campaignId: string,
   tweetId: string,
   jobType: WorkerState['job_type'],
-  updates: Partial<Pick<WorkerState, 'last_success' | 'cursor' | 'blocked_until' | 'last_error' | 'retry_count'>>
+  updates: Partial<Pick<WorkerState, 'last_success' | 'cursor' | 'blocked_until' | 'last_error' | 'retry_count' | 'backfill_complete'>>
 ): Promise<boolean> {
   const collection = await getWorkerStateCollection();
   

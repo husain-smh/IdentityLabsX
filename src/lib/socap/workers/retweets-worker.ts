@@ -9,43 +9,60 @@ import { getEngagementsByTweet } from '../../models/socap/engagements';
 
 /**
  * Retweets Worker
- * Fetches retweeters and processes them with delta detection
+ * Fetches retweeters and processes them with proper backfill continuation.
+ * 
+ * Key behavior:
+ * - Backfill: Fetches ALL retweeters by paginating through the entire list
+ * - Only marks backfill_complete when ALL pages have been fetched
+ * - If interrupted, resumes backfill from the saved cursor
+ * - Delta mode: After backfill, fetches new retweeters (first page only)
  */
 export class RetweetsWorker extends BaseWorker {
   protected async processJob(job: Job, state: WorkerState): Promise<void> {
     const tweetId = job.tweet_id;
     const campaignId = job.campaign_id;
     
-    // Determine if this is first run (backfill) or subsequent run (delta)
-    const isFirstRun = !state.cursor && !state.last_success;
+    // Check if backfill has been completed
+    // If backfill_complete is false/undefined, we need to continue or start backfilling
+    const needsBackfill = !state.backfill_complete;
     
-    if (isFirstRun) {
-      // First run: Backfill all retweeters
+    if (needsBackfill) {
+      // Continue or start backfill - will resume from cursor if one exists
       await this.backfillRetweeters(campaignId, tweetId, state);
     } else {
-      // Subsequent run: Delta detection
+      // Backfill complete - just fetch new retweeters (delta)
       await this.processDelta(campaignId, tweetId, state);
     }
   }
   
   /**
    * Backfill all existing retweeters
+   * Continues from saved cursor if backfill was previously interrupted
    */
   private async backfillRetweeters(
     campaignId: string,
     tweetId: string,
-    _state: WorkerState
+    state: WorkerState
   ): Promise<void> {
-    // State not needed in backfill; keep signature aligned with caller
-    void _state;
-    let cursor: string | null = null;
+    // Resume from saved cursor if available (backfill was interrupted)
+    let cursor: string | null = state.cursor || null;
     let allProcessed = 0;
+    let pageCount = 0;
+    
+    const isResume = !!cursor;
+    if (isResume) {
+      console.log(`[RetweetsWorker] Resuming backfill for tweet ${tweetId} from cursor`);
+    } else {
+      console.log(`[RetweetsWorker] Starting fresh backfill for tweet ${tweetId}`);
+    }
     
     while (true) {
       const response = await fetchTweetRetweets(tweetId, {
         cursor: cursor || undefined,
         maxPages: 1, // Process one page at a time
       });
+      
+      pageCount++;
       
       // Process each retweeter
       for (const user of response.data) {
@@ -65,13 +82,15 @@ export class RetweetsWorker extends BaseWorker {
         allProcessed++;
       }
       
-      // Update cursor
+      // Update cursor after each page (for resume capability)
       cursor = response.nextCursor || null;
       
-      // Update state after each page
+      // Save cursor progress after each page - enables resume if interrupted
       await updateWorkerState(campaignId, tweetId, 'retweets', {
         cursor,
       });
+      
+      console.log(`[RetweetsWorker] Page ${pageCount}: processed ${response.data.length} retweeters (total: ${allProcessed})`);
       
       // Stop if no more pages
       if (!response.hasMore || !cursor) {
@@ -79,26 +98,27 @@ export class RetweetsWorker extends BaseWorker {
       }
     }
     
-    // Mark as successful
+    // Backfill complete - mark it as done so future runs go to delta mode
     await updateWorkerState(campaignId, tweetId, 'retweets', {
       last_success: new Date(),
-      cursor,
+      cursor: null, // Clear cursor - backfill is complete
+      backfill_complete: true, // KEY: Mark backfill as done
     });
     
-    console.log(`Backfilled ${allProcessed} retweeters for tweet ${tweetId}`);
+    console.log(`[RetweetsWorker] ✅ Backfill complete for tweet ${tweetId}: ${allProcessed} retweeters across ${pageCount} pages`);
   }
   
   /**
    * Process delta (new retweeters only)
+   * Called after backfill is complete - just checks for new retweets
    */
   private async processDelta(
     campaignId: string,
     tweetId: string,
-    state: WorkerState
+    _state: WorkerState
   ): Promise<void> {
-    // Fetch first page with stored cursor
+    // Fetch first page (newest retweeters) - no cursor, start fresh
     const response = await fetchTweetRetweets(tweetId, {
-      cursor: state.cursor || undefined,
       maxPages: 1,
     });
     
@@ -111,44 +131,31 @@ export class RetweetsWorker extends BaseWorker {
     );
     
     let newCount = 0;
-    let updatedCount = 0;
+    let existingCount = 0;
     
-    // Process retweeters (newest first)
+    // Process retweeters (newest first from API)
     for (const user of response.data) {
       const isNew = !existingUserIds.has(user.userId);
       
-      const timestamp = new Date(); // Approximate timestamp
-      
-      const engagementInput = await processEngagement(
-        campaignId,
-        tweetId,
-        user,
-        'retweet',
-        timestamp
-      );
-      
-      await createOrUpdateEngagement(engagementInput);
-      
       if (isNew) {
+        const timestamp = new Date(); // Approximate timestamp for new retweets
+        
+        const engagementInput = await processEngagement(
+          campaignId,
+          tweetId,
+          user,
+          'retweet',
+          timestamp
+        );
+        
+        await createOrUpdateEngagement(engagementInput);
         newCount++;
       } else {
-        updatedCount++;
+        existingCount++;
+        // Once we hit an existing user, all subsequent users in this page
+        // are likely also existing (API returns newest first)
+        // But we continue processing the full page to be safe
       }
-      
-      // Stop if we've seen this user before (all newer items processed)
-      // Note: For retweets, we can't use timestamp comparison since API doesn't provide it
-      // So we process the first page and stop
-      if (!isNew && existingUserIds.size > 0) {
-        // We've hit existing users, likely all new ones are processed
-        break;
-      }
-    }
-    
-    // Update cursor if we got a new one
-    if (response.nextCursor) {
-      await updateWorkerState(campaignId, tweetId, 'retweets', {
-        cursor: response.nextCursor,
-      });
     }
     
     // Mark as successful
@@ -157,7 +164,7 @@ export class RetweetsWorker extends BaseWorker {
     });
     
     console.log(
-      `Delta processed for tweet ${tweetId}: ${newCount} new, ${updatedCount} updated retweeters`
+      `[RetweetsWorker] Delta for tweet ${tweetId}: ${newCount} new, ${existingCount} existing (checked ${response.data.length} users)`
     );
   }
 }
