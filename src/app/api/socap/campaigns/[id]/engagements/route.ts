@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getEngagementsByCampaign } from '@/lib/models/socap/engagements';
 
+// Vercel Pro: Allow up to 30 seconds for this function (handles cold starts + DB queries)
+export const maxDuration = 30;
+
 /**
  * GET /socap/campaigns/:id/engagements
  * Get engagements for a campaign with filtering and pagination

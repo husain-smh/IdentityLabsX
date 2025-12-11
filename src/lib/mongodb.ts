@@ -8,18 +8,23 @@ const uri = process.env.MONGODB_URI;
 // Determine if we're connecting to local MongoDB or Atlas
 const isLocalMongo = uri?.includes('localhost') || uri?.includes('127.0.0.1') || uri?.includes('mongodb://localhost');
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000; // 1 second between retries
+
 const options = {
   // Only use TLS for Atlas connections, not local MongoDB
   ...(isLocalMongo ? {} : { tls: true, tlsAllowInvalidCertificates: false }),
-  serverSelectionTimeoutMS: 5000, // Reduced timeout for faster failure detection
-  socketTimeoutMS: 30000,
-  connectTimeoutMS: 5000, // Reduced timeout for faster failure detection
+  // Increased timeouts for Vercel serverless cold starts
+  serverSelectionTimeoutMS: 15000, // Increased from 5s → 15s for cold starts
+  socketTimeoutMS: 45000,          // Increased from 30s → 45s
+  connectTimeoutMS: 15000,         // Increased from 5s → 15s for cold starts
   maxPoolSize: 10,
   minPoolSize: 1,
-  maxIdleTimeMS: 30000,
+  maxIdleTimeMS: 60000,            // Increased from 30s → 60s
   retryWrites: true,
   retryReads: true,
-  // Add heartbeat to detect connection issues faster
+  // Heartbeat to detect connection issues
   heartbeatFrequencyMS: 10000,
 };
 
@@ -66,70 +71,77 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = createConnection();
 }
 
-// Wrapper function to get client with automatic stale connection refresh
+// Helper to sleep for a given duration
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Helper to refresh the connection
+function refreshConnection(): Promise<MongoClient> {
+  if (process.env.NODE_ENV === 'development') {
+    const globalWithMongo = global as typeof globalThis & {
+      _mongoClientPromise?: Promise<MongoClient>;
+      _mongoConnectionTimestamp?: number;
+    };
+    client = new MongoClient(uri, options);
+    globalWithMongo._mongoClientPromise = client.connect();
+    globalWithMongo._mongoConnectionTimestamp = Date.now();
+    clientPromise = globalWithMongo._mongoClientPromise;
+    connectionTimestamp = Date.now();
+  } else {
+    clientPromise = createConnection();
+  }
+  return clientPromise;
+}
+
+// Wrapper function to get client with automatic stale connection refresh and retry logic
 async function getClient(): Promise<MongoClient> {
   // Check for stale connection in both dev and production
   if (isConnectionStale()) {
     console.log('⚠️ Connection is stale, refreshing...');
-    if (process.env.NODE_ENV === 'development') {
-      // In development, update the global connection
-      const globalWithMongo = global as typeof globalThis & {
-        _mongoClientPromise?: Promise<MongoClient>;
-        _mongoConnectionTimestamp?: number;
-      };
-      client = new MongoClient(uri, options);
-      globalWithMongo._mongoClientPromise = client.connect();
-      globalWithMongo._mongoConnectionTimestamp = Date.now();
-      clientPromise = globalWithMongo._mongoClientPromise;
-      connectionTimestamp = Date.now();
-    } else {
-      clientPromise = createConnection();
+    refreshConnection();
+  }
+  
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const clientInstance = await clientPromise;
+      // Test the connection by pinging the server
+      await clientInstance.db().admin().ping();
+      if (attempt > 1) {
+        console.log(`✅ MongoDB connected successfully on attempt ${attempt}`);
+      }
+      return clientInstance;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const errorMessage = lastError.message;
+      
+      console.error(`❌ MongoDB connection attempt ${attempt}/${MAX_RETRIES} failed:`, errorMessage);
+      
+      // Provide helpful error message for common issues (only on first attempt)
+      if (attempt === 1) {
+        if (errorMessage.includes('timeout') || errorMessage.includes('MongoServerSelectionError')) {
+          if (isLocalMongo) {
+            console.error('💡 Tip: Make sure MongoDB is running locally. Try: mongod or brew services start mongodb-community');
+          } else {
+            console.error('💡 Tip: Check your MongoDB Atlas connection string and IP whitelist settings.');
+          }
+        }
+      }
+      
+      // If we have more retries, wait and create a fresh connection
+      if (attempt < MAX_RETRIES) {
+        const delayMs = RETRY_DELAY_MS * attempt; // Linear backoff: 1s, 2s, 3s
+        console.log(`🔄 Retrying in ${delayMs}ms...`);
+        await sleep(delayMs);
+        refreshConnection();
+      }
     }
   }
   
-  try {
-    const clientInstance = await clientPromise;
-    // Test the connection by pinging the server
-    await clientInstance.db().admin().ping();
-    return clientInstance;
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('❌ MongoDB connection failed:', errorMessage);
-    
-    // Provide helpful error message for common issues
-    if (errorMessage.includes('timeout') || errorMessage.includes('MongoServerSelectionError')) {
-      if (isLocalMongo) {
-        console.error('💡 Tip: Make sure MongoDB is running locally. Try: mongod or brew services start mongodb-community');
-      } else {
-        console.error('💡 Tip: Check your MongoDB Atlas connection string and IP whitelist settings.');
-        console.error('💡 Tip: Make sure your IP address is whitelisted in MongoDB Atlas Network Access.');
-      }
-    }
-    
-    // Recreate connection on failure (only once to avoid infinite loops)
-    if (process.env.NODE_ENV === 'development') {
-      const globalWithMongo = global as typeof globalThis & {
-        _mongoClientPromise?: Promise<MongoClient>;
-        _mongoConnectionTimestamp?: number;
-      };
-      client = new MongoClient(uri, options);
-      globalWithMongo._mongoClientPromise = client.connect();
-      globalWithMongo._mongoConnectionTimestamp = Date.now();
-      clientPromise = globalWithMongo._mongoClientPromise;
-      connectionTimestamp = Date.now();
-    } else {
-      clientPromise = createConnection();
-    }
-    
-    // Try once more, but don't retry indefinitely
-    try {
-      return await clientPromise;
-    } catch (retryError) {
-      const retryErrorMessage = retryError instanceof Error ? retryError.message : String(retryError);
-      console.error('❌ MongoDB connection retry also failed:', retryErrorMessage);
-      throw new Error(`MongoDB connection failed: ${retryErrorMessage}. Please check your MongoDB connection string and ensure the database is accessible.`);
-    }
-  }
+  // All retries exhausted
+  throw new Error(`MongoDB connection failed after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}. Please check your connection.`);
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a

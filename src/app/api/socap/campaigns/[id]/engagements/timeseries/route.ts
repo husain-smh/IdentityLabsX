@@ -5,6 +5,9 @@ import {
 } from '@/lib/models/socap/engagements';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 
+// Vercel Pro: Allow up to 30 seconds for this function (handles cold starts + DB queries)
+export const maxDuration = 30;
+
 /**
  * GET /socap/campaigns/:id/engagements/timeseries
  * Time-bucketed engagement metrics for a campaign.

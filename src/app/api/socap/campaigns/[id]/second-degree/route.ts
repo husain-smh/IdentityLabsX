@@ -3,6 +3,9 @@ import { getQuoteTweetsCollection } from '@/lib/models/socap/quote-tweets';
 import { getSecondOrderEngagementsCollection } from '@/lib/models/socap/second-order-engagements';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 
+// Vercel Pro: Allow up to 30 seconds for this function (handles cold starts + DB queries)
+export const maxDuration = 30;
+
 type Category = 'main_twt' | 'influencer_twt' | 'investor_twt' | undefined;
 
 type SeriesPoint = {

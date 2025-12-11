@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMetricSnapshotsByCampaign } from '@/lib/models/socap/metric-snapshots';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 
+// Vercel Pro: Allow up to 30 seconds for this function (handles cold starts + DB queries)
+export const maxDuration = 30;
+
 /**
  * GET /socap/campaigns/:id/metrics
  * Get time-series metrics for a campaign

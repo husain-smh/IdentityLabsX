@@ -3,6 +3,9 @@ import { getCampaignById } from '@/lib/models/socap/campaigns';
 import { getTweetsByCampaign } from '@/lib/models/socap/tweets';
 import { getAllUniqueEngagersByCampaign } from '@/lib/models/socap/engagements';
 
+// Vercel Pro: Allow up to 30 seconds for this function (handles cold starts + DB queries)
+export const maxDuration = 30;
+
 /**
  * GET /socap/campaigns/:id/dashboard
  * Get dashboard data for a campaign
