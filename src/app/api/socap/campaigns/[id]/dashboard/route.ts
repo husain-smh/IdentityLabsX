@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 import { getTweetsByCampaign } from '@/lib/models/socap/tweets';
-import { getAllUniqueEngagersByCampaign } from '@/lib/models/socap/engagements';
 
-// Vercel Pro: Allow up to 30 seconds for this function (handles cold starts + DB queries)
-export const maxDuration = 30;
+// Reduced from 30s since we removed the heavy getAllUniqueEngagersByCampaign query
+export const maxDuration = 15;
 
 /**
  * GET /socap/campaigns/:id/dashboard
@@ -70,45 +69,9 @@ export async function GET(
     // Engagement total = interactions (likes, retweets, replies, quote tweets)
     const totalEngagements = totalLikes + totalRetweets + totalReplies + totalQuotes;
     
-    // Get ALL unique engagers (one per user) with their aggregated data
-    // This ensures we can display all accounts that have engaged
-    const uniqueEngagersData = await getAllUniqueEngagersByCampaign(id);
-    
-    // We need to expand the _all_actions field back into individual engagement records
-    // so the frontend grouping logic works correctly
-    const latestEngagements: any[] = [];
-    for (const engager of uniqueEngagersData) {
-      const { _all_actions: _ignoredActions, ...restEngager } = engager as any;
-      const allActions = _ignoredActions || [];
-      if (allActions.length > 0) {
-        // Create one engagement record per action
-        for (const action of allActions) {
-          latestEngagements.push({
-            ...restEngager,
-            action_type: action.action_type,
-            tweet_id: action.tweet_id,
-            tweet_category: action.tweet_category,
-            timestamp: action.timestamp,
-            engagement_tweet_id: action.engagement_tweet_id,
-            // Remove the _all_actions field
-            _all_actions: undefined,
-          });
-        }
-      } else {
-        // Fallback: use the engager as a single engagement
-        const { _all_actions: _ignored, ...engagement } = engager as any;
-        void _ignored;
-        latestEngagements.push(engagement);
-      }
-    }
-    
-    // Calculate category breakdown
-    const categoryCounts: Record<string, number> = {};
-    for (const engagement of latestEngagements) {
-      for (const category of engagement.account_categories || []) {
-        categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-      }
-    }
+    // NOTE: Engagements are now lazy loaded via /api/socap/campaigns/:id/engagements
+    // when user expands the "Important People" section. This removes the heavy
+    // getAllUniqueEngagersByCampaign query that was causing 10-15 second load times.
     
     return NextResponse.json({
       success: true,
@@ -130,8 +93,9 @@ export async function GET(
           author_username: t.author_username,
           metrics: t.metrics,
         })),
-        latest_engagements: latestEngagements,
-        category_breakdown: categoryCounts,
+        // Engagements are lazy loaded via separate API call now
+        latest_engagements: [],
+        category_breakdown: {},
       },
     });
   } catch (error) {

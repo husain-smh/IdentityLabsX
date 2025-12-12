@@ -257,6 +257,7 @@ export default function CampaignDashboardPage() {
   const router = useRouter();
   const campaignId = params.id as string;
   const mainTweetContainerRef = useRef<HTMLDivElement | null>(null);
+  const secondDegreeSectionRef = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [chartMinDate, setChartMinDate] = useState<Date | null>(null);
@@ -630,30 +631,39 @@ const engagementOffsetRef = useRef(0);
   // Track if initial load has happened to avoid double-fetching
   const initialLoadDoneRef = useRef(false);
 
+  // Track if second-degree metrics have been loaded (lazy load)
+  const [secondDegreeLoaded, setSecondDegreeLoaded] = useState(false);
+  const [isSecondDegreeLoading, setIsSecondDegreeLoading] = useState(false);
+  // Track if engagements have been loaded (lazy load)
+  const [engagementsLoaded, setEngagementsLoaded] = useState(false);
+
   // Main data load effect - runs ONLY on mount and campaignId change
   useEffect(() => {
     console.log('[Campaign] Main useEffect triggered, campaignId:', campaignId);
     initialLoadDoneRef.current = false;
+    // Reset lazy load states on campaign change
+    setSecondDegreeLoaded(false);
+    setEngagementsLoaded(false);
 
     const loadAll = async () => {
       console.log('[Campaign] Starting fetch with chart min date awareness...');
       setLoading(true);
       const minDate = await fetchDashboard();
+      // Only fetch essential data for initial view (metrics + charts)
+      // Engagements and second-degree metrics are lazy loaded on demand
       await Promise.all([
         fetchMetrics(minDate),
         fetchEngagementSeries(minDate),
         fetchCategoryEngagementSeries('main_twt', minDate),
         // NOTE: influencer-specific fetch paused temporarily to avoid hitting the DB
         // fetchCategoryEngagementSeries('influencer_twt', minDate),
-        fetchSecondDegree(),
         fetchMainQuoteViewSeries(),
       ]);
-      console.log('[Campaign] Fetch complete, now fetching engagements...');
-      // Fetch engagements separately (depends on actionTypeFilter but we want initial load)
-      await fetchEngagementsPage(true);
+      // NOTE: fetchSecondDegree() is now lazy loaded when section becomes visible
+      // NOTE: fetchEngagementsPage() is now lazy loaded when "Important People" is expanded
       setLoading(false);
       initialLoadDoneRef.current = true;
-      console.log('[Campaign] Initial load complete');
+      console.log('[Campaign] Initial load complete (engagements + second-degree deferred)');
     };
 
     loadAll();
@@ -663,17 +673,20 @@ const engagementOffsetRef = useRef(0);
     const interval = setInterval(() => {
       console.log('[Campaign] Auto-refresh triggered');
       const minDate = chartMinDateRef.current;
-      Promise.all([
+      // Only refresh data that was already loaded
+      const refreshPromises = [
         fetchDashboard(),
         fetchMetrics(minDate),
         fetchEngagementSeries(minDate),
         fetchCategoryEngagementSeries('main_twt', minDate),
-        // NOTE: influencer-specific fetch paused temporarily to avoid hitting the DB
-        // fetchCategoryEngagementSeries('influencer_twt', minDate),
-        fetchSecondDegree(),
         fetchMainQuoteViewSeries(),
-      ]);
+      ];
+      // Only refresh second-degree if it was loaded
+      if (secondDegreeLoaded) {
+        refreshPromises.push(fetchSecondDegree());
+      }
       // Don't auto-refresh engagements (user controls via Load More)
+      Promise.all(refreshPromises);
     }, REFRESH_INTERVAL_MS);
 
     return () => {
@@ -689,10 +702,36 @@ const engagementOffsetRef = useRef(0);
       console.log('[Campaign] Skipping filter effect - initial load not done');
       return;
     }
+    if (!engagementsLoaded) {
+      console.log('[Campaign] Skipping filter effect - engagements not loaded yet');
+      return;
+    }
     console.log('[Campaign] Action filter changed to:', actionTypeFilter);
     fetchEngagementsPage(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actionTypeFilter]); // Only re-run when filter changes
+  }, [actionTypeFilter, engagementsLoaded]); // Only re-run when filter changes
+
+  // Lazy load second-degree metrics when section becomes visible
+  useEffect(() => {
+    if (secondDegreeLoaded || !secondDegreeSectionRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !secondDegreeLoaded) {
+          console.log('[Campaign] Second-degree section visible, lazy loading...');
+          setSecondDegreeLoaded(true);
+          setIsSecondDegreeLoading(true);
+          fetchSecondDegree().finally(() => setIsSecondDegreeLoading(false));
+        }
+      },
+      { threshold: 0.1 } // Trigger when 10% of the section is visible
+    );
+
+    observer.observe(secondDegreeSectionRef.current);
+
+    return () => observer.disconnect();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secondDegreeLoaded, fetchSecondDegree]);
 
   useEffect(() => {
     if (!mainTweet?.tweet_id) {
@@ -1128,6 +1167,11 @@ const engagementOffsetRef = useRef(0);
           ...counts,
           [category]: INITIAL_IMPORTANT_VISIBLE,
         }));
+      } else if (!engagementsLoaded) {
+        // Lazy load engagements on first expand
+        console.log('[Campaign] Lazy loading engagements on section expand');
+        setEngagementsLoaded(true);
+        fetchEngagementsPage(true);
       }
       return { ...prev, [category]: nextOpen };
     });
@@ -1311,7 +1355,12 @@ const engagementOffsetRef = useRef(0);
                         </button>
                       </div>
                     </div>
-                    {importantPeopleOpen.main ? (
+                    {importantPeopleOpen.main && isLoadingEngagements ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
+                        <span className="ml-3 text-zinc-400 text-sm">Loading important people...</span>
+                      </div>
+                    ) : importantPeopleOpen.main ? (
                       <div className="space-y-4">
                         {visibleImportantPeopleMain.map((person) => {
                           const isExpanded = expandedActions.has(person.user_id);
@@ -1462,47 +1511,60 @@ const engagementOffsetRef = useRef(0);
                     )}
                   </div>
 
-                  <div className="glass rounded-2xl p-6 border border-zinc-800">
+                  <div ref={secondDegreeSectionRef} className="glass rounded-2xl p-6 border border-zinc-800">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold text-white">Second-Degree Engagements (Main)</h3>
                       <span className="text-xs text-zinc-500">From quote tweets & second-order</span>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
-                      <div className="glass rounded-xl p-3 border border-indigo-500/20">
-                        <p className="text-xs text-zinc-400">Quote Views</p>
-                        <p className="text-xl font-bold text-white mt-1">
-                          {(secondDegreeTotals.main_twt.views || 0).toLocaleString()}
-                        </p>
+                    {isSecondDegreeLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-500 border-t-transparent"></div>
+                        <span className="ml-3 text-zinc-400 text-sm">Loading second-degree metrics...</span>
                       </div>
-                      <div className="glass rounded-xl p-3">
-                        <p className="text-xs text-zinc-400">Quote Likes</p>
-                        <p className="text-xl font-bold text-white mt-1">
-                          {(secondDegreeTotals.main_twt.likes || 0).toLocaleString()}
-                        </p>
+                    ) : !secondDegreeLoaded ? (
+                      <div className="text-center py-8 text-zinc-500 text-sm">
+                        Scroll down to load second-degree metrics...
                       </div>
-                      <div className="glass rounded-xl p-3">
-                        <p className="text-xs text-zinc-400">Quote Retweets</p>
-                        <p className="text-xl font-bold text-white mt-1">
-                          {(secondDegreeTotals.main_twt.retweets || 0).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="glass rounded-xl p-3">
-                        <p className="text-xs text-zinc-400">Quote Replies</p>
-                        <p className="text-xl font-bold text-white mt-1">
-                          {(secondDegreeTotals.main_twt.replies || 0).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                          <div className="glass rounded-xl p-3 border border-indigo-500/20">
+                            <p className="text-xs text-zinc-400">Quote Views</p>
+                            <p className="text-xl font-bold text-white mt-1">
+                              {(secondDegreeTotals.main_twt.views || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="glass rounded-xl p-3">
+                            <p className="text-xs text-zinc-400">Quote Likes</p>
+                            <p className="text-xl font-bold text-white mt-1">
+                              {(secondDegreeTotals.main_twt.likes || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="glass rounded-xl p-3">
+                            <p className="text-xs text-zinc-400">Quote Retweets</p>
+                            <p className="text-xl font-bold text-white mt-1">
+                              {(secondDegreeTotals.main_twt.retweets || 0).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="glass rounded-xl p-3">
+                            <p className="text-xs text-zinc-400">Quote Replies</p>
+                            <p className="text-xl font-bold text-white mt-1">
+                              {(secondDegreeTotals.main_twt.replies || 0).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
 
-                    <div className="mt-4">
-                      <div className="w-full lg:w-1/2 mx-auto">
-                        <MetricChart
-                          title="Quote Views from Quote Tweets (Main)"
-                          metric="quoteViews"
-                          chartData={mainQuoteViewSeries}
-                        />
-                      </div>
-                    </div>
+                        <div className="mt-4">
+                          <div className="w-full lg:w-1/2 mx-auto">
+                            <MetricChart
+                              title="Quote Views from Quote Tweets (Main)"
+                              metric="quoteViews"
+                              chartData={mainQuoteViewSeries}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               ) : (
