@@ -253,19 +253,60 @@ export async function getTweet(tweetId: string): Promise<Tweet | null> {
 }
 
 /**
- * Get all tweets (paginated)
+ * Lightweight tweet data for list views (excludes heavy fields like ai_report, metrics_history)
+ */
+export interface TweetListItem {
+  _id?: ObjectId;
+  tweet_id: string;
+  tweet_url: string;
+  author_name: string;
+  author_username?: string;
+  status: 'pending' | 'analyzing' | 'completed' | 'failed';
+  total_engagers: number;
+  engagers_above_10k: number;
+  engagers_below_10k: number;
+  created_at: Date;
+  analyzed_at?: Date;
+}
+
+/**
+ * Get all tweets (paginated) - OPTIMIZED VERSION
+ * Uses projection to fetch only lightweight fields needed for list views.
+ * This dramatically reduces data transfer (excludes ai_report, metrics_history, etc.)
  */
 export async function getAllTweets(
   limit = 50,
   skip = 0
-): Promise<Tweet[]> {
+): Promise<{ tweets: TweetListItem[]; total: number }> {
   const collection = await getTweetsCollection();
-  return await collection
-    .find({})
-    .sort({ created_at: -1 })
-    .limit(limit)
-    .skip(skip)
-    .toArray();
+  
+  // Only fetch the fields needed for the list view
+  // IMPORTANT: This excludes ai_report and metrics_history which can be HUGE
+  const projection = {
+    tweet_id: 1,
+    tweet_url: 1,
+    author_name: 1,
+    author_username: 1,
+    status: 1,
+    total_engagers: 1,
+    engagers_above_10k: 1,
+    engagers_below_10k: 1,
+    created_at: 1,
+    analyzed_at: 1,
+  };
+  
+  // Run count and find in parallel for better performance
+  const [tweets, total] = await Promise.all([
+    collection
+      .find({}, { projection })
+      .sort({ created_at: -1 })
+      .limit(limit)
+      .skip(skip)
+      .toArray(),
+    collection.countDocuments(),
+  ]);
+  
+  return { tweets: tweets as TweetListItem[], total };
 }
 
 /**
