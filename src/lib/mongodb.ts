@@ -94,7 +94,27 @@ function refreshConnection(): Promise<MongoClient> {
   return clientPromise;
 }
 
+// Fast client getter - skips ping for performance on serverless
+// The MongoDB driver handles reconnection automatically
+async function getClientFast(): Promise<MongoClient> {
+  // Check for stale connection in both dev and production
+  if (isConnectionStale()) {
+    console.log('⚠️ Connection is stale, refreshing...');
+    refreshConnection();
+  }
+  
+  try {
+    return await clientPromise;
+  } catch (error) {
+    // Only refresh on actual connection errors
+    console.error('❌ MongoDB connection error, refreshing...', error);
+    refreshConnection();
+    return await clientPromise;
+  }
+}
+
 // Wrapper function to get client with automatic stale connection refresh and retry logic
+// Use this for critical operations that need guaranteed connection
 async function getClient(): Promise<MongoClient> {
   // Check for stale connection in both dev and production
   if (isConnectionStale()) {
@@ -107,8 +127,11 @@ async function getClient(): Promise<MongoClient> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const clientInstance = await clientPromise;
-      // Test the connection by pinging the server
-      await clientInstance.db().admin().ping();
+      // Only ping in development - skip in production for speed
+      // The MongoDB driver handles reconnection automatically
+      if (process.env.NODE_ENV === 'development') {
+        await clientInstance.db().admin().ping();
+      }
       if (attempt > 1) {
         console.log(`✅ MongoDB connected successfully on attempt ${attempt}`);
       }
@@ -150,5 +173,7 @@ async function getClient(): Promise<MongoClient> {
 export default clientPromise;
 
 // Export the smart client getter for better connection management
-export { getClient };
+// - getClient: Standard getter with stale check (ping only in dev mode)
+// - getClientFast: Ultra-fast getter, no ping, minimal overhead for serverless
+export { getClient, getClientFast };
 

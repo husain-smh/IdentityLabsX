@@ -713,25 +713,79 @@ const engagementOffsetRef = useRef(0);
 
   // Lazy load second-degree metrics when section becomes visible
   useEffect(() => {
-    if (secondDegreeLoaded || !secondDegreeSectionRef.current) return;
+    // Don't run until initial page load is complete (so the ref is rendered)
+    if (loading || secondDegreeLoaded) return;
+    
+    const sectionElement = secondDegreeSectionRef.current;
+    if (!sectionElement) {
+      console.log('[Campaign] Second-degree section ref not ready yet');
+      return;
+    }
 
+    // Use a ref to track if we've triggered loading (to prevent double-trigger)
+    let hasTriggered = false;
+    
+    const triggerLoad = () => {
+      if (hasTriggered) return;
+      hasTriggered = true;
+      console.log('[Campaign] Second-degree section visible, lazy loading...');
+      setSecondDegreeLoaded(true);
+      setIsSecondDegreeLoading(true);
+      fetchSecondDegree().finally(() => setIsSecondDegreeLoading(false));
+    };
+
+    // Check if element is in viewport
+    const isElementVisible = () => {
+      const rect = sectionElement.getBoundingClientRect();
+      // Element is visible if its top is above viewport bottom AND bottom is below viewport top
+      return rect.top < window.innerHeight && rect.bottom > 0;
+    };
+
+    // Set up IntersectionObserver - this handles both initial visibility and scroll
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !secondDegreeLoaded) {
-          console.log('[Campaign] Second-degree section visible, lazy loading...');
-          setSecondDegreeLoaded(true);
-          setIsSecondDegreeLoading(true);
-          fetchSecondDegree().finally(() => setIsSecondDegreeLoading(false));
+        if (entries[0].isIntersecting) {
+          console.log('[Campaign] IntersectionObserver fired - section is intersecting');
+          triggerLoad();
+          observer.disconnect(); // Stop observing once triggered
         }
       },
-      { threshold: 0.1 } // Trigger when 10% of the section is visible
+      { 
+        threshold: 0, // Fire as soon as any part is visible
+        rootMargin: '200px' // Trigger 200px before element comes into view
+      }
     );
 
-    observer.observe(secondDegreeSectionRef.current);
+    observer.observe(sectionElement);
 
-    return () => observer.disconnect();
+    // FALLBACK: After a short delay, manually check visibility
+    // This catches edge cases where IntersectionObserver doesn't fire immediately
+    const fallbackTimer = setTimeout(() => {
+      if (!hasTriggered && isElementVisible()) {
+        console.log('[Campaign] Fallback check - section is visible, loading...');
+        triggerLoad();
+        observer.disconnect();
+      }
+    }, 100);
+
+    // Also check on scroll as additional fallback
+    const handleScroll = () => {
+      if (!hasTriggered && isElementVisible()) {
+        console.log('[Campaign] Scroll handler - section is visible, loading...');
+        triggerLoad();
+        observer.disconnect();
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallbackTimer);
+      window.removeEventListener('scroll', handleScroll);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondDegreeLoaded, fetchSecondDegree]);
+  }, [loading, secondDegreeLoaded, fetchSecondDegree]);
 
   useEffect(() => {
     if (!mainTweet?.tweet_id) {

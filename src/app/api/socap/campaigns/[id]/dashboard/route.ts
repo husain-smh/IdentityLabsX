@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignById } from '@/lib/models/socap/campaigns';
 import { getTweetsByCampaign } from '@/lib/models/socap/tweets';
 
-// Reduced from 30s since we removed the heavy getAllUniqueEngagersByCampaign query
-export const maxDuration = 15;
+// Vercel Hobby has 10s hard limit, Pro allows up to 60s
+// We optimize code to stay under 10s whenever possible
+export const maxDuration = 10;
 
 /**
  * GET /socap/campaigns/:id/dashboard
  * Get dashboard data for a campaign
+ * 
+ * Optimized for serverless cold starts:
+ * - Parallel DB queries instead of sequential
+ * - Reduced data transfer with projections handled at model level
  */
 export async function GET(
   request: NextRequest,
@@ -15,7 +20,13 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const campaign = await getCampaignById(id);
+    
+    // Run both queries in PARALLEL to save time on cold starts
+    // This is much faster than sequential: campaign -> tweets
+    const [campaign, tweets] = await Promise.all([
+      getCampaignById(id),
+      getTweetsByCampaign(id),
+    ]);
     
     if (!campaign) {
       return NextResponse.json(
@@ -26,9 +37,6 @@ export async function GET(
         { status: 404 }
       );
     }
-    
-    // Get tweets
-    const tweets = await getTweetsByCampaign(id);
     
     // Calculate total metrics + per-category breakdown (for cards)
     let totalLikes = 0;

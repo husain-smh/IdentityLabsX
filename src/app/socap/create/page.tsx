@@ -121,9 +121,9 @@ export default function CreateCampaignPage() {
     }
   }
 
-  // Set default dates (today and 3 days from now)
+  // Set default dates (today and 10 days from now)
   const today = new Date().toISOString().split('T')[0];
-  const threeDaysLater = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
+  const tenDaysLater = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split('T')[0];
 
@@ -131,7 +131,7 @@ export default function CreateCampaignPage() {
     formData.start_date = today;
   }
   if (!formData.end_date) {
-    formData.end_date = threeDaysLater;
+    formData.end_date = tenDaysLater;
   }
 
   return (

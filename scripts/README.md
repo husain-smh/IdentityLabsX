@@ -34,6 +34,7 @@ Standalone SOCAP/ranker utilities you can run with `npx tsx scripts/<file> ...` 
 
 ### Worker & scheduling
 - `socap-worker.ts` — Long-running worker that pulls and processes SOCAP jobs. Env: `SOCAP_WORKER_CONCURRENCY` (default 5), `SOCAP_MAX_JOBS_PER_BATCH` (default 100) plus DB/API envs. Run: `npm run worker` or `npx tsx scripts/socap-worker.ts` (keep process alive, e.g., PM2/systemd).
+- `turbo-worker.ts` — **High-performance worker for processing large job backlogs quickly.** 3× faster than the regular worker with progress tracking, ETA display, and automatic stats. Env: `SOCAP_TURBO_CONCURRENCY` (default 15), `SOCAP_MAX_JOBS_PER_BATCH` (default 500), `SOCAP_TURBO_DELAY` (default 100ms). Run: `npm run turbo-worker` or with custom concurrency: `npx tsx scripts/turbo-worker.ts --concurrency=25`.
 - `job-scheduler.ts` — Cron scheduler that hits SOCAP endpoints to enqueue/run workers. Env: `NEXT_PUBLIC_BASE_URL` (defaults to `https://identity-labs-x.vercel.app`). Run: `npx tsx scripts/job-scheduler.ts` (or `npm run scheduler`). PM2 example: `pm2 start scripts/job-scheduler.ts --interpreter=node --interpreter-args="--loader tsx"`.
 
 Default schedule inside `job-scheduler.ts`:

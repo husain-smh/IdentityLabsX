@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "worker": "tsx scripts/socap-worker.ts",
+    "turbo-worker": "tsx scripts/turbo-worker.ts",
     "scheduler": "tsx scripts/job-scheduler.ts"
   },
   "dependencies": {
