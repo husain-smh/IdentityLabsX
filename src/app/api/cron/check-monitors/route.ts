@@ -45,7 +45,8 @@ export async function GET() {
         }
 
         // Fetch current metrics from external API
-        const metrics = await fetchTweetMetrics(job.tweet_id);
+        // Use dedicated 'monitor' API key to protect from batch operation rate limits
+        const metrics = await fetchTweetMetrics(job.tweet_id, 1, 'monitor');
         console.log(`[cron-monitors] Fetched base metrics for ${job.tweet_id}: quoteCount=${metrics.quoteCount}, viewCount=${metrics.viewCount}`);
 
         // Fetch quote aggregates (with pagination) - now with improved logic
@@ -56,8 +57,10 @@ export async function GET() {
 
         try {
           // Pass expected quote count for dynamic page cap
+          // Use dedicated 'monitor' API key to protect from batch operation rate limits
           quoteAgg = await fetchQuoteMetricsAggregate(job.tweet_id, {
             expectedQuoteCount: metrics.quoteCount,
+            keyType: 'monitor',
           });
 
           // Validate the result - don't trust 0 if we expected data

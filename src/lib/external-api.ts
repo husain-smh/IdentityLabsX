@@ -1,7 +1,13 @@
 /**
  * External API integration for fetching tweet metrics
  * API: https://api.twitterapi.io/twitter/tweets
+ * 
+ * Supports hybrid API key strategy:
+ * - 'monitor' key: Dedicated for monitoring (protected)
+ * - 'shared' key: For batch operations (jobs, narratives, aggregates)
  */
+
+import { getTwitterApiKey, type TwitterApiKeyType } from './config/twitter-api-config';
 
 export interface TweetMetrics {
   likeCount: number;
@@ -78,15 +84,20 @@ export class TwitterApiError extends Error {
 
 /**
  * Fetch tweet metrics from external API with retry logic
+ * 
+ * @param tweetId - The tweet ID to fetch metrics for
+ * @param retries - Number of retries (default: 1)
+ * @param keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchTweetMetrics(
   tweetId: string,
-  retries: number = 1
+  retries: number = 1,
+  keyType: TwitterApiKeyType = 'shared'
 ): Promise<TweetMetrics> {
-  const apiKey = process.env.TWITTER_API_KEY;
+  const apiKey = getTwitterApiKey(keyType);
   
   if (!apiKey) {
-    throw new TwitterApiError('TWITTER_API_KEY environment variable is not set', 500, false);
+    throw new TwitterApiError('Twitter API key is not configured. Set TWITTER_API_KEY_MONITOR, TWITTER_API_KEY_SHARED, or TWITTER_API_KEY.', 500, false);
   }
   
   const apiUrl = process.env.TWITTER_API_URL || 'https://api.twitterapi.io';
@@ -235,15 +246,20 @@ export async function fetchTweetMetrics(
 
 /**
  * Fetch full tweet details including author information
+ * 
+ * @param tweetId - The tweet ID to fetch details for
+ * @param retries - Number of retries (default: 1)
+ * @param keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchTweetDetails(
   tweetId: string,
-  retries: number = 1
+  retries: number = 1,
+  keyType: TwitterApiKeyType = 'shared'
 ): Promise<TweetDetails> {
-  const apiKey = process.env.TWITTER_API_KEY;
+  const apiKey = getTwitterApiKey(keyType);
   
   if (!apiKey) {
-    throw new TwitterApiError('TWITTER_API_KEY environment variable is not set', 500, false);
+    throw new TwitterApiError('Twitter API key is not configured. Set TWITTER_API_KEY_MONITOR, TWITTER_API_KEY_SHARED, or TWITTER_API_KEY.', 500, false);
   }
   
   const apiUrl = process.env.TWITTER_API_URL || 'https://api.twitterapi.io';
@@ -406,16 +422,22 @@ export function extractTweetIdFromUrl(tweetUrl: string): string | null {
  * Supports pagination via next_cursor.
  * 
  * IMPROVED: 3 retries with exponential backoff, better logging
+ * 
+ * @param tweetId - The tweet ID to fetch quotes for
+ * @param cursor - Pagination cursor
+ * @param retries - Number of retries (default: 3)
+ * @param keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchTweetQuotesPage(
   tweetId: string,
   cursor?: string,
-  retries: number = 3 // Increased from 1 to 3
+  retries: number = 3, // Increased from 1 to 3
+  keyType: TwitterApiKeyType = 'shared'
 ): Promise<TwitterQuotesResponse> {
-  const apiKey = process.env.TWITTER_API_KEY;
+  const apiKey = getTwitterApiKey(keyType);
 
   if (!apiKey) {
-    throw new TwitterApiError('TWITTER_API_KEY environment variable is not set', 500, false);
+    throw new TwitterApiError('Twitter API key is not configured. Set TWITTER_API_KEY_MONITOR, TWITTER_API_KEY_SHARED, or TWITTER_API_KEY.', 500, false);
   }
 
   const apiUrl = process.env.TWITTER_API_URL || 'https://api.twitterapi.io';
@@ -588,6 +610,13 @@ export interface QuoteAggregateResult {
  * - Comprehensive logging for debugging
  * - Health check validation
  * - Returns metadata about fetch quality
+ * 
+ * @param tweetId - The tweet ID to aggregate quotes for
+ * @param options - Configuration options
+ * @param options.pageDelayMs - Delay between pages (default: 500ms)
+ * @param options.maxPages - Maximum pages to fetch (default: 50, dynamic based on expectedQuoteCount)
+ * @param options.expectedQuoteCount - Expected quote count for dynamic page calculation
+ * @param options.keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchQuoteMetricsAggregate(
   tweetId: string,
@@ -595,11 +624,13 @@ export async function fetchQuoteMetricsAggregate(
     pageDelayMs?: number;
     maxPages?: number;
     expectedQuoteCount?: number; // From the original tweet's quoteCount metric
+    keyType?: TwitterApiKeyType; // Which API key to use
   } = {}
 ): Promise<QuoteAggregateResult> {
   const startTime = Date.now();
   const pageDelayMs = options.pageDelayMs ?? 500; // Increased from 300ms to 500ms for rate limit safety
   const expectedQuoteCount = options.expectedQuoteCount;
+  const keyType = options.keyType ?? 'shared';
   
   // Dynamic page cap: if we know expected quotes, calculate pages needed (~20 tweets/page)
   // Add 20% buffer for safety, minimum 10 pages, cap at 100
@@ -628,7 +659,7 @@ export async function fetchQuoteMetricsAggregate(
     const pageStart = Date.now();
     
     try {
-      const data = await fetchTweetQuotesPage(tweetId, cursor);
+      const data = await fetchTweetQuotesPage(tweetId, cursor, 3, keyType);
       page += 1;
       const pageElapsed = Date.now() - pageStart;
 

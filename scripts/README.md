@@ -5,8 +5,41 @@ Standalone SOCAP/ranker utilities you can run with `npx tsx scripts/<file> ...` 
 ## 🔧 Setup (once)
 - Node 18+ with native `fetch`.
 - `npm install` (repo root).
-- `.env` with: `MONGODB_URI` (both ranker & socap DBs), `TWITTER_API_KEY` (+ optional `TWITTER_API_URL`), `NEXT_PUBLIC_BASE_URL`, `AUTO_SYNC_BASE_URL` (defaults to `http://localhost:3000`), `OPENAIAPIKEY` for LLM scans.
+- `.env` with required environment variables (see below).
 - Optional: `REQUEST_INTERVAL_MS`, `MAX_PAGES`, etc. to tune rate limits (see individual scripts).
+
+### Required Environment Variables
+
+```bash
+# Database
+MONGODB_URI=mongodb+srv://...  # MongoDB connection string (ranker & socap DBs)
+
+# Twitter API (Hybrid Key Setup - recommended for rate limit distribution)
+TWITTER_API_KEY_MONITOR=...   # Dedicated key for monitoring (protected)
+TWITTER_API_KEY_SHARED=...    # Shared key for batch operations (jobs, narratives, aggregates)
+# OR use single key (backward compatible):
+TWITTER_API_KEY=...           # Fallback if specific keys not set
+
+TWITTER_API_URL=https://api.twitterapi.io  # Optional, defaults to twitterapi.io
+
+# OpenAI (for narrative scans)
+OPENAIAPIKEY=sk-...
+
+# Application URLs
+NEXT_PUBLIC_BASE_URL=https://your-app.vercel.app
+AUTO_SYNC_BASE_URL=http://localhost:3000  # For local sync scripts
+```
+
+### Twitter API Key Strategy (Hybrid)
+
+To prevent rate limit issues, we use a **hybrid API key approach**:
+
+| Key | Used By | Purpose |
+|-----|---------|---------|
+| `TWITTER_API_KEY_MONITOR` | Monitoring endpoints | **Protected** - always available for real-time monitoring |
+| `TWITTER_API_KEY_SHARED` | Jobs, narratives, aggregates | **Shared** - for batch operations that can tolerate delays |
+
+If you only have one API key, just set `TWITTER_API_KEY` and it will be used for everything (backward compatible).
 
 ## 📚 Script reference
 
@@ -77,10 +110,12 @@ GitHub Actions workflows run your scripts automatically on a schedule, even when
    | Secret Name | Description |
    |-------------|-------------|
    | `MONGODB_URI` | MongoDB connection string |
-   | `TWITTER_API_KEY` | Twitter API key |
+   | `TWITTER_API_KEY_SHARED` | Twitter API key for batch operations (jobs, narratives, aggregates) |
    | `TWITTER_API_URL` | Twitter API base URL (optional) |
    | `OPENAIAPIKEY` | OpenAI API key (for narrative scans) |
    | `NEXT_PUBLIC_BASE_URL` | Your deployed app URL (e.g., `https://identity-labs-x.vercel.app`) |
+   
+   **Note:** GitHub Actions only runs batch operations (jobs, narratives, aggregates), so it only needs `TWITTER_API_KEY_SHARED`. Your Vercel deployment should have `TWITTER_API_KEY_MONITOR` for the monitoring endpoints.
 
 4. **Enable Actions**: Go to Actions tab in your repo and enable workflows.
 

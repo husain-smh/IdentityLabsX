@@ -1,10 +1,14 @@
 /**
  * Twitter API Client - Handles fetching replies, retweets, and quotes
  * with pagination, rate limiting, and immediate data transformation
+ * 
+ * Supports hybrid API key strategy:
+ * - 'monitor' key: Dedicated for monitoring (protected)
+ * - 'shared' key: For batch operations (jobs, narratives, aggregates)
  */
 
 import { TwitterApiError } from './external-api';
-import { getTwitterApiConfig } from './config/twitter-api-config';
+import { getTwitterApiConfig, type TwitterApiKeyType } from './config/twitter-api-config';
 import { RateLimitError } from './errors/analysis-errors';
 
 export interface FilteredUser {
@@ -253,6 +257,13 @@ function transformUser(user: any, engagementCreatedAt?: string): FilteredUser | 
 
 /**
  * Fetch tweet replies with pagination
+ * 
+ * @param tweetId - The tweet ID to fetch replies for
+ * @param options - Configuration options
+ * @param options.maxPages - Maximum pages to fetch
+ * @param options.cursor - Pagination cursor
+ * @param options.requestIntervalMs - Delay between requests
+ * @param options.keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchTweetReplies(
   tweetId: string,
@@ -260,9 +271,11 @@ export async function fetchTweetReplies(
     maxPages?: number;
     cursor?: string;
     requestIntervalMs?: number;
+    keyType?: TwitterApiKeyType;
   } = {}
 ): Promise<PaginatedResponse<FilteredUser>> {
-  const config = getTwitterApiConfig();
+  const keyType = options.keyType ?? 'shared';
+  const config = getTwitterApiConfig(keyType);
   const maxPages = options.maxPages || config.maxPages.replies;
   const requestIntervalMs = options.requestIntervalMs ?? config.rateLimitDelay;
   
@@ -330,15 +343,23 @@ export async function fetchTweetReplies(
 
 /**
  * Fetch tweet retweets with pagination
+ * 
+ * @param tweetId - The tweet ID to fetch retweets for
+ * @param options - Configuration options
+ * @param options.maxPages - Maximum pages to fetch
+ * @param options.cursor - Pagination cursor
+ * @param options.keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchTweetRetweets(
   tweetId: string,
   options: {
     maxPages?: number;
     cursor?: string;
+    keyType?: TwitterApiKeyType;
   } = {}
 ): Promise<PaginatedResponse<FilteredUser>> {
-  const config = getTwitterApiConfig();
+  const keyType = options.keyType ?? 'shared';
+  const config = getTwitterApiConfig(keyType);
   const maxPages = options.maxPages || config.maxPages.retweets;
   
   if (!config.apiKey) {
@@ -399,6 +420,13 @@ export async function fetchTweetRetweets(
 
 /**
  * Fetch tweet quotes with pagination
+ * 
+ * @param tweetId - The tweet ID to fetch quotes for
+ * @param options - Configuration options
+ * @param options.maxPages - Maximum pages to fetch
+ * @param options.cursor - Pagination cursor
+ * @param options.requestIntervalMs - Delay between requests
+ * @param options.keyType - Which API key to use: 'monitor' (dedicated) or 'shared' (batch operations)
  */
 export async function fetchTweetQuotes(
   tweetId: string,
@@ -406,9 +434,11 @@ export async function fetchTweetQuotes(
     maxPages?: number;
     cursor?: string;
     requestIntervalMs?: number;
+    keyType?: TwitterApiKeyType;
   } = {}
 ): Promise<PaginatedResponse<FilteredUser>> {
-  const config = getTwitterApiConfig();
+  const keyType = options.keyType ?? 'shared';
+  const config = getTwitterApiConfig(keyType);
   const maxPages = options.maxPages || config.maxPages.quotes;
   const requestIntervalMs = options.requestIntervalMs ?? config.rateLimitDelay;
   

@@ -1,6 +1,7 @@
 # GitHub Actions: Job Scheduler
-# Triggers SOCAP worker endpoints every 15 minutes
-# This replaces the local job-scheduler.ts cron
+# Triggers job CREATION only (every 15 minutes)
+# Job PROCESSING is handled by socap-worker.yml (every 5 minutes)
+# This separation avoids Vercel serverless timeout limits (504 errors)
 
 name: SOCAP Job Scheduler
 
@@ -15,10 +16,10 @@ env:
   API_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
 
 jobs:
-  trigger-workers:
-    name: Trigger SOCAP Workers
+  trigger-job-creation:
+    name: Trigger Job Creation
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - name: Trigger Job Creation
@@ -43,25 +44,5 @@ jobs:
           
           echo "✅ Job creation triggered successfully"
 
-      - name: Process Jobs
-        run: |
-          echo "⚙️ Running job processor at $API_BASE_URL/api/socap/workers/run"
-          
-          # -L follows redirects (Vercel often returns 308 for trailing slash)
-          RESPONSE=$(curl -sL -w "\n%{http_code}" -X POST \
-            "$API_BASE_URL/api/socap/workers/run" \
-            -H "Content-Type: application/json" \
-            -d '{"maxJobs": 100, "concurrency": 5}')
-          
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          
-          echo "Response: $BODY"
-          echo "HTTP Status: $HTTP_CODE"
-          
-          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
-            echo "❌ Request failed with status $HTTP_CODE"
-            exit 1
-          fi
-          
-          echo "✅ Jobs processed successfully"
+      # NOTE: Job processing is handled by socap-worker.yml (runs turbo-worker.ts every 5 min)
+      # This avoids Vercel serverless function timeout limits (504 errors)

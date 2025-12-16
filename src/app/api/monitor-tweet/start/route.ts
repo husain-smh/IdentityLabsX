@@ -49,17 +49,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate tweet exists by fetching it once
+    // Use dedicated 'monitor' API key to protect from batch operation rate limits
     let initialMetrics: Awaited<ReturnType<typeof fetchTweetMetrics>>;
     let initialQuoteAgg: QuoteAggregateResult | null = null;
     try {
-      initialMetrics = await fetchTweetMetrics(tweetId);
+      initialMetrics = await fetchTweetMetrics(tweetId, 1, 'monitor');
       console.log(`[monitor-start] Fetched base metrics: quoteCount=${initialMetrics.quoteCount}, viewCount=${initialMetrics.viewCount}`);
 
       // Fetch quote aggregates (with pagination) so the first snapshot has quote views
       // Pass expected quote count for dynamic page cap
+      // Use dedicated 'monitor' API key
       try {
         initialQuoteAgg = await fetchQuoteMetricsAggregate(tweetId, {
           expectedQuoteCount: initialMetrics.quoteCount,
+          keyType: 'monitor',
         });
         
         console.log(
