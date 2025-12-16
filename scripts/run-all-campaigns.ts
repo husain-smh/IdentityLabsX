@@ -131,7 +131,9 @@ async function main(): Promise<void> {
     console.log(`[${ts()}] 📌 Running for specific campaign: ${specificCampaign}`);
   } else {
     console.log(`[${ts()}] 📊 Fetching active campaigns...`);
-    campaigns = await getActiveCampaigns();
+    // Type assertion needed because Campaign interface has optional _id (for inserts)
+    // but fetched MongoDB documents always have _id populated
+    campaigns = await getActiveCampaigns() as { _id: any; name?: string }[];
     console.log(`[${ts()}] Found ${campaigns.length} active campaign(s)`);
   }
   
