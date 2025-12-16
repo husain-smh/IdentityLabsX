@@ -404,11 +404,13 @@ export function extractTweetIdFromUrl(tweetUrl: string): string | null {
 /**
  * Fetch one page of quote tweets for a given tweet.
  * Supports pagination via next_cursor.
+ * 
+ * IMPROVED: 3 retries with exponential backoff, better logging
  */
 export async function fetchTweetQuotesPage(
   tweetId: string,
   cursor?: string,
-  retries: number = 1
+  retries: number = 3 // Increased from 1 to 3
 ): Promise<TwitterQuotesResponse> {
   const apiKey = process.env.TWITTER_API_KEY;
 
@@ -425,10 +427,18 @@ export async function fetchTweetQuotesPage(
   });
   const url = `${apiUrl}/twitter/tweet/quotes?${params.toString()}`;
 
+  // Exponential backoff delays: 2s, 4s, 8s
+  const getBackoffDelay = (attempt: number): number => Math.pow(2, attempt + 1) * 1000;
+
   for (let attempt = 0; attempt <= retries; attempt++) {
+    const attemptStart = Date.now();
     try {
+      if (attempt > 0) {
+        console.log(`[quotes-page] Retry attempt ${attempt}/${retries} for tweetId=${tweetId}, cursor=${cursor ?? 'none'}`);
+      }
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      const timeoutId = setTimeout(() => controller.abort(), 45000); // Increased from 30s to 45s
 
       const response = await fetch(url, {
         method: 'GET',
@@ -440,10 +450,15 @@ export async function fetchTweetQuotesPage(
       });
 
       clearTimeout(timeoutId);
+      const elapsed = Date.now() - attemptStart;
+      
+      console.log(`[quotes-page] Response: status=${response.status}, elapsed=${elapsed}ms, tweetId=${tweetId}, cursor=${cursor ?? 'none'}`);
 
       if (response.status === 429) {
+        const backoffDelay = getBackoffDelay(attempt) * 2; // Double backoff for rate limits
         if (attempt < retries) {
-          await new Promise(resolve => setTimeout(resolve, 5000));
+          console.warn(`[quotes-page] Rate limited (429), backing off ${backoffDelay}ms before retry ${attempt + 1}/${retries}`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
           continue;
         }
         throw new TwitterApiError(
@@ -481,6 +496,7 @@ export async function fetchTweetQuotesPage(
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error');
+        console.error(`[quotes-page] Non-OK response: status=${response.status}, body=${errorText.slice(0, 500)}`);
         throw new TwitterApiError(
           `Twitter API responded with status ${response.status}: ${errorText}`,
           response.status,
@@ -492,12 +508,16 @@ export async function fetchTweetQuotesPage(
 
       if (data.status === 'error') {
         const errorMessage = data.message || 'Twitter API returned an error';
+        console.error(`[quotes-page] API error response: ${errorMessage}`);
         throw new TwitterApiError(errorMessage, 400, false);
       }
 
       return data;
     } catch (error) {
+      const elapsed = Date.now() - attemptStart;
+      
       if (error instanceof TwitterApiError && !error.isRetryable) {
+        console.error(`[quotes-page] Non-retryable error after ${elapsed}ms: ${error.message}`);
         throw error;
       }
 
@@ -505,9 +525,10 @@ export async function fetchTweetQuotesPage(
         (error instanceof Error && error.name === 'AbortError') ||
         (error instanceof TypeError && error.message.includes('fetch'))
       ) {
+        const backoffDelay = getBackoffDelay(attempt);
         if (attempt < retries) {
-          console.warn(`Network error on attempt ${attempt + 1} (quotes), retrying...`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          console.warn(`[quotes-page] Network/timeout error after ${elapsed}ms, backing off ${backoffDelay}ms before retry ${attempt + 1}/${retries}`);
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
           continue;
         }
         throw new TwitterApiError(
@@ -518,8 +539,9 @@ export async function fetchTweetQuotesPage(
       }
 
       if (error instanceof TwitterApiError && error.isRetryable && attempt < retries) {
-        console.warn(`Retryable error on attempt ${attempt + 1} (quotes), retrying...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const backoffDelay = getBackoffDelay(attempt);
+        console.warn(`[quotes-page] Retryable error after ${elapsed}ms: ${error.message}, backing off ${backoffDelay}ms before retry ${attempt + 1}/${retries}`);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
         continue;
       }
 
@@ -537,61 +559,226 @@ export async function fetchTweetQuotesPage(
 }
 
 /**
+ * Result of quote metrics aggregation with quality metadata
+ */
+export interface QuoteAggregateResult {
+  quoteTweetCount: number;
+  quoteViewSum: number;
+  /** Metadata about the fetch quality */
+  meta: {
+    pagesProcessed: number;
+    maxPagesUsed: number;
+    wasComplete: boolean;        // True if we got all pages (no maxPages cap hit)
+    expectedQuoteCount?: number; // The quoteCount from the original tweet
+    coveragePercent?: number;    // What % of expected quotes we found
+    emptyPagesEncountered: number;
+    duplicatesSkipped: number;
+    tweetsWithZeroViews: number;
+    totalElapsedMs: number;
+    errors: string[];            // Any non-fatal errors encountered
+  };
+}
+
+/**
  * Aggregate quote tweets across all pages with a small delay between pages.
- * Returns total quote tweets and summed view counts.
+ * Returns total quote tweets, summed view counts, and quality metadata.
+ * 
+ * IMPROVED:
+ * - Dynamic page cap based on expected quoteCount
+ * - Comprehensive logging for debugging
+ * - Health check validation
+ * - Returns metadata about fetch quality
  */
 export async function fetchQuoteMetricsAggregate(
   tweetId: string,
   options: {
     pageDelayMs?: number;
     maxPages?: number;
+    expectedQuoteCount?: number; // From the original tweet's quoteCount metric
   } = {}
-): Promise<{ quoteTweetCount: number; quoteViewSum: number }> {
-  const pageDelayMs = options.pageDelayMs ?? 300; // default 300ms between pages
-  const maxPages = options.maxPages ?? 50; // safety cap
+): Promise<QuoteAggregateResult> {
+  const startTime = Date.now();
+  const pageDelayMs = options.pageDelayMs ?? 500; // Increased from 300ms to 500ms for rate limit safety
+  const expectedQuoteCount = options.expectedQuoteCount;
+  
+  // Dynamic page cap: if we know expected quotes, calculate pages needed (~20 tweets/page)
+  // Add 20% buffer for safety, minimum 10 pages, cap at 100
+  let maxPages = options.maxPages ?? 50;
+  if (expectedQuoteCount && expectedQuoteCount > 0) {
+    const estimatedPagesNeeded = Math.ceil(expectedQuoteCount / 20) * 1.2; // 20% buffer
+    maxPages = Math.max(10, Math.min(100, Math.ceil(estimatedPagesNeeded)));
+    console.log(`[quotes-agg] Dynamic maxPages=${maxPages} based on expectedQuoteCount=${expectedQuoteCount}`);
+  }
 
   let cursor: string | undefined = undefined;
   let hasNext = true;
   let page = 0;
   let quoteTweetCount = 0;
   let quoteViewSum = 0;
+  let emptyPagesEncountered = 0;
+  let duplicatesSkipped = 0;
+  let tweetsWithZeroViews = 0;
+  let consecutiveEmptyPages = 0;
+  const errors: string[] = [];
   const seen = new Set<string>();
 
+  console.log(`[quotes-agg] Starting aggregation for tweetId=${tweetId}, maxPages=${maxPages}, expectedQuotes=${expectedQuoteCount ?? 'unknown'}`);
+
   while (hasNext && page < maxPages) {
-    const data = await fetchTweetQuotesPage(tweetId, cursor);
-    page += 1;
+    const pageStart = Date.now();
+    
+    try {
+      const data = await fetchTweetQuotesPage(tweetId, cursor);
+      page += 1;
+      const pageElapsed = Date.now() - pageStart;
 
-    const tweets = data.tweets || [];
-    console.log(
-      `[quotes] page=${page} tweets=${tweets.length} cursor=${cursor ?? 'none'} has_next_page=${(data as any).has_next_page} next_cursor=${(data as any).next_cursor}`
-    );
+      const tweets = data.tweets || [];
+      
+      // Log first page response structure for debugging
+      if (page === 1 && tweets.length > 0) {
+        const sampleTweet = tweets[0];
+        const fields = Object.keys(sampleTweet || {});
+        console.log(`[quotes-agg] First tweet sample fields: [${fields.join(', ')}]`);
+        
+        // Check for different viewCount field names
+        const viewFieldCandidates = ['viewCount', 'view_count', 'views', 'impressionCount', 'impressions'];
+        const foundViewField = viewFieldCandidates.find(f => (sampleTweet as any)[f] !== undefined);
+        if (foundViewField && foundViewField !== 'viewCount') {
+          console.warn(`[quotes-agg] ⚠️ Found view count in field "${foundViewField}" instead of "viewCount"`);
+        }
+        if (!foundViewField) {
+          console.warn(`[quotes-agg] ⚠️ No view count field found in tweet! Available: ${fields.join(', ')}`);
+        }
+      }
 
-    if (tweets.length === 0) {
-      console.warn(`[quotes] empty tweets array for tweetId=${tweetId} on page=${page}`);
-    }
+      console.log(
+        `[quotes-agg] page=${page}/${maxPages} tweets=${tweets.length} elapsed=${pageElapsed}ms ` +
+        `cursor=${cursor ? cursor.slice(0, 20) + '...' : 'none'} ` +
+        `has_next=${(data as any).has_next_page} next_cursor=${(data as any).next_cursor ? 'yes' : 'no'}`
+      );
 
-    for (const t of tweets) {
-      if (!t?.id) continue;
-      if (seen.has(t.id)) continue;
-      seen.add(t.id);
-      quoteTweetCount += 1;
-      const viewCount = (t as any).viewCount ?? 0;
-      quoteViewSum += typeof viewCount === 'number' ? viewCount : 0;
-    }
+      if (tweets.length === 0) {
+        emptyPagesEncountered++;
+        consecutiveEmptyPages++;
+        console.warn(`[quotes-agg] ⚠️ Empty page ${page} for tweetId=${tweetId} (consecutive: ${consecutiveEmptyPages})`);
+        
+        // Stop if we get 3 consecutive empty pages (likely API issue)
+        if (consecutiveEmptyPages >= 3) {
+          errors.push(`Stopped after ${consecutiveEmptyPages} consecutive empty pages`);
+          console.error(`[quotes-agg] ❌ Stopping: ${consecutiveEmptyPages} consecutive empty pages`);
+          break;
+        }
+      } else {
+        consecutiveEmptyPages = 0; // Reset on successful page
+      }
 
-    const hasNextPage = (data as any).has_next_page === true || (data as any).hasNextPage === true;
-    hasNext = hasNextPage && !!data.next_cursor;
-    cursor = data.next_cursor;
+      for (const t of tweets) {
+        if (!t?.id) {
+          errors.push('Tweet without id encountered');
+          continue;
+        }
+        if (seen.has(t.id)) {
+          duplicatesSkipped++;
+          continue;
+        }
+        seen.add(t.id);
+        quoteTweetCount += 1;
+        
+        // Try multiple possible view count field names
+        let viewCount = 0;
+        const viewValue = (t as any).viewCount ?? (t as any).view_count ?? (t as any).views ?? (t as any).impressionCount ?? 0;
+        if (typeof viewValue === 'number') {
+          viewCount = viewValue;
+        } else if (typeof viewValue === 'string') {
+          viewCount = parseInt(viewValue, 10) || 0;
+        }
+        
+        if (viewCount === 0) {
+          tweetsWithZeroViews++;
+        }
+        quoteViewSum += viewCount;
+      }
 
-    if (hasNext) {
-      await new Promise(resolve => setTimeout(resolve, pageDelayMs));
+      // Check pagination signals
+      const hasNextPage = (data as any).has_next_page === true || (data as any).hasNextPage === true;
+      const nextCursor = data.next_cursor || (data as any).nextCursor;
+      hasNext = hasNextPage && !!nextCursor && nextCursor !== cursor; // Also check cursor changed
+      cursor = nextCursor;
+
+      if (!hasNext) {
+        console.log(`[quotes-agg] Pagination complete: has_next_page=${hasNextPage}, has_cursor=${!!nextCursor}`);
+      }
+
+      if (hasNext) {
+        await new Promise(resolve => setTimeout(resolve, pageDelayMs));
+      }
+    } catch (pageError) {
+      const errorMsg = pageError instanceof Error ? pageError.message : 'Unknown error';
+      errors.push(`Page ${page + 1} error: ${errorMsg}`);
+      console.error(`[quotes-agg] ❌ Error on page ${page + 1}: ${errorMsg}`);
+      
+      // If we have some data, don't throw - return what we have with error noted
+      if (quoteTweetCount > 0) {
+        console.warn(`[quotes-agg] ⚠️ Returning partial data (${quoteTweetCount} quotes) after error`);
+        break;
+      }
+      
+      // If no data at all, re-throw
+      throw pageError;
     }
   }
 
+  const totalElapsed = Date.now() - startTime;
+  const wasComplete = page < maxPages && !hasNext;
+  const coveragePercent = expectedQuoteCount && expectedQuoteCount > 0 
+    ? Math.round((quoteTweetCount / expectedQuoteCount) * 100) 
+    : undefined;
+
+  // Health check warnings
+  if (coveragePercent !== undefined && coveragePercent < 80) {
+    console.warn(
+      `[quotes-agg] ⚠️ LOW COVERAGE: Only found ${quoteTweetCount}/${expectedQuoteCount} quotes (${coveragePercent}%). ` +
+      `This may indicate pagination issues.`
+    );
+    errors.push(`Low coverage: ${coveragePercent}% of expected quotes`);
+  }
+
+  if (tweetsWithZeroViews > quoteTweetCount * 0.5) {
+    console.warn(
+      `[quotes-agg] ⚠️ HIGH ZERO-VIEW RATE: ${tweetsWithZeroViews}/${quoteTweetCount} tweets have 0 views. ` +
+      `This may indicate view field parsing issues.`
+    );
+    errors.push(`${Math.round(tweetsWithZeroViews / quoteTweetCount * 100)}% of tweets have 0 views`);
+  }
+
+  if (page >= maxPages && hasNext) {
+    console.warn(`[quotes-agg] ⚠️ HIT MAX PAGES CAP: Stopped at ${maxPages} pages but more data exists`);
+    errors.push(`Hit max pages cap (${maxPages}), data may be incomplete`);
+  }
+
   console.log(
-    `[quotes] aggregate complete for tweetId=${tweetId}: quoteTweetCount=${quoteTweetCount}, quoteViewSum=${quoteViewSum}, pages=${page}, maxPagesCap=${maxPages}`
+    `[quotes-agg] ✅ Complete for tweetId=${tweetId}: ` +
+    `quoteTweetCount=${quoteTweetCount}, quoteViewSum=${quoteViewSum.toLocaleString()}, ` +
+    `pages=${page}/${maxPages}, wasComplete=${wasComplete}, ` +
+    `coverage=${coveragePercent ?? 'N/A'}%, elapsed=${totalElapsed}ms, ` +
+    `emptyPages=${emptyPagesEncountered}, duplicates=${duplicatesSkipped}, zeroViews=${tweetsWithZeroViews}`
   );
 
-  return { quoteTweetCount, quoteViewSum };
+  return {
+    quoteTweetCount,
+    quoteViewSum,
+    meta: {
+      pagesProcessed: page,
+      maxPagesUsed: maxPages,
+      wasComplete,
+      expectedQuoteCount,
+      coveragePercent,
+      emptyPagesEncountered,
+      duplicatesSkipped,
+      tweetsWithZeroViews,
+      totalElapsedMs: totalElapsed,
+      errors,
+    },
+  };
 }
 

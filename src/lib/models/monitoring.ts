@@ -163,6 +163,40 @@ export async function getMetricSnapshots(tweetId: string): Promise<MetricSnapsho
 }
 
 /**
+ * Get the last valid (non-zero) quoteViewSum for a tweet.
+ * Used as fallback when current fetch fails or returns 0.
+ */
+export async function getLastValidQuoteViewSum(tweetId: string): Promise<{
+  quoteViewSum: number;
+  quoteTweetCount: number;
+  timestamp: Date;
+} | null> {
+  const collection = await getMetricSnapshotsCollection();
+  
+  // Find the most recent snapshot with quoteViewSum > 0
+  const result = await collection.findOne(
+    { 
+      tweet_id: tweetId,
+      quoteViewSum: { $gt: 0 }
+    },
+    { 
+      sort: { timestamp: -1 }, // Most recent first
+      projection: { quoteViewSum: 1, quoteTweetCount: 1, timestamp: 1 }
+    }
+  );
+
+  if (!result) {
+    return null;
+  }
+
+  return {
+    quoteViewSum: result.quoteViewSum,
+    quoteTweetCount: result.quoteTweetCount,
+    timestamp: result.timestamp,
+  };
+}
+
+/**
  * Get monitoring job with snapshots
  */
 export async function getMonitoringData(tweetId: string): Promise<{

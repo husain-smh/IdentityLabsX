@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMonitoringJob, getMonitoringJobByTweetId, storeMetricSnapshot } from '@/lib/models/monitoring';
-import { fetchTweetMetrics, fetchQuoteMetricsAggregate } from '@/lib/external-api';
+import { fetchTweetMetrics, fetchQuoteMetricsAggregate, QuoteAggregateResult } from '@/lib/external-api';
 import { extractTweetIdFromUrl } from '@/lib/utils/tweet-utils';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const body = await request.json();
     const { tweetUrl } = body;
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Extract tweet ID from URL
     const tweetId = extractTweetIdFromUrl(tweetUrl);
     if (!tweetId) {
-      console.error('Failed to extract tweet ID from URL:', tweetUrl);
+      console.error('[monitor-start] Failed to extract tweet ID from URL:', tweetUrl);
       return NextResponse.json(
         { 
           error: 'Invalid Twitter/X URL. Please provide a valid tweet URL.',
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    console.log('Extracted tweet ID:', tweetId, 'from URL:', tweetUrl);
+    console.log('[monitor-start] Extracted tweet ID:', tweetId, 'from URL:', tweetUrl);
 
     // Check if tweet is already being monitored
     const existingJob = await getMonitoringJobByTweetId(tweetId);
@@ -48,15 +50,29 @@ export async function POST(request: NextRequest) {
 
     // Validate tweet exists by fetching it once
     let initialMetrics: Awaited<ReturnType<typeof fetchTweetMetrics>>;
-    let initialQuoteAgg = { quoteTweetCount: 0, quoteViewSum: 0 };
+    let initialQuoteAgg: QuoteAggregateResult | null = null;
     try {
       initialMetrics = await fetchTweetMetrics(tweetId);
+      console.log(`[monitor-start] Fetched base metrics: quoteCount=${initialMetrics.quoteCount}, viewCount=${initialMetrics.viewCount}`);
 
       // Fetch quote aggregates (with pagination) so the first snapshot has quote views
+      // Pass expected quote count for dynamic page cap
       try {
-        initialQuoteAgg = await fetchQuoteMetricsAggregate(tweetId);
+        initialQuoteAgg = await fetchQuoteMetricsAggregate(tweetId, {
+          expectedQuoteCount: initialMetrics.quoteCount,
+        });
+        
+        console.log(
+          `[monitor-start] Quote aggregation complete: ` +
+          `quoteTweetCount=${initialQuoteAgg.quoteTweetCount}, quoteViewSum=${initialQuoteAgg.quoteViewSum.toLocaleString()}, ` +
+          `coverage=${initialQuoteAgg.meta.coveragePercent ?? 'N/A'}%, wasComplete=${initialQuoteAgg.meta.wasComplete}`
+        );
+        
+        if (initialQuoteAgg.meta.errors.length > 0) {
+          console.warn(`[monitor-start] Quote aggregation had issues: ${initialQuoteAgg.meta.errors.join('; ')}`);
+        }
       } catch (quoteError) {
-        console.error('Error fetching initial quote aggregates:', quoteError);
+        console.error('[monitor-start] Error fetching initial quote aggregates:', quoteError);
       }
     } catch (error) {
       console.error('Error validating tweet:', error);
@@ -100,14 +116,22 @@ export async function POST(request: NextRequest) {
 
     // Capture the first snapshot immediately so the user sees metrics right away
     try {
+      const quoteTweetCount = initialQuoteAgg?.quoteTweetCount || initialMetrics.quoteCount;
+      const quoteViewSum = initialQuoteAgg?.quoteViewSum || 0;
+      
       await storeMetricSnapshot(tweetId, {
         ...initialMetrics,
-        // Fallback: if quotes API returns none, use the base tweet quoteCount as count
-        quoteTweetCount: initialQuoteAgg.quoteTweetCount || initialMetrics.quoteCount,
-        quoteViewSum: initialQuoteAgg.quoteViewSum,
+        quoteTweetCount,
+        quoteViewSum,
       });
+      
+      const elapsed = Date.now() - startTime;
+      console.log(
+        `[monitor-start] ✅ Monitoring started for ${tweetId}: ` +
+        `quoteViewSum=${quoteViewSum.toLocaleString()}, quoteTweetCount=${quoteTweetCount}, elapsed=${elapsed}ms`
+      );
     } catch (snapshotError) {
-      console.error('Error storing initial metric snapshot:', snapshotError);
+      console.error('[monitor-start] Error storing initial metric snapshot:', snapshotError);
       return NextResponse.json(
         {
           error: 'Failed to store initial metrics snapshot',
@@ -119,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-    message: 'Monitoring started successfully. Metrics will be collected every 5 minutes for 72 hours.',
+      message: 'Monitoring started successfully. Metrics will be collected every 5 minutes for 5 days.',
       tweet_id: tweetId,
       job: {
         tweet_id: job.tweet_id,
@@ -127,9 +151,15 @@ export async function POST(request: NextRequest) {
         status: job.status,
         started_at: job.started_at,
       },
+      initial_quote_metrics: initialQuoteAgg ? {
+        quoteTweetCount: initialQuoteAgg.quoteTweetCount,
+        quoteViewSum: initialQuoteAgg.quoteViewSum,
+        wasComplete: initialQuoteAgg.meta.wasComplete,
+        coveragePercent: initialQuoteAgg.meta.coveragePercent,
+      } : null,
     });
   } catch (error) {
-    console.error('Error starting tweet monitoring:', error);
+    console.error('[monitor-start] Error starting tweet monitoring:', error);
     
     return NextResponse.json(
       {
