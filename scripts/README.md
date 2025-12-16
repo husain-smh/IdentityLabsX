@@ -45,3 +45,86 @@ Default schedule inside `job-scheduler.ts`:
 
 To change or add jobs, edit the `JOBS` array in `job-scheduler.ts` (cron syntax such as `*/5 * * * *` for every 5 minutes). Keep Node 18+ so `fetch` is available.
 
+### Batch helpers
+- `run-all-campaigns.ts` — Wrapper script that runs any campaign-specific script for ALL active campaigns. Used by GitHub Actions for automated scheduling. Usage: `npx tsx scripts/run-all-campaigns.ts --script narrative-scan [--dry-run]`.
+
+---
+
+## 🤖 GitHub Actions (Automated Scheduling)
+
+GitHub Actions workflows run your scripts automatically on a schedule, even when your laptop is off. Located in `.github/workflows/`.
+
+### Quick Setup
+
+1. **Initialize Git** (if not already done):
+   ```bash
+   git init
+   git add .
+   git commit -m "Initial commit"
+   ```
+
+2. **Create GitHub Repository**:
+   - Go to [github.com/new](https://github.com/new) and create a new repo
+   - Push your code:
+     ```bash
+     git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
+     git branch -M main
+     git push -u origin main
+     ```
+
+3. **Add Repository Secrets** (Settings → Secrets and variables → Actions → New repository secret):
+
+   | Secret Name | Description |
+   |-------------|-------------|
+   | `MONGODB_URI` | MongoDB connection string |
+   | `TWITTER_API_KEY` | Twitter API key |
+   | `TWITTER_API_URL` | Twitter API base URL (optional) |
+   | `OPENAIAPIKEY` | OpenAI API key (for narrative scans) |
+   | `NEXT_PUBLIC_BASE_URL` | Your deployed app URL (e.g., `https://identity-labs-x.vercel.app`) |
+
+4. **Enable Actions**: Go to Actions tab in your repo and enable workflows.
+
+### Workflow Schedule
+
+| Workflow | File | Schedule | What it does |
+|----------|------|----------|--------------|
+| Job Scheduler | `job-scheduler.yml` | Every 15 min | Triggers worker endpoints to create and process jobs |
+| SOCAP Worker | `socap-worker.yml` | Every 5 min | Processes queued jobs via turbo-worker |
+| Narrative Scans | `narrative-scans.yml` | Every 12 min | Runs LLM analysis on all campaigns |
+| Aggregate Metrics | `aggregate-metrics.yml` | Every 15 min | Fetches and aggregates quote metrics |
+
+### Manual Triggers
+
+All workflows can be triggered manually from the GitHub Actions UI:
+1. Go to Actions → Select workflow → "Run workflow"
+2. Optionally specify a campaign ID or other parameters
+
+### Monitoring
+
+- View workflow runs: **Actions** tab in your GitHub repo
+- Check logs: Click on any workflow run to see detailed logs
+- Notifications: Enable email/Slack notifications for failures in Settings
+
+### Important Notes
+
+- **GitHub Actions timeout**: 6 hours per job (plenty for most scripts)
+- **Cron accuracy**: GitHub may delay cron jobs by 5-15 min during peak times
+- **Free tier limits**: 2,000 min/month for private repos (unlimited for public)
+- **Secrets**: Never commit `.env` files; use GitHub Secrets instead
+
+---
+
+## 🚂 Railway Deployment (Alternative)
+
+For truly **continuous** workers that need to run 24/7, consider Railway:
+
+1. Create a Railway account at [railway.app](https://railway.app)
+2. Connect your GitHub repo
+3. Add environment variables in Railway dashboard
+4. Create a service for the worker with start command:
+   ```bash
+   npm run turbo-worker
+   ```
+
+Railway is pay-per-usage (~$5-10/month for workers) and has no timeout limits.
+
