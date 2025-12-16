@@ -27,7 +27,9 @@ on:
 env:
   MONGODB_URI: ${{ secrets.MONGODB_URI }}
   OPENAIAPIKEY: ${{ secrets.OPENAIAPIKEY }}
-  TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+  # Use SHARED key for batch operations (separate from monitoring to avoid rate limit conflicts)
+  TWITTER_API_KEY_SHARED: ${{ secrets.TWITTER_API_KEY_SHARED }}
+  TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}  # Fallback for backward compatibility
   NEXT_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
 
 jobs:

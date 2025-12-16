@@ -21,7 +21,9 @@ on:
 
 env:
   MONGODB_URI: ${{ secrets.MONGODB_URI }}
-  TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+  # Use SHARED key for batch operations (separate from monitoring to avoid rate limit conflicts)
+  TWITTER_API_KEY_SHARED: ${{ secrets.TWITTER_API_KEY_SHARED }}
+  TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}  # Fallback for backward compatibility
   TWITTER_API_URL: ${{ secrets.TWITTER_API_URL }}
   NEXT_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
   SOCAP_WORKER_CONCURRENCY: ${{ github.event.inputs.concurrency || '10' }}
