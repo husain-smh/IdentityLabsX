@@ -25,7 +25,8 @@ jobs:
         run: |
           echo "🚀 Triggering job creation at $API_BASE_URL/api/socap/workers/trigger"
           
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          # -L follows redirects (Vercel often returns 308 for trailing slash)
+          RESPONSE=$(curl -sL -w "\n%{http_code}" -X POST \
             "$API_BASE_URL/api/socap/workers/trigger" \
             -H "Content-Type: application/json")
           
@@ -46,7 +47,8 @@ jobs:
         run: |
           echo "⚙️ Running job processor at $API_BASE_URL/api/socap/workers/run"
           
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          # -L follows redirects (Vercel often returns 308 for trailing slash)
+          RESPONSE=$(curl -sL -w "\n%{http_code}" -X POST \
             "$API_BASE_URL/api/socap/workers/run" \
             -H "Content-Type: application/json" \
             -d '{"maxJobs": 100, "concurrency": 5}')
