@@ -258,17 +258,25 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
 /**
  * Claim a pending job (atomic operation)
  * Also claims jobs ready for retry
+ * 
+ * @param workerId - Unique identifier for the worker claiming the job
+ * @param campaignId - Optional: If provided, only claims jobs for this specific campaign
  */
-export async function claimJob(workerId: string): Promise<Job | null> {
+export async function claimJob(workerId: string, campaignId?: string): Promise<Job | null> {
   const collection = await getJobQueueCollection();
   
-  // First, reset jobs ready for retry
-  const now = new Date();
+  // Build the filter based on whether we're filtering by campaign
+  const baseFilter: any = campaignId 
+    ? { status: 'pending', campaign_id: campaignId }
+    : { status: 'pending' };
+  
+  const retryFilter: any = campaignId
+    ? { status: 'retrying', retry_after: { $lte: new Date() }, campaign_id: campaignId }
+    : { status: 'retrying', retry_after: { $lte: new Date() } };
+  
+  // First, reset jobs ready for retry (respecting campaign filter if provided)
   await collection.updateMany(
-    {
-      status: 'retrying',
-      retry_after: { $lte: now },
-    },
+    retryFilter,
     {
       $set: {
         status: 'pending',
@@ -280,9 +288,7 @@ export async function claimJob(workerId: string): Promise<Job | null> {
   
   // Claim a pending job (including newly reset retry jobs)
   const result = await collection.findOneAndUpdate(
-    {
-      status: 'pending',
-    },
+    baseFilter,
     {
       $set: {
         status: 'processing',

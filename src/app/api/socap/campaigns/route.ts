@@ -8,7 +8,8 @@ import {
   createCampaignTweet,
 } from '@/lib/models/socap/tweets';
 import {
-  createWorkerState,
+  createWorkerStatesBulk,
+  CreateWorkerStateInput,
 } from '@/lib/models/socap/worker-state';
 import {
   resolveTweetUrls,
@@ -174,12 +175,16 @@ export async function POST(request: NextRequest) {
             'metrics',
           ];
 
-          for (const resolvedTweet of resolvedTweets) {
+          // ============================================================
+          // PARALLEL TWEET CREATION - Process all tweets concurrently
+          // ============================================================
+          const successfulTweets: Array<{ tweet_id: string; tweet_url: string }> = [];
+
+          const tweetCreationPromises = resolvedTweets.map(async (resolvedTweet) => {
             const tweetInfo = tweetMap.get(resolvedTweet.tweet_url);
-            if (!tweetInfo) continue;
+            if (!tweetInfo) return null;
 
             try {
-              // Create tweet document
               await createCampaignTweet(
                 campaign._id!,
                 resolvedTweet.tweet_id,
@@ -189,7 +194,7 @@ export async function POST(request: NextRequest) {
                 resolvedTweet.author_username,
                 resolvedTweet.text
               );
-              tweetsCreated += 1;
+              return { tweet_id: resolvedTweet.tweet_id, tweet_url: resolvedTweet.tweet_url };
             } catch (err) {
               const message =
                 err instanceof Error ? err.message : 'Failed to create campaign tweet';
@@ -197,26 +202,43 @@ export async function POST(request: NextRequest) {
                 url: resolvedTweet.tweet_url,
                 reason: message,
               });
-              // Skip worker state creation for this tweet
-              continue;
+              return null;
             }
+          });
 
-            // Create worker states for each job type (best-effort per job)
-            for (const jobType of jobTypes) {
-              try {
-                await createWorkerState({
+          // Wait for all tweet creations to complete in parallel
+          const tweetResults = await Promise.all(tweetCreationPromises);
+          for (const result of tweetResults) {
+            if (result) {
+              successfulTweets.push(result);
+              tweetsCreated += 1;
+            }
+          }
+
+          // ============================================================
+          // BULK INSERT WORKER STATES - Single batch operation
+          // ============================================================
+          if (successfulTweets.length > 0) {
+            const workerStateInputs: CreateWorkerStateInput[] = [];
+
+            for (const tweet of successfulTweets) {
+              for (const jobType of jobTypes) {
+                workerStateInputs.push({
                   campaign_id: campaign._id!,
-                  tweet_id: resolvedTweet.tweet_id,
+                  tweet_id: tweet.tweet_id,
                   job_type: jobType,
                 });
-              } catch (err) {
-                const message =
-                  err instanceof Error
-                    ? err.message
-                    : 'Failed to create worker state for tweet';
+              }
+            }
+
+            const bulkResult = await createWorkerStatesBulk(workerStateInputs);
+
+            // Report any bulk insert errors
+            if (bulkResult.errors.length > 0) {
+              for (const errMsg of bulkResult.errors) {
                 tweetErrors.push({
-                  url: resolvedTweet.tweet_url,
-                  reason: `worker_state:${jobType}:${message}`,
+                  url: 'worker_states_bulk',
+                  reason: errMsg,
                 });
               }
             }

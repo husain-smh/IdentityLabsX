@@ -74,6 +74,58 @@ export async function createWorkerState(input: CreateWorkerStateInput): Promise<
   return state;
 }
 
+/**
+ * Bulk insert multiple worker states at once.
+ * Uses ordered: false to continue inserting even if some fail (e.g., duplicates).
+ * Returns the count of successfully inserted documents.
+ */
+export async function createWorkerStatesBulk(
+  inputs: CreateWorkerStateInput[]
+): Promise<{ insertedCount: number; errors: string[] }> {
+  if (inputs.length === 0) {
+    return { insertedCount: 0, errors: [] };
+  }
+
+  const collection = await getWorkerStateCollection();
+  const now = new Date();
+
+  const states: WorkerState[] = inputs.map((input) => ({
+    campaign_id: input.campaign_id,
+    tweet_id: input.tweet_id,
+    job_type: input.job_type,
+    last_success: null,
+    cursor: null,
+    blocked_until: null,
+    last_error: null,
+    retry_count: 0,
+    updated_at: now,
+  }));
+
+  const errors: string[] = [];
+
+  try {
+    // ordered: false means continue inserting even if some fail (e.g., duplicates)
+    const result = await collection.insertMany(states, { ordered: false });
+    return { insertedCount: result.insertedCount, errors };
+  } catch (err: unknown) {
+    // MongoDB bulk write errors contain partial success info
+    if (
+      err &&
+      typeof err === 'object' &&
+      'insertedCount' in err &&
+      typeof (err as { insertedCount: number }).insertedCount === 'number'
+    ) {
+      const bulkErr = err as { insertedCount: number; message?: string };
+      errors.push(bulkErr.message || 'Partial bulk insert failure');
+      return { insertedCount: bulkErr.insertedCount, errors };
+    }
+    // Complete failure
+    const message = err instanceof Error ? err.message : 'Bulk insert failed';
+    errors.push(message);
+    return { insertedCount: 0, errors };
+  }
+}
+
 export async function getWorkerState(
   campaignId: string,
   tweetId: string,

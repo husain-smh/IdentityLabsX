@@ -102,7 +102,7 @@ export async function resolveTweetUrls(urls: string[]): Promise<ResolvedTweet[]>
     
     // Small delay between batches to respect rate limits
     if (i + batchSize < urls.length) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 300));
     }
   }
   
