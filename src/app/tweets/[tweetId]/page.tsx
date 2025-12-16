@@ -83,6 +83,9 @@ export default function TweetDetailPage() {
   const [page, setPage] = useState(1);
   const limit = 50;
 
+  // CSV Export state
+  const [exporting, setExporting] = useState(false);
+
   // Interactive category selection for charts
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
   // Pagination for categorized engagers list
@@ -1075,7 +1078,106 @@ useEffect(() => {
 
           {/* Filters */}
           <div className="glass rounded-2xl p-6 mb-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Filters</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">Filters</h3>
+              <button
+                onClick={async () => {
+                  if (!tweetId || exporting) return;
+                  
+                  setExporting(true);
+                  
+                  try {
+                    // Fetch ALL engagers (set a high limit to get everyone)
+                    const params = new URLSearchParams({
+                      include_engagers: 'true',
+                      limit: '10000', // High limit to get all engagers
+                      skip: '0',
+                      sort_by: sortBy,
+                      sort_order: 'desc',
+                    });
+                    
+                    // Apply current filters to the export
+                    if (minFollowers) params.append('min_followers', minFollowers);
+                    if (engagementFilter) params.append('engagement_type', engagementFilter);
+                    if (verifiedOnly) params.append('verified_only', 'true');
+                    
+                    const res = await fetch(`/api/tweets/${tweetId}?${params}`);
+                    const data = await res.json();
+                    
+                    if (!data.success || !data.engagers?.engagers) {
+                      alert('Failed to fetch engagers for export');
+                      return;
+                    }
+                    
+                    const allEngagers: Engager[] = data.engagers.engagers;
+                    
+                    // Build CSV content
+                    const headers = ['Score', 'Username', 'Name', 'Bio', 'Followers', 'Verified', 'Replied', 'Retweeted', 'Quoted', 'Followed By'];
+                    
+                    const escapeCSV = (value: string | undefined | null) => {
+                      if (value === undefined || value === null) return '';
+                      const str = String(value);
+                      // Escape quotes and wrap in quotes if contains comma, quote, or newline
+                      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                        return `"${str.replace(/"/g, '""')}"`;
+                      }
+                      return str;
+                    };
+                    
+                    const rows = allEngagers.map(engager => [
+                      engager.importance_score || 0,
+                      escapeCSV(engager.username),
+                      escapeCSV(engager.name),
+                      escapeCSV(engager.bio),
+                      engager.followers,
+                      engager.verified ? 'Yes' : 'No',
+                      engager.replied ? 'Yes' : 'No',
+                      engager.retweeted ? 'Yes' : 'No',
+                      engager.quoted ? 'Yes' : 'No',
+                      escapeCSV(engager.followed_by?.join(', '))
+                    ]);
+                    
+                    const csvContent = [
+                      headers.join(','),
+                      ...rows.map(row => row.join(','))
+                    ].join('\n');
+                    
+                    // Create and trigger download
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `engagers-${tweetId}-${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error('Export failed:', err);
+                    alert('Failed to export engagers. Please try again.');
+                  } finally {
+                    setExporting(false);
+                  }
+                }}
+                disabled={exporting}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors text-sm"
+              >
+                {exporting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export All CSV
+                  </>
+                )}
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-300 mb-1">
