@@ -10,6 +10,7 @@ import {
   SecondOrderEngagementInput,
 } from '../src/lib/models/socap/second-order-engagements';
 import { calculateImportanceScore, classifyAccount } from '../src/lib/socap/engagement-processor';
+import { disconnect } from '../src/lib/mongodb';
 
 const MAX_PAGES = Number(process.env.SECOND_ORDER_MAX_PAGES ?? 10);
 const REQUEST_INTERVAL_MS = Number(process.env.SECOND_ORDER_REQUEST_INTERVAL_MS ?? 500);
@@ -133,8 +134,14 @@ async function main(): Promise<void> {
   console.log(`[${ts()}] 🎉 Done processing campaign ${campaignId}`);
 }
 
-main().catch((err) => {
-  console.error(`[${ts()}] ❌ Error:`, err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
+    console.error(`[${ts()}] ❌ Error:`, err);
+    await disconnect();
+    process.exit(1);
+  });
 

@@ -24,6 +24,7 @@ import 'dotenv/config';
 import { spawn } from 'child_process';
 import path from 'path';
 import { getActiveCampaigns } from '../src/lib/models/socap/campaigns';
+import { disconnect } from '../src/lib/mongodb';
 
 // Map of script names to their campaign argument format
 const SCRIPT_CAMPAIGN_ARGS: Record<string, string> = {
@@ -139,6 +140,7 @@ async function main(): Promise<void> {
   
   if (campaigns.length === 0) {
     console.log(`[${ts()}] ⚠️ No active campaigns found. Exiting.`);
+    await disconnect();
     process.exit(0);
   }
   
@@ -153,6 +155,7 @@ async function main(): Promise<void> {
   
   if (dryRun) {
     console.log(`[${ts()}] 🔍 DRY RUN - Not executing scripts`);
+    await disconnect();
     process.exit(0);
   }
   
@@ -186,13 +189,21 @@ async function main(): Promise<void> {
     results
       .filter((r) => !r.success)
       .forEach((r) => console.log(`   - ${r.campaignId}`));
+    await disconnect();
     process.exit(1);
   }
   
   console.log(`\n[${ts()}] 🎉 All campaigns processed successfully!`);
 }
 
-main().catch((err) => {
-  console.error(`[${ts()}] ❌ Fatal error:`, err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    // Gracefully close MongoDB connection so the process can exit
+    await disconnect();
+    // Note: exit code is handled inside main() based on success/failure
+  })
+  .catch(async (err) => {
+    console.error(`[${ts()}] ❌ Fatal error:`, err);
+    await disconnect();
+    process.exit(1);
+  });

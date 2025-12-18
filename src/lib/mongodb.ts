@@ -177,3 +177,27 @@ export default clientPromise;
 // - getClientFast: Ultra-fast getter, no ping, minimal overhead for serverless
 export { getClient, getClientFast };
 
+/**
+ * Gracefully disconnect from MongoDB.
+ * 
+ * IMPORTANT: Call this at the end of CLI scripts (not in web server contexts)
+ * to ensure the Node.js process can exit cleanly. Without this, the connection
+ * pool keeps the event loop alive indefinitely.
+ * 
+ * Usage in scripts:
+ *   await disconnect();
+ *   process.exit(0);
+ */
+async function disconnect(): Promise<void> {
+  try {
+    const clientInstance = await clientPromise;
+    await clientInstance.close();
+    console.log('🔌 MongoDB connection closed');
+  } catch (error) {
+    // Ignore errors during disconnect - we're shutting down anyway
+    console.warn('⚠️ Error closing MongoDB connection:', error);
+  }
+}
+
+export { disconnect };
+

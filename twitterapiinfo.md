@@ -15,7 +15,15 @@ QPS Limit respectively
 6
 10
 20
-
+Tweets:
+$0.15
+per 1K tweets
+Profiles:
+$0.18
+per 1K users
+Followers:
+$0.15
+per 1K followers
 
 API ENDPOINTS 
 

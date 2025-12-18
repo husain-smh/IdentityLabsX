@@ -12,6 +12,7 @@ import {
 import { processEngagement } from '../src/lib/socap/engagement-processor';
 import { createOrUpdateEngagement } from '../src/lib/models/socap/engagements';
 import { createOrUpdateQuoteTweet } from '../src/lib/models/socap/quote-tweets';
+import { disconnect } from '../src/lib/mongodb';
 
 type Category = 'main_twt' | 'influencer_twt' | 'investor_twt' | 'all';
 
@@ -219,8 +220,15 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((err) => {
-  console.error(`[${ts()}] ❌ Error`, err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    // Gracefully close MongoDB connection so the process can exit
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
+    console.error(`[${ts()}] ❌ Error`, err);
+    await disconnect();
+    process.exit(1);
+  });
 

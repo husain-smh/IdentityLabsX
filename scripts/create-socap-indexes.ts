@@ -8,7 +8,7 @@
  */
 import 'dotenv/config';
 
-import { getClient } from '../src/lib/mongodb';
+import { disconnect } from '../src/lib/mongodb';
 import { createCampaignIndexes } from '../src/lib/models/socap/campaigns';
 import { createTweetIndexes } from '../src/lib/models/socap/tweets';
 import { createMetricSnapshotIndexes } from '../src/lib/models/socap/metric-snapshots';
@@ -45,14 +45,17 @@ async function main() {
   await createReplyIndexes();
   console.log('✅ Reply indexes created');
 
-  // Close the client to ensure clean exit
-  const client = await getClient();
-  await client.close();
-  console.log('🎉 All SOCAP indexes created and connection closed.');
+  console.log('🎉 All SOCAP indexes created.');
 }
 
-main().catch((err) => {
-  console.error('❌ Failed to create SOCAP indexes:', err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
+    console.error('❌ Failed to create SOCAP indexes:', err);
+    await disconnect();
+    process.exit(1);
+  });
 

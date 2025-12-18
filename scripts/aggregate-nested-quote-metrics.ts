@@ -8,6 +8,7 @@ import {
   QuoteTweet,
 } from '../src/lib/models/socap/quote-tweets';
 import { createOrUpdateNestedQuoteTweet } from '../src/lib/models/socap/nested-quote-tweets';
+import { disconnect } from '../src/lib/mongodb';
 
 const REQUEST_INTERVAL_MS_DEFAULT = Number(process.env.REQUEST_INTERVAL_MS ?? 500);
 const MAX_PAGES_DEFAULT = Number(process.env.MAX_PAGES ?? 60);
@@ -193,8 +194,15 @@ async function main(): Promise<void> {
   );
 }
 
-main().catch((err) => {
-  console.error(`[${ts()}] ❌ Error`, err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    // Gracefully close MongoDB connection so the process can exit
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
+    console.error(`[${ts()}] ❌ Error`, err);
+    await disconnect();
+    process.exit(1);
+  });
 

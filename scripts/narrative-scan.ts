@@ -7,6 +7,7 @@ import { OpenAI } from 'openai';
 
 import { getQuoteTweetsCollection } from '../src/lib/models/socap/quote-tweets';
 import { calculateImportanceScore } from '../src/lib/socap/engagement-processor';
+import { disconnect } from '../src/lib/mongodb';
 
 type CliOptions = {
   campaignId: string;
@@ -258,8 +259,14 @@ async function main() {
   console.log(`[${ts()}] Report saved to: ${outPath}`);
 }
 
-main().catch((err) => {
-  console.error(`[${ts()}] ❌ Fatal error:`, err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
+    console.error(`[${ts()}] ❌ Fatal error:`, err);
+    await disconnect();
+    process.exit(1);
+  });
 

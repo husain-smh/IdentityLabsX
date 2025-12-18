@@ -12,6 +12,7 @@
 import 'dotenv/config';
 import { getTwitterApiConfig } from '../src/lib/config/twitter-api-config';
 import { makeApiRequest } from '../src/lib/twitter-api-client';
+import { disconnect } from '../src/lib/mongodb';
 import {
   getQuoteTweetsByCampaign,
   QuoteTweet,
@@ -284,8 +285,14 @@ async function main(): Promise<void> {
   console.log(`[${ts()}] 🏁 Done.`);
 }
 
-main().catch((err) => {
-  console.error(`[${ts()}] ❌ Error`, err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    await disconnect();
+    process.exit(0);
+  })
+  .catch(async (err) => {
+    console.error(`[${ts()}] ❌ Error`, err);
+    await disconnect();
+    process.exit(1);
+  });
 
