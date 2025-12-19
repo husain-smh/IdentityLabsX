@@ -9,6 +9,7 @@ export interface ImportantPerson {
   user_id?: string; // Optional until first sync
   name?: string; // Optional until first sync
   weight?: number;
+  networth?: number;
   last_synced?: Date | null;
   tags?: string[];
   following_count: number;
@@ -337,6 +338,38 @@ export async function updateImportantPersonWeight(
 
   await recalculateImportanceScores(followingIndexCollection);
   return true;
+}
+
+export async function updateImportantPersonNetworth(
+  username: string,
+  networth: number | null
+): Promise<boolean> {
+  const importantPeopleCollection = await getImportantPeopleCollection();
+
+  // If networth is null, unset the field; otherwise, set it
+  if (networth === null) {
+    const result = await importantPeopleCollection.updateOne(
+      { username, is_active: true },
+      {
+        $unset: { networth: '' },
+        $set: {
+          updated_at: new Date(),
+        },
+      }
+    );
+    return result.modifiedCount > 0;
+  } else {
+    const result = await importantPeopleCollection.updateOne(
+      { username, is_active: true },
+      {
+        $set: {
+          networth,
+          updated_at: new Date(),
+        },
+      }
+    );
+    return result.modifiedCount > 0;
+  }
 }
 
 export async function getImportantPeople(page: number = 1, limit: number = 20): Promise<{ people: ImportantPerson[], total: number }> {

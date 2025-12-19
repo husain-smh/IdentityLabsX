@@ -11,6 +11,7 @@ interface ImportantPerson {
   following_count: number;
   is_active: boolean;
   weight?: number;
+  networth?: number;
   tags?: string[];
 }
 
@@ -64,6 +65,8 @@ export default function RankerAdmin() {
   const [importantPeople, setImportantPeople] = useState<ImportantPerson[]>([]);
   const [weightEdits, setWeightEdits] = useState<Record<string, string>>({});
   const [updatingWeight, setUpdatingWeight] = useState<string | null>(null);
+  const [networthEdits, setNetworthEdits] = useState<Record<string, string>>({});
+  const [updatingNetworth, setUpdatingNetworth] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<{
     summary: {
       total_people: number;
@@ -234,6 +237,7 @@ export default function RankerAdmin() {
         setTotalPeople(data.data.pagination.total);
         setCurrentPage(page);
         setWeightEdits({});
+        setNetworthEdits({});
       }
     } catch (error) {
       console.error('Error fetching important people:', error);
@@ -509,6 +513,11 @@ export default function RankerAdmin() {
       person.username === username ? { ...person, weight } : person
     );
 
+  const updatePeopleNetworth = (list: ImportantPerson[], username: string, networth: number | null) =>
+    list.map((person) =>
+      person.username === username ? { ...person, networth: networth ?? undefined } : person
+    );
+
   const updatePeopleTags = (list: ImportantPerson[], username: string, tags: string[]) =>
     list.map((person) =>
       person.username === username ? { ...person, tags } : person
@@ -580,6 +589,83 @@ export default function RankerAdmin() {
       });
     } finally {
       setUpdatingWeight(null);
+    }
+  };
+
+  const handleNetworthInputChange = (username: string, value: string) => {
+    setNetworthEdits((prev) => ({
+      ...prev,
+      [username]: value,
+    }));
+  };
+
+  const handleNetworthSave = async (person: ImportantPerson) => {
+    const inputValue = networthEdits[person.username] ?? (person.networth !== undefined ? person.networth.toString() : '');
+    const trimmedValue = inputValue.trim();
+    
+    // Allow empty string to clear networth
+    let parsedNetworth: number | null;
+    if (trimmedValue === '') {
+      parsedNetworth = null;
+    } else {
+      parsedNetworth = Number(trimmedValue);
+      if (!Number.isFinite(parsedNetworth) || parsedNetworth < 0) {
+        setMessage({
+          type: 'error',
+          text: 'Networth must be a non-negative number or empty to clear',
+        });
+        return;
+      }
+    }
+
+    // Check if value actually changed
+    const currentNetworth = person.networth ?? null;
+    if (parsedNetworth === currentNetworth) {
+      return; // No change
+    }
+
+    setUpdatingNetworth(person.username);
+
+    try {
+      const response = await fetch('/api/ranker/admin/important-person', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: person.username,
+          networth: parsedNetworth,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setMessage({
+          type: 'success',
+          text: data.message || `@${person.username} networth updated`,
+        });
+        setImportantPeople((prev) => updatePeopleNetworth(prev, person.username, parsedNetworth));
+        setAllPeople((prev) => updatePeopleNetworth(prev, person.username, parsedNetworth));
+        setNetworthEdits((prev) => {
+          const next = { ...prev };
+          delete next[person.username];
+          return next;
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to update networth',
+        });
+      }
+    } catch (error) {
+      console.error('Error updating networth:', error);
+      setMessage({
+        type: 'error',
+        text: 'Network error. Please try again.',
+      });
+    } finally {
+      setUpdatingNetworth(null);
     }
   };
 
@@ -1390,6 +1476,7 @@ export default function RankerAdmin() {
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Username</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Name</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Weight</th>
+                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Networth</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Tags</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Following</th>
                       <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Last Synced</th>
@@ -1404,6 +1491,14 @@ export default function RankerAdmin() {
                       const isWeightValid = Number.isFinite(parsedWeight) && parsedWeight > 0;
                       const hasWeightChanged = isWeightValid && Math.abs(parsedWeight - (person.weight ?? 1)) >= 0.0001;
                       const isUpdatingThisWeight = updatingWeight === person.username;
+                      
+                      const networthValue = networthEdits[person.username] ?? (person.networth !== undefined ? person.networth.toString() : '');
+                      const trimmedNetworthValue = networthValue.trim();
+                      const parsedNetworth = trimmedNetworthValue === '' ? null : Number(trimmedNetworthValue);
+                      const isNetworthValid = trimmedNetworthValue === '' || (Number.isFinite(parsedNetworth) && parsedNetworth !== null && parsedNetworth >= 0);
+                      const hasNetworthChanged = isNetworthValid && parsedNetworth !== (person.networth ?? null);
+                      const isUpdatingThisNetworth = updatingNetworth === person.username;
+                      
                       const personTags = person.tags ?? [];
 
                       return (
@@ -1455,6 +1550,49 @@ export default function RankerAdmin() {
                               <span>Save</span>
                             </button>
                           </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min={0}
+                              step={1000000}
+                              placeholder="Enter networth..."
+                              value={networthValue}
+                              disabled={isUpdatingThisNetworth}
+                              onChange={(e) => handleNetworthInputChange(person.username, e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (hasNetworthChanged && isNetworthValid && !isUpdatingThisNetworth) {
+                                    handleNetworthSave(person);
+                                  }
+                                }
+                              }}
+                              className="w-32 px-3 py-1.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 placeholder-zinc-600"
+                            />
+                            <button
+                              onClick={() => handleNetworthSave(person)}
+                              disabled={!hasNetworthChanged || !isNetworthValid || isUpdatingThisNetworth}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isUpdatingThisNetworth ? (
+                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
+                                </svg>
+                              ) : (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                              <span>Save</span>
+                            </button>
+                          </div>
+                          {person.networth !== undefined && (
+                            <div className="text-xs text-zinc-500 mt-1">
+                              ${person.networth.toLocaleString()}
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-4">
                           <div className="flex flex-wrap gap-2 mb-2">

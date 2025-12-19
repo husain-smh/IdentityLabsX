@@ -3,6 +3,7 @@ import {
   addImportantPerson,
   removeImportantPerson,
   updateImportantPersonWeight,
+  updateImportantPersonNetworth,
   updateImportantPersonTags,
 } from '@/lib/models/ranker';
 
@@ -156,7 +157,7 @@ export async function DELETE(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, weight, tags } = body;
+    const { username, weight, networth, tags } = body;
 
     if (!username || typeof username !== 'string') {
       return NextResponse.json(
@@ -166,11 +167,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const hasWeightUpdate = weight !== undefined;
+    const hasNetworthUpdate = networth !== undefined;
     const hasTagUpdate = tags !== undefined;
 
-    if (!hasWeightUpdate && !hasTagUpdate) {
+    if (!hasWeightUpdate && !hasNetworthUpdate && !hasTagUpdate) {
       return NextResponse.json(
-        { error: 'Provide weight and/or tags to update' },
+        { error: 'Provide weight, networth, and/or tags to update' },
         { status: 400 }
       );
     }
@@ -183,6 +185,22 @@ export async function PATCH(request: NextRequest) {
           { error: 'weight must be a positive number' },
           { status: 400 }
         );
+      }
+    }
+
+    let parsedNetworth: number | null | undefined;
+    if (hasNetworthUpdate) {
+      // Allow null to clear networth, or a positive number
+      if (networth === null || networth === '') {
+        parsedNetworth = null;
+      } else {
+        parsedNetworth = Number(networth);
+        if (!Number.isFinite(parsedNetworth) || parsedNetworth < 0) {
+          return NextResponse.json(
+            { error: 'networth must be a non-negative number or null' },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -219,7 +237,22 @@ export async function PATCH(request: NextRequest) {
       results.push(`weight updated to ${parsedWeight}`);
     }
 
-    if (hasTagUpdate && normalizedTags) {
+    if (hasNetworthUpdate && parsedNetworth !== undefined) {
+      const updated = await updateImportantPersonNetworth(trimmedUsername, parsedNetworth);
+      if (!updated) {
+        return NextResponse.json(
+          { error: 'Person not found or inactive' },
+          { status: 404 }
+        );
+      }
+      if (parsedNetworth === null) {
+        results.push('networth cleared');
+      } else {
+        results.push(`networth updated to ${parsedNetworth.toLocaleString()}`);
+      }
+    }
+
+    if (hasTagUpdate && normalizedTags !== undefined) {
       const updated = await updateImportantPersonTags(trimmedUsername, normalizedTags);
       if (!updated) {
         return NextResponse.json(
@@ -236,15 +269,16 @@ export async function PATCH(request: NextRequest) {
       data: {
         username: trimmedUsername,
         weight: parsedWeight,
+        networth: parsedNetworth,
         tags: normalizedTags,
       },
     });
   } catch (error) {
-    console.error('Error updating important person weight:', error);
+    console.error('Error updating important person:', error);
 
     return NextResponse.json(
       {
-        error: 'Failed to update weight',
+        error: 'Failed to update person',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
