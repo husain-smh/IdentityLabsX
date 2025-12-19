@@ -842,10 +842,6 @@ export default function RankerAdmin() {
               <span className="text-white"></span>
             </h1>
 
-            <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Manage important people and track their following relationships. 
-              Rank tweet engagers by importance with inverse index lookup.
-            </p>
 
             {/* Stats Overview */}
             {syncStatus && (
@@ -1612,43 +1608,6 @@ export default function RankerAdmin() {
             )}
           </div>
 
-          {/* How it Works */}
-          <div className="mt-16 text-center">
-            <h2 className="text-2xl font-bold text-white mb-8">How it works:</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">1</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Add Important People</h3>
-                <p className="text-zinc-400 text-sm">Define who matters in your network</p>
-              </div>
-
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">2</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Sync Following Data</h3>
-                <p className="text-zinc-400 text-sm">N8N fetches and syncs their following lists</p>
-              </div>
-
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">3</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Build Inverse Index</h3>
-                <p className="text-zinc-400 text-sm">System creates importance score for everyone</p>
-              </div>
-
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">4</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Rank Engagers</h3>
-                <p className="text-zinc-400 text-sm">Instantly rank any list by importance</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {isCandidateModalOpen && (

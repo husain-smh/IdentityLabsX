@@ -384,65 +384,11 @@ export default function TwitterEngagement() {
               <span className="text-white">Analysis.</span>
             </h1>
             
-            <p className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed">
-              Deep-dive into tweet engagement patterns. Analyze user interactions, 
-              engagement metrics, and export comprehensive data to Google Sheets.
-            </p>
-            
-            <div className="flex flex-wrap justify-center gap-8 text-sm text-zinc-500">
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-1 bg-zinc-500 rounded-full"></div>
-                <span>Engagement tracking</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-1 bg-zinc-500 rounded-full"></div>
-                <span>User interaction analysis</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-1 bg-zinc-500 rounded-full"></div>
-                <span>Google Sheets export</span>
-              </div>
-            </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="max-w-2xl mx-auto px-6 pb-20">
-          {/* Important Notes */}
-          <div className="glass rounded-2xl p-6 mb-8">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-6 h-6 bg-yellow-500/20 border border-yellow-500/30 rounded flex items-center justify-center flex-shrink-0">
-                <svg className="w-3.5 h-3.5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.59c.75 1.334-.213 2.987-1.743 2.987H3.482c-1.53 0-2.493-1.653-1.743-2.987l6.518-11.59zM11 14a1 1 0 10-2 0 1 1 0 002 0zm-1-2a1 1 0 01-1-1V8a1 1 0 112 0v3a1 1 0 01-1 1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <h3 className="text-white font-semibold text-lg">Important notes</h3>
-            </div>
-            <ul className="list-disc list-inside space-y-2 text-black text-sm">
-              <li>
-                Ensure the account&apos;s sheet exists in your Google Spreadsheet (
-                <a
-                  href="https://docs.google.com/spreadsheets/d/1Ejt2mOL-uwZ5iu-fGhDten4Du0Hy8t3BFQMJSJA-h2s/edit?gid=0#gid=0"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-indigo-400 hover:text-indigo-300 underline"
-                >
-                  open spreadsheet
-                </a>
-                ). If a sheet with the exact account name does not exist, create one and copy the header
-                row (first row) from an existing sheet into it.
-              </li>
-              <li>
-                The workflow takes time to process. You&apos;ll see a loading state — please be patient.
-              </li>
-              <li>
-                After completion, you can see the reports in the Tweets tab in Nav Bar which contains all the tweets analyzed.
-              </li>
-              <li>
-                Provide the complete Tweet URL, including the full path like /status/123456789...
-              </li>
-            </ul>
-          </div>
           {/* Analytics Tool Card */}
           <div className="glass rounded-2xl p-8 mb-8">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -638,43 +584,6 @@ export default function TwitterEngagement() {
             </div>
           )}
 
-          {/* How it Works Section */}
-          <div className="mt-16 text-center">
-            <h2 className="text-2xl font-bold text-white mb-8">How it works:</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">1</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Copy URL</h3>
-                <p className="text-zinc-400 text-sm">Get any Twitter/X tweet URL from the share button</p>
-              </div>
-              
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">2</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Analyze Engagement</h3>
-                <p className="text-zinc-400 text-sm">Input the URL and click analyze for engagement insights</p>
-              </div>
-              
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">3</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Export Data</h3>
-                <p className="text-zinc-400 text-sm">Get comprehensive data exported to Google Sheets</p>
-              </div>
-              
-              <div className="glass rounded-xl p-6">
-                <div className="w-12 h-12 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-white font-bold text-lg">4</span>
-                </div>
-                <h3 className="text-white font-semibold mb-2">Optimize Strategy</h3>
-                <p className="text-zinc-400 text-sm">Use engagement insights to improve your content strategy</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Footer */}
