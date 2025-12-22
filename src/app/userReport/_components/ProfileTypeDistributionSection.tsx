@@ -19,14 +19,14 @@ const CATEGORY_CONFIG: {
   label: string;
   color: string;
 }[] = [
-  { key: 'founders', label: 'Founders / CEOs', color: '#60a5fa' },
-  { key: 'vcs', label: 'Investors & VCs', color: '#a78bfa' },
-  { key: 'ai_creators', label: 'AI Creators', color: '#34d399' },
-  { key: 'media', label: 'Media & Press', color: '#3b82f6' },
-  { key: 'developers', label: 'Developers', color: '#f472b6' },
-  { key: 'c_level', label: 'C-Level Operators', color: '#fbbf24' },
-  { key: 'yc_alumni', label: 'YC Alumni', color: '#fb923c' },
-  { key: 'others', label: 'General Audience', color: '#94a3b8' },
+  { key: 'founders', label: 'Founders / CEOs', color: '#4D4DFF' },
+  { key: 'vcs', label: 'Investors & VCs', color: '#C4B5FD' },
+  { key: 'ai_creators', label: 'AI Creators', color: '#10B981' },
+  { key: 'media', label: 'Media & Press', color: '#3B82F6' },
+  { key: 'developers', label: 'Developers', color: '#F472B6' },
+  { key: 'c_level', label: 'C-Level Operators', color: '#FBBF24' },
+  { key: 'yc_alumni', label: 'YC Alumni', color: '#FB923C' },
+  { key: 'others', label: 'General Audience', color: '#9CA3AF' },
 ];
 
 type Props = {
@@ -72,7 +72,7 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
 
   if (!total || pieData.length === 0) {
     return (
-      <p className="text-sm text-zinc-400">
+      <p className="text-sm text-muted-foreground">
         We don&apos;t have enough engager data yet to build a profile distribution.
       </p>
     );
@@ -81,20 +81,20 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <div className="card-base p-5">
           <div className="flex items-center justify-between mb-2 gap-2">
-            <h4 className="text-sm font-semibold text-white">
+            <h4 className="text-sm font-semibold text-foreground">
               Profile Type Distribution
             </h4>
             <button
               type="button"
-              className="shrink-0 w-5 h-5 rounded-full border border-zinc-600 text-[10px] text-zinc-300 flex items-center justify-center hover:bg-zinc-800 hover:text-white"
+              className="shrink-0 w-5 h-5 rounded-full border border-muted-foreground/30 text-[10px] text-muted-foreground flex items-center justify-center hover:bg-muted hover:text-foreground"
               title="One account can belong to multiple groups (e.g. YC founder & investor). Slices show share of labels across all unique engagers."
             >
               i
             </button>
           </div>
-          <p className="text-xs text-zinc-400 mb-4">
+          <p className="text-xs text-muted-foreground mb-4">
             Based on all unique engagers across every analyzed tweet. Click a
             segment to see who is in that group.
           </p>
@@ -127,8 +127,8 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
                       <Cell
                         key={entry.key}
                         fill={entry.color}
-                        stroke={isActive ? '#e5e7eb' : '#000000'}
-                        strokeWidth={isActive ? 2 : 1}
+                        stroke={isActive ? 'var(--background)' : 'transparent'}
+                        strokeWidth={isActive ? 2 : 0}
                         className="cursor-pointer"
                       />
                     );
@@ -146,16 +146,17 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
                     ];
                   }}
                   contentStyle={{
-                    backgroundColor: '#ffffff',
-                    borderRadius: '0.5rem',
-                    border: '1px solid #e5e7eb',
-                    color: '#111827',
+                    backgroundColor: 'var(--popover)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                    color: 'var(--popover-foreground)',
+                    boxShadow: 'var(--shadow-card)',
                   }}
                   labelStyle={{
-                    color: '#4b5563',
+                    color: 'var(--muted-foreground)',
                   }}
                   itemStyle={{
-                    color: '#111827',
+                    color: 'var(--foreground)',
                   }}
                 />
               </PieChart>
@@ -163,16 +164,16 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <div className="card-base p-5">
           {selectedCategory ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-zinc-400">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     {CATEGORY_CONFIG.find((c) => c.key === selectedCategory.key)
                       ?.label ?? selectedCategory.label}
                   </p>
-                  <p className="text-sm text-zinc-500">
+                  <p className="text-sm text-foreground/80">
                     {selectedCategory.count} accounts ·{' '}
                     {selectedCategory.percentage.toFixed(1)}% of unique
                     engagers
@@ -181,7 +182,7 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
                 <button
                   type="button"
                   onClick={() => setSelectedKey(null)}
-                  className="text-xs text-zinc-400 hover:text-zinc-200 underline"
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
                 >
                   Clear
                 </button>
@@ -197,23 +198,23 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
                   .map((engager) => (
                     <div
                       key={engager.userId}
-                      className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3"
+                      className="rounded-xl border border-border bg-muted/20 p-3"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-foreground">
                             {engager.name}{' '}
-                            <span className="text-xs text-zinc-400">
+                            <span className="text-xs text-muted-foreground">
                               @{engager.username}
                             </span>
                           </p>
                           {engager.bio && (
-                            <p className="text-xs text-zinc-500 mt-1 line-clamp-2">
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                               {engager.bio}
                             </p>
                           )}
                         </div>
-                        <div className="text-right text-xs text-zinc-400">
+                        <div className="text-right text-xs text-muted-foreground">
                           <div>
                             {followerFormatter.format(
                               Math.round(engager.followers || 0),
@@ -233,7 +234,7 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Click a slice in the chart to inspect the underlying accounts.
             </p>
           )}
@@ -242,5 +243,3 @@ export function ProfileTypeDistributionSection({ distribution }: Props) {
     </div>
   );
 }
-
-

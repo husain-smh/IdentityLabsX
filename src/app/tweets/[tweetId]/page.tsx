@@ -32,19 +32,20 @@ type CategoryKey =
   | 'yc_alumni'
   | 'others';
 
+// Design.json palette mapping
 const CATEGORY_CONFIG: {
   key: CategoryKey;
   label: string;
   color: string;
 }[] = [
-  { key: 'founders', label: 'Founders', color: '#60a5fa' },
-  { key: 'vcs', label: 'VCs', color: '#a78bfa' },
-  { key: 'ai_creators', label: 'AI Creators', color: '#34d399' },
-  { key: 'media', label: 'Media', color: '#3b82f6' },
-  { key: 'developers', label: 'Developers', color: '#f472b6' },
-  { key: 'c_level', label: 'C-Level', color: '#fbbf24' },
-  { key: 'yc_alumni', label: 'YC Alumni', color: '#fb923c' },
-  { key: 'others', label: 'Others', color: '#94a3b8' },
+  { key: 'founders', label: 'Founders', color: '#4D4DFF' }, // primary.vibrantBlue
+  { key: 'vcs', label: 'VCs', color: '#C4B5FD' }, // secondary.lightPurple
+  { key: 'ai_creators', label: 'AI Creators', color: '#10B981' }, // semantic.success
+  { key: 'media', label: 'Media', color: '#3B82F6' }, // Blue
+  { key: 'developers', label: 'Developers', color: '#F472B6' }, // Pink
+  { key: 'c_level', label: 'C-Level', color: '#FBBF24' }, // Amber
+  { key: 'yc_alumni', label: 'YC Alumni', color: '#FB923C' }, // Orange
+  { key: 'others', label: 'Others', color: '#9CA3AF' }, // textTertiary
 ];
 
 export default function TweetDetailPage() {
@@ -91,10 +92,10 @@ export default function TweetDetailPage() {
   // Pagination for categorized engagers list
   const [displayedCount, setDisplayedCount] = useState(20);
 
-const fetchTweetData = useCallback(async () => {
-  if (!tweetId) {
-    return;
-  }
+  const fetchTweetData = useCallback(async () => {
+    if (!tweetId) {
+      return;
+    }
     try {
       setLoading(true);
       
@@ -125,16 +126,16 @@ const fetchTweetData = useCallback(async () => {
       } else {
         setError(data.error || 'Failed to fetch tweet');
       }
-  } catch {
+    } catch {
       setError('Failed to fetch tweet');
     } finally {
       setLoading(false);
     }
-}, [tweetId, page, minFollowers, sortBy, engagementFilter, verifiedOnly]);
+  }, [tweetId, page, minFollowers, sortBy, engagementFilter, verifiedOnly]);
 
-useEffect(() => {
-  fetchTweetData();
-}, [fetchTweetData]);
+  useEffect(() => {
+    fetchTweetData();
+  }, [fetchTweetData]);
 
   const getEngagementBadges = (engager: Engager) => {
     const badges = [];
@@ -361,13 +362,12 @@ useEffect(() => {
 
   if (loading && !tweet) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
         <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-zinc-400">Loading tweet data...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading tweet data...</p>
           </div>
         </div>
       </div>
@@ -376,13 +376,12 @@ useEffect(() => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-background text-foreground">
         <Navbar />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
         <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
           <div className="text-center">
-            <p className="text-red-400 text-lg">{error}</p>
-            <Link href="/tweets" className="mt-4 inline-block px-4 py-2 gradient-primary text-white rounded-lg hover:opacity-90 transition-all">
+            <p className="text-destructive text-lg">{error}</p>
+            <Link href="/tweets" className="mt-4 inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all">
               Back to Tweets
             </Link>
           </div>
@@ -394,16 +393,14 @@ useEffect(() => {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
       
       <div className="relative z-10">
         {/* Header Section */}
         <div className="pt-24 pb-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Link href="/tweets" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 text-sm mb-6 transition-colors">
+            <Link href="/tweets" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 text-sm mb-6 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -414,28 +411,28 @@ useEffect(() => {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
           {/* Tweet Header */}
-          <div className="glass rounded-2xl p-6 mb-6">
+          <div className="card-base mb-6">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-white mb-2">
+                <h1 className="text-2xl font-bold text-foreground mb-2">
                   {tweet?.author_name}
                 </h1>
                 <a
                   href={tweet?.tweet_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-indigo-400 hover:text-indigo-300 hover:underline text-sm transition-colors"
+                  className="text-primary hover:text-primary/80 hover:underline text-sm transition-colors"
                 >
                   View on Twitter →
                 </a>
-                <p className="text-sm text-zinc-400 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                   Analyzed: {tweet?.created_at && new Date(tweet.created_at).toLocaleString()}
                 </p>
               </div>
               <div className={`px-4 py-2 rounded-full font-semibold text-sm border ${
-                tweet?.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                tweet?.status === 'analyzing' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                tweet?.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                tweet?.status === 'analyzing' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
+                'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
               }`}>
                 {tweet?.status}
               </div>
@@ -445,17 +442,17 @@ useEffect(() => {
           {/* Stats */}
           {stats && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">Total Unique Engagers</p>
-                <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
+              <div className="card-base p-4">
+                <p className="text-sm text-muted-foreground">Total Unique Engagers</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
               </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">&gt;10k Followers</p>
-                <p className="text-2xl font-bold text-indigo-400 mt-1">{stats.above_10k}</p>
+              <div className="card-base p-4">
+                <p className="text-sm text-muted-foreground">&gt;10k Followers</p>
+                <p className="text-2xl font-bold text-primary mt-1">{stats.above_10k}</p>
               </div>
-              <div className="glass rounded-xl p-4">
-                <p className="text-sm text-zinc-400">&lt;10k Followers</p>
-                <p className="text-2xl font-bold text-zinc-300 mt-1">{stats.below_10k}</p>
+              <div className="card-base p-4">
+                <p className="text-sm text-muted-foreground">&lt;10k Followers</p>
+                <p className="text-2xl font-bold text-foreground/70 mt-1">{stats.below_10k}</p>
               </div>
             </div>
           )}
@@ -470,26 +467,26 @@ useEffect(() => {
                 { label: 'Bookmark Count', value: tweet.metrics.bookmarkCount },
                 { label: 'Quote Count', value: tweet.metrics.quoteCount },
               ].map(card => (
-                <div key={card.label} className="glass rounded-xl p-4">
-                  <p className="text-sm text-zinc-400">{card.label}</p>
-                  <p className="text-2xl font-bold text-white mt-1">{card.value?.toLocaleString?.() ?? card.value ?? 0}</p>
+                <div key={card.label} className="card-base p-4">
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  <p className="text-2xl font-bold text-foreground mt-1">{card.value?.toLocaleString?.() ?? card.value ?? 0}</p>
                 </div>
               ))}
             </div>
           )}
 
           {/* AI Report Section */}
-          <div className="glass rounded-2xl p-6 mb-6">
+          <div className="card-base p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">AI Engagement Report</h3>
+              <h3 className="text-lg font-semibold text-foreground">AI Engagement Report</h3>
               <button
                 onClick={handleGenerateReport}
                 disabled={generatingReport || !tweetId}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
               >
                 {generatingReport ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
                     Generating...
                   </>
                 ) : aiReport ? (
@@ -501,30 +498,30 @@ useEffect(() => {
             </div>
 
             {reportError && (
-              <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400 text-sm">
+              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
                 {reportError}
               </div>
             )}
 
             {generatingReport && (
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-2 border-indigo-500 border-t-transparent mx-auto"></div>
-                <p className="mt-4 text-zinc-400">Analyzing engagers and generating report...</p>
-                <p className="mt-2 text-sm text-zinc-500">This may take 10-30 seconds</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
+                <p className="mt-4 text-muted-foreground">Analyzing engagers and generating report...</p>
+                <p className="mt-2 text-sm text-muted-foreground/80">This may take 10-30 seconds</p>
               </div>
             )}
 
             {aiReport && !generatingReport && (
               <div className="space-y-8">
                 {/* Formatted Narrative Report */}
-                <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                <div className="bg-muted/30 rounded-lg border border-border">
                   <button
                     onClick={() => setIsNarrativeOpen(!isNarrativeOpen)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
                   >
-                    <h4 className="text-lg font-semibold text-white">Narrative Report</h4>
+                    <h4 className="text-lg font-semibold text-foreground">Narrative Report</h4>
                     <svg
-                      className={`w-5 h-5 text-zinc-400 transition-transform ${isNarrativeOpen ? 'rotate-180' : ''}`}
+                      className={`w-5 h-5 text-muted-foreground transition-transform ${isNarrativeOpen ? 'rotate-180' : ''}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -541,44 +538,39 @@ useEffect(() => {
                           </p>
                         </div>
                       ) : (
-                        <div className="bg-white rounded-lg p-8 shadow-lg border border-zinc-200">
-                          <div className="font-mono text-black text-sm leading-relaxed">
+                        <div className="bg-card rounded-lg p-8 shadow-sm border border-border">
+                          <div className="prose prose-sm max-w-none text-foreground">
                             <ReactMarkdown
                               components={{
-                              // Style headings
-                              h1: (props) => <h1 className="text-2xl font-bold text-black mb-4 mt-6 first:mt-0" {...props} />,
-                              h2: (props) => <h2 className="text-xl font-bold text-black mb-3 mt-5 first:mt-0" {...props} />,
-                              h3: (props) => <h3 className="text-lg font-bold text-black mb-2 mt-4 first:mt-0" {...props} />,
-                              // Style paragraphs
-                              p: (props) => <p className="text-black mb-3 last:mb-0" {...props} />,
-                              // Style lists
-                              ul: (props) => <ul className="list-disc list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
-                              ol: (props) => <ol className="list-decimal list-outside ml-6 text-black mb-3 space-y-2" {...props} />,
-                              li: (props) => <li className="text-black" {...props} />,
-                              // Style bold text
-                              strong: (props) => <strong className="font-bold text-black" {...props} />,
-                              // Style code
-                              code: (props) => <code className="bg-zinc-100 px-1.5 py-0.5 rounded text-black text-xs font-mono" {...props} />,
+                              h1: (props) => <h1 className="text-2xl font-bold text-foreground mb-4 mt-6 first:mt-0" {...props} />,
+                              h2: (props) => <h2 className="text-xl font-bold text-foreground mb-3 mt-5 first:mt-0" {...props} />,
+                              h3: (props) => <h3 className="text-lg font-bold text-foreground mb-2 mt-4 first:mt-0" {...props} />,
+                              p: (props) => <p className="text-foreground/90 mb-3 last:mb-0" {...props} />,
+                              ul: (props) => <ul className="list-disc list-outside ml-6 text-foreground/90 mb-3 space-y-2" {...props} />,
+                              ol: (props) => <ol className="list-decimal list-outside ml-6 text-foreground/90 mb-3 space-y-2" {...props} />,
+                              li: (props) => <li className="text-foreground/90" {...props} />,
+                              strong: (props) => <strong className="font-bold text-foreground" {...props} />,
+                              code: (props) => <code className="bg-muted px-1.5 py-0.5 rounded text-foreground text-xs font-mono" {...props} />,
                             }}
                           >
                             {aiReport.narrative}
                           </ReactMarkdown>
+                          </div>
                         </div>
-                      </div>
                       )}
                     </div>
                   )}
                 </div>
 
                 {/* Charts Section */}
-                <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                <div className="bg-muted/30 rounded-lg border border-border">
                   <button
                     onClick={() => setIsChartsOpen(!isChartsOpen)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
                   >
-                    <h4 className="text-lg font-semibold text-white">Charts & Visualizations</h4>
+                    <h4 className="text-lg font-semibold text-foreground">Charts & Visualizations</h4>
                     <svg
-                      className={`w-5 h-5 text-zinc-400 transition-transform ${isChartsOpen ? 'rotate-180' : ''}`}
+                      className={`w-5 h-5 text-muted-foreground transition-transform ${isChartsOpen ? 'rotate-180' : ''}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -638,24 +630,24 @@ useEffect(() => {
 
                     return pieData.length > 0 ? (
                       <div
-                        className={`bg-zinc-900/50 rounded-lg p-6 transition-all duration-200 ${
+                        className={`bg-card rounded-lg p-6 transition-all duration-200 border border-border ${
                           activeCategory ? 'lg:flex lg:items-start lg:gap-6' : ''
                         }`}
                       >
                         <div className={activeCategory ? 'lg:w-1/2' : ''}>
                           <div className="flex items-center justify-between mb-2 gap-2">
-                            <h4 className="text-lg font-semibold text-white">
+                            <h4 className="text-lg font-semibold text-foreground">
                               Profile Type Distribution
                             </h4>
                             <button
                               type="button"
-                              className="shrink-0 w-5 h-5 rounded-full border border-zinc-600 text-[10px] text-zinc-300 flex items-center justify-center hover:bg-zinc-800 hover:text-white"
+                              className="shrink-0 w-5 h-5 rounded-full border border-muted-foreground/30 text-[10px] text-muted-foreground flex items-center justify-center hover:bg-muted hover:text-foreground"
                               title="One account can be in many groups (founder, VC, etc). This chart shows each group's share of all group labels, not unique people, so the slices always add up to 100%."
                             >
                               i
                             </button>
                           </div>
-                          <p className="text-xs text-zinc-400 mb-4">
+                          <p className="text-xs text-muted-foreground mb-4">
                             Click a segment to see the specific accounts in that category.
                           </p>
                           <ResponsiveContainer width="100%" height={300}>
@@ -669,7 +661,7 @@ useEffect(() => {
                                   `${name}: ${(percent * 100).toFixed(0)}%`
                                 }
                                 outerRadius={100}
-                                fill="#8884d8"
+                                fill="var(--chart-1)"
                                 dataKey="value"
                                 onClick={handleSliceClick}
                               >
@@ -680,25 +672,33 @@ useEffect(() => {
                                     <Cell
                                       key={`cell-${index}`}
                                       fill={entry.color}
-                                      stroke={isActive ? '#e5e7eb' : '#000000'}
-                                      strokeWidth={isActive ? 2 : 1}
+                                      stroke={isActive ? 'var(--background)' : 'transparent'}
+                                      strokeWidth={isActive ? 2 : 0}
                                       className="cursor-pointer"
                                     />
                                   );
                                 })}
                               </Pie>
-                              <Tooltip />
+                              <Tooltip 
+                                contentStyle={{
+                                  backgroundColor: 'var(--popover)',
+                                  borderColor: 'var(--border)',
+                                  borderRadius: '6px',
+                                  color: 'var(--popover-foreground)',
+                                  boxShadow: 'var(--shadow-card)',
+                                }}
+                              />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
 
                         {activeCategory && (
                           <div className="mt-6 lg:mt-0 lg:w-1/2">
-                            <h5 className="text-sm font-semibold text-white mb-2 flex items-center justify-between">
+                            <h5 className="text-sm font-semibold text-foreground mb-2 flex items-center justify-between">
                               <span>
                                 {CATEGORY_CONFIG.find(c => c.key === activeCategory)?.label}{' '}
                                 {isLimited ? (
-                                  <span className="text-zinc-400">
+                                  <span className="text-muted-foreground">
                                     ({displayedCount} shown of {totalCountForCategory} total)
                                   </span>
                                 ) : (
@@ -708,18 +708,18 @@ useEffect(() => {
                               <button
                                 type="button"
                                 onClick={() => setSelectedCategory(null)}
-                                className="text-xs text-zinc-400 hover:text-zinc-200 underline"
+                                className="text-xs text-muted-foreground hover:text-foreground underline"
                               >
                                 Clear
                               </button>
                             </h5>
                             {isLimited && (
-                              <div className="mb-3 p-2 bg-yellow-500/20 border border-yellow-500/30 rounded text-xs text-yellow-400">
+                              <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs text-yellow-600">
                                 ⚠️ Showing limited results. Regenerate the report to see all {totalCountForCategory} accounts in this category.
                               </div>
                             )}
                             {selectedEngagers.length === 0 ? (
-                              <p className="text-xs text-zinc-500">
+                              <p className="text-xs text-muted-foreground">
                                 No accounts found in this category.
                               </p>
                             ) : (
@@ -732,15 +732,15 @@ useEffect(() => {
                                     .map((engager: Engager, index: number) => (
                                       <div
                                         key={`${activeCategory}-${engager.userId}-${index}`}
-                                        className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
+                                        className="bg-muted/30 rounded-md p-3 border border-border"
                                       >
                                         <div className="flex items-center justify-between">
                                           <div>
-                                            <div className="text-sm font-medium text-white flex items-center gap-1">
+                                            <div className="text-sm font-medium text-foreground flex items-center gap-1">
                                               {engager.name}
                                               {engager.verified && (
                                                 <svg
-                                                  className="w-4 h-4 text-indigo-400"
+                                                  className="w-4 h-4 text-primary"
                                                   fill="currentColor"
                                                   viewBox="0 0 20 20"
                                                 >
@@ -752,16 +752,16 @@ useEffect(() => {
                                                 </svg>
                                               )}
                                             </div>
-                                            <div className="text-xs text-zinc-400">
+                                            <div className="text-xs text-muted-foreground">
                                               @{engager.username}
                                             </div>
                                           </div>
-                                          <div className="text-xs text-zinc-300 font-medium ml-4 whitespace-nowrap">
+                                          <div className="text-xs text-foreground font-medium ml-4 whitespace-nowrap">
                                             {engager.followers.toLocaleString()}
                                           </div>
                                         </div>
                                         {engager.bio && (
-                                          <p className="text-xs text-zinc-500 mt-2 line-clamp-2">
+                                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                                             {engager.bio}
                                           </p>
                                         )}
@@ -769,7 +769,7 @@ useEffect(() => {
                                           {getEngagementBadges(engager).map((badge, idx) => (
                                             <span
                                               key={idx}
-                                              className="text-[10px] bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full"
+                                              className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full"
                                             >
                                               {badge}
                                             </span>
@@ -782,7 +782,7 @@ useEffect(() => {
                                   <button
                                     type="button"
                                     onClick={() => setDisplayedCount(prev => Math.min(prev + 20, selectedEngagers.length))}
-                                    className="mt-3 w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+                                    className="mt-3 w-full px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
                                   >
                                     Show More ({Math.min(20, selectedEngagers.length - displayedCount)} more)
                                   </button>
@@ -798,24 +798,27 @@ useEffect(() => {
                   {/* Bar Chart - Follower Tiers (stacked below) */}
                   {aiReport.structured_stats.follower_tiers &&
                     aiReport.structured_stats.follower_tiers.length > 0 && (
-                      <div className="bg-zinc-900/50 rounded-lg p-6">
-                        <h4 className="text-lg font-semibold text-white mb-4">
+                      <div className="bg-card rounded-lg p-6 border border-border">
+                        <h4 className="text-lg font-semibold text-foreground mb-4">
                           Follower Count Tiers
                         </h4>
                         <ResponsiveContainer width="100%" height={300}>
                           <BarChart data={aiReport.structured_stats.follower_tiers}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                            <XAxis dataKey="tier" stroke="#9ca3af" />
-                            <YAxis stroke="#9ca3af" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                            <XAxis dataKey="tier" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
+                            <YAxis stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
                             <Tooltip
+                              cursor={{ fill: 'var(--muted)', opacity: 0.2 }}
                               contentStyle={{
-                                backgroundColor: '#1f2937',
-                                border: '1px solid #374151',
-                                borderRadius: '8px',
+                                backgroundColor: 'var(--popover)',
+                                borderColor: 'var(--border)',
+                                borderRadius: '6px',
+                                color: 'var(--popover-foreground)',
+                                boxShadow: 'var(--shadow-card)',
                               }}
-                              labelStyle={{ color: '#f3f4f6' }}
+                              labelStyle={{ color: 'var(--muted-foreground)' }}
                             />
-                            <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                            <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -826,14 +829,14 @@ useEffect(() => {
 
                 {/* VC Firms */}
                 {aiReport.structured_stats.vc_firms && aiReport.structured_stats.vc_firms.length > 0 && (
-                  <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                  <div className="bg-muted/30 rounded-lg border border-border">
                     <button
                       onClick={() => setIsVCFirmsOpen(!isVCFirmsOpen)}
-                      className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
                     >
-                      <h4 className="text-lg font-semibold text-white">VCs by Firm Affiliation</h4>
+                      <h4 className="text-lg font-semibold text-foreground">VCs by Firm Affiliation</h4>
                       <svg
-                        className={`w-5 h-5 text-zinc-400 transition-transform ${isVCFirmsOpen ? 'rotate-180' : ''}`}
+                        className={`w-5 h-5 text-muted-foreground transition-transform ${isVCFirmsOpen ? 'rotate-180' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -845,16 +848,16 @@ useEffect(() => {
                       <div className="p-6">
                         <div className="space-y-4">
                           {aiReport.structured_stats.vc_firms.map((firm: any, idx: number) => (
-                            <div key={idx} className="bg-zinc-900/50 rounded-lg p-4">
-                              <h5 className="text-white font-semibold mb-3">{firm.firm_name}</h5>
+                            <div key={idx} className="bg-card rounded-lg p-4 border border-border">
+                              <h5 className="text-foreground font-semibold mb-3">{firm.firm_name}</h5>
                               <div className="space-y-2">
                                 {firm.partners.map((partner: any, pIdx: number) => (
                                   <div key={pIdx} className="flex items-center justify-between text-sm">
                                     <div>
-                                      <span className="text-white font-medium">{partner.name}</span>
-                                      <span className="text-indigo-400 ml-2">@{partner.username}</span>
+                                      <span className="text-foreground font-medium">{partner.name}</span>
+                                      <span className="text-primary ml-2">@{partner.username}</span>
                                     </div>
-                                    <span className="text-zinc-400">{(partner.followers / 1000).toFixed(1)}K followers</span>
+                                    <span className="text-muted-foreground">{(partner.followers / 1000).toFixed(1)}K followers</span>
                                   </div>
                                 ))}
                               </div>
@@ -868,14 +871,14 @@ useEffect(() => {
 
                 {/* Hardcoded VC Firms by Firm Affiliation */}
                 {aiReport.structured_stats.hardcoded_vc_firms && aiReport.structured_stats.hardcoded_vc_firms.length > 0 && (
-                  <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                  <div className="bg-muted/30 rounded-lg border border-border">
                     <button
                       onClick={() => setIsHardcodedVCFirmsOpen(!isHardcodedVCFirmsOpen)}
-                      className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
                     >
-                      <h4 className="text-lg font-semibold text-white">VCs by Firm Affiliation (Hardcoded)</h4>
+                      <h4 className="text-lg font-semibold text-foreground">VCs by Firm Affiliation (Hardcoded)</h4>
                       <svg
-                        className={`w-5 h-5 text-zinc-400 transition-transform ${isHardcodedVCFirmsOpen ? 'rotate-180' : ''}`}
+                        className={`w-5 h-5 text-muted-foreground transition-transform ${isHardcodedVCFirmsOpen ? 'rotate-180' : ''}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -897,21 +900,22 @@ useEffect(() => {
                             ? firms.find((f: any) => f.firm_name === selectedVCFirm)
                             : null;
 
-                          const COLORS = ['#a78bfa', '#60a5fa', '#34d399', '#f472b6', '#fbbf24', '#fb923c', '#3b82f6'];
+                          // Design.json-ish colors for firms (cycling)
+                          const COLORS = ['#4D4DFF', '#C4B5FD', '#10B981', '#F472B6', '#FBBF24', '#FB923C', '#3B82F6'];
 
                           return pieData.length > 0 ? (
                             <div
-                              className={`bg-zinc-900/50 rounded-lg p-6 transition-all duration-200 ${
+                              className={`bg-card rounded-lg p-6 transition-all duration-200 border border-border ${
                                 selectedVCFirm ? 'lg:flex lg:items-start lg:gap-6' : ''
                               }`}
                             >
                               <div className={selectedVCFirm ? 'lg:w-1/2' : ''}>
                                 <div className="flex items-center justify-between mb-2 gap-2">
-                                  <h5 className="text-lg font-semibold text-white">
+                                  <h5 className="text-lg font-semibold text-foreground">
                                     Firm Distribution
                                   </h5>
                                 </div>
-                                <p className="text-xs text-zinc-400 mb-4">
+                                <p className="text-xs text-muted-foreground mb-4">
                                   Click a segment to see the VCs/investors from that firm.
                                 </p>
                                 <ResponsiveContainer width="100%" height={300}>
@@ -925,7 +929,7 @@ useEffect(() => {
                                         `${name}: ${(percent * 100).toFixed(0)}%`
                                       }
                                       outerRadius={100}
-                                      fill="#8884d8"
+                                      fill="var(--chart-1)"
                                       dataKey="value"
                                       onClick={(_: any, index: number) => {
                                         const clicked = pieData[index];
@@ -941,34 +945,42 @@ useEffect(() => {
                                           <Cell
                                             key={`cell-${index}`}
                                             fill={COLORS[index % COLORS.length]}
-                                            stroke={isActive ? '#e5e7eb' : '#000000'}
-                                            strokeWidth={isActive ? 2 : 1}
+                                            stroke={isActive ? 'var(--background)' : 'transparent'}
+                                            strokeWidth={isActive ? 2 : 0}
                                             className="cursor-pointer"
                                           />
                                         );
                                       })}
                                     </Pie>
-                                    <Tooltip />
+                                    <Tooltip 
+                                      contentStyle={{
+                                        backgroundColor: 'var(--popover)',
+                                        borderColor: 'var(--border)',
+                                        borderRadius: '6px',
+                                        color: 'var(--popover-foreground)',
+                                        boxShadow: 'var(--shadow-card)',
+                                      }}
+                                    />
                                   </PieChart>
                                 </ResponsiveContainer>
                               </div>
 
                               {selectedVCFirm && selectedFirmData && (
                                 <div className="mt-6 lg:mt-0 lg:w-1/2">
-                                  <h5 className="text-sm font-semibold text-white mb-2 flex items-center justify-between">
+                                  <h5 className="text-sm font-semibold text-foreground mb-2 flex items-center justify-between">
                                     <span>
                                       {selectedFirmData.firm_name} ({selectedFirmData.partners.length} VC{selectedFirmData.partners.length !== 1 ? 's' : ''})
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => setSelectedVCFirm(null)}
-                                      className="text-xs text-zinc-400 hover:text-zinc-200 underline"
+                                      className="text-xs text-muted-foreground hover:text-foreground underline"
                                     >
                                       Clear
                                     </button>
                                   </h5>
                                   {selectedFirmData.partners.length === 0 ? (
-                                    <p className="text-xs text-zinc-500">
+                                    <p className="text-xs text-muted-foreground">
                                       No VCs/investors found in this firm.
                                     </p>
                                   ) : (
@@ -979,23 +991,23 @@ useEffect(() => {
                                         .map((partner: any, pIdx: number) => (
                                           <div
                                             key={`${selectedVCFirm}-${partner.username}-${pIdx}`}
-                                            className="bg-zinc-900 rounded-md p-3 border border-zinc-800"
+                                            className="bg-muted/30 rounded-md p-3 border border-border"
                                           >
                                             <div className="flex items-center justify-between">
                                               <div>
-                                                <div className="text-sm font-medium text-white flex items-center gap-1">
+                                                <div className="text-sm font-medium text-foreground flex items-center gap-1">
                                                   {partner.name}
                                                 </div>
-                                                <div className="text-xs text-zinc-400">
+                                                <div className="text-xs text-muted-foreground">
                                                   @{partner.username}
                                                 </div>
                                               </div>
-                                              <div className="text-xs text-zinc-300 font-medium ml-4 whitespace-nowrap">
+                                              <div className="text-xs text-foreground font-medium ml-4 whitespace-nowrap">
                                                 {partner.followers.toLocaleString()} followers
                                               </div>
                                             </div>
                                             {partner.bio && (
-                                              <p className="text-xs text-zinc-500 mt-2 line-clamp-2">
+                                              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
                                                 {partner.bio}
                                               </p>
                                             )}
@@ -1014,14 +1026,14 @@ useEffect(() => {
                 )}
 
                 {/* Quality Metrics */}
-                <div className="bg-zinc-900/50 rounded-lg border border-zinc-800">
+                <div className="bg-muted/30 rounded-lg border border-border">
                   <button
                     onClick={() => setIsQualityMetricsOpen(!isQualityMetricsOpen)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-zinc-900/50 transition-colors rounded-t-lg"
+                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
                   >
-                    <h4 className="text-lg font-semibold text-white">Quality Metrics</h4>
+                    <h4 className="text-lg font-semibold text-foreground">Quality Metrics</h4>
                     <svg
-                      className={`w-5 h-5 text-zinc-400 transition-transform ${isQualityMetricsOpen ? 'rotate-180' : ''}`}
+                      className={`w-5 h-5 text-muted-foreground transition-transform ${isQualityMetricsOpen ? 'rotate-180' : ''}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1032,27 +1044,27 @@ useEffect(() => {
                   {isQualityMetricsOpen && (
                     <div className="p-6">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                          <p className="text-sm text-zinc-400">Verified</p>
-                          <p className="text-2xl font-bold text-emerald-400 mt-1">
+                        <div className="bg-card rounded-lg p-4 text-center border border-border">
+                          <p className="text-sm text-muted-foreground">Verified</p>
+                          <p className="text-2xl font-bold text-emerald-500 mt-1">
                             {aiReport.structured_stats.quality_metrics?.verified_percentage || 0}%
                           </p>
                         </div>
-                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                          <p className="text-sm text-zinc-400">Replied</p>
-                          <p className="text-2xl font-bold text-blue-400 mt-1">
+                        <div className="bg-card rounded-lg p-4 text-center border border-border">
+                          <p className="text-sm text-muted-foreground">Replied</p>
+                          <p className="text-2xl font-bold text-blue-500 mt-1">
                             {aiReport.structured_stats.engagement.replied_percentage}%
                           </p>
                         </div>
-                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                          <p className="text-sm text-zinc-400">Retweeted</p>
-                          <p className="text-2xl font-bold text-indigo-400 mt-1">
+                        <div className="bg-card rounded-lg p-4 text-center border border-border">
+                          <p className="text-sm text-muted-foreground">Retweeted</p>
+                          <p className="text-2xl font-bold text-primary mt-1">
                             {aiReport.structured_stats.engagement.retweeted_percentage}%
                           </p>
                         </div>
-                        <div className="bg-zinc-900/50 rounded-lg p-4 text-center">
-                          <p className="text-sm text-zinc-400">Top 10 Reach</p>
-                          <p className="text-2xl font-bold text-purple-400 mt-1">
+                        <div className="bg-card rounded-lg p-4 text-center border border-border">
+                          <p className="text-sm text-muted-foreground">Top 10 Reach</p>
+                          <p className="text-2xl font-bold text-purple-500 mt-1">
                             {(aiReport.structured_stats.quality_metrics?.top_10_followers_sum / 1000000).toFixed(2)}M+
                           </p>
                         </div>
@@ -1062,7 +1074,7 @@ useEffect(() => {
                 </div>
 
                 {aiReport.generated_at && (
-                  <p className="text-xs text-zinc-500 text-right">
+                  <p className="text-xs text-muted-foreground text-right">
                     Generated: {new Date(aiReport.generated_at).toLocaleString()}
                   </p>
                 )}
@@ -1070,16 +1082,16 @@ useEffect(() => {
             )}
 
             {!aiReport && !generatingReport && (
-              <div className="text-center py-8 text-zinc-400">
+              <div className="text-center py-8 text-muted-foreground">
                 <p>No report generated yet. Click &quot;Generate Report&quot; to create an AI-powered analysis.</p>
               </div>
             )}
           </div>
 
           {/* Filters */}
-          <div className="glass rounded-2xl p-6 mb-6">
+          <div className="card-base mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Filters</h3>
+              <h3 className="text-lg font-semibold text-foreground">Filters</h3>
               <button
                 onClick={async () => {
                   if (!tweetId || exporting) return;
@@ -1180,7 +1192,7 @@ useEffect(() => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Min Followers
                 </label>
                 <input
@@ -1191,12 +1203,12 @@ useEffect(() => {
                     setPage(1);
                   }}
                   placeholder="e.g. 10000"
-                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none transition-all"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Sort By
                 </label>
                 <select
@@ -1205,7 +1217,7 @@ useEffect(() => {
                     setSortBy(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none transition-all"
                 >
                   <option value="importance_score">Importance Score</option>
                   <option value="followers">Followers</option>
@@ -1214,7 +1226,7 @@ useEffect(() => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Engagement Type
                 </label>
                 <select
@@ -1223,7 +1235,7 @@ useEffect(() => {
                     setEngagementFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none transition-all"
                 >
                   <option value="">All</option>
                   <option value="replied">Replied</option>
@@ -1233,7 +1245,7 @@ useEffect(() => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   Verified Only
                 </label>
                 <label className="flex items-center mt-2">
@@ -1244,66 +1256,66 @@ useEffect(() => {
                       setVerifiedOnly(e.target.checked);
                       setPage(1);
                     }}
-                    className="rounded border-zinc-700 bg-zinc-900 text-indigo-500 focus:ring-indigo-500 focus:ring-2"
+                    className="rounded border-input bg-background text-primary focus:ring-ring focus:ring-2"
                   />
-                  <span className="ml-2 text-sm text-zinc-300">Show only verified</span>
+                  <span className="ml-2 text-sm text-muted-foreground">Show only verified</span>
                 </label>
               </div>
             </div>
           </div>
 
           {/* Engagers Table */}
-          <div className="glass rounded-2xl overflow-hidden">
+          <div className="card-base overflow-hidden p-0">
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
-                  <tr className="border-b border-zinc-800">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  <tr className="border-b border-border">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Score
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       User
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Followers
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Engagement
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Followed By
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800">
+                <tbody className="divide-y divide-border">
                   {engagers.map((engager) => (
-                    <tr key={engager.userId} className="hover:bg-zinc-900/50 transition-colors">
+                    <tr key={engager.userId} className="hover:bg-muted/30 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-lg font-bold text-emerald-400">
+                        <span className="text-lg font-bold text-emerald-500">
                           {engager.importance_score || 0}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-white flex items-center gap-1">
+                            <div className="text-sm font-medium text-foreground flex items-center gap-1">
                               {engager.name}
                               {engager.verified && (
-                                <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                 </svg>
                               )}
                             </div>
-                            <div className="text-sm text-zinc-400">@{engager.username}</div>
+                            <div className="text-sm text-muted-foreground">@{engager.username}</div>
                             {engager.bio && (
-                              <div className="text-xs text-zinc-500 mt-1 max-w-xs truncate">
+                              <div className="text-xs text-muted-foreground/80 mt-1 max-w-xs truncate">
                                 {engager.bio}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">
                         {engager.followers.toLocaleString()}
                       </td>
                       <td className="px-6 py-4">
@@ -1311,21 +1323,21 @@ useEffect(() => {
                           {getEngagementBadges(engager).map((badge, idx) => (
                             <span
                               key={idx}
-                              className="text-xs bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-1 rounded-full"
+                              className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full"
                             >
                               {badge}
                             </span>
                           ))}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-zinc-400">
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
                         {engager.followed_by && engager.followed_by.length > 0 ? (
                           <div className="max-w-xs">
                             {engager.followed_by.slice(0, 3).join(', ')}
                             {engager.followed_by.length > 3 && ` +${engager.followed_by.length - 3} more`}
                           </div>
                         ) : (
-                          <span className="text-zinc-500">-</span>
+                          <span className="text-muted-foreground/50">-</span>
                         )}
                       </td>
                     </tr>
@@ -1336,24 +1348,24 @@ useEffect(() => {
             
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-zinc-900/50 border-t border-zinc-800 px-6 py-4 flex items-center justify-between">
-                <div className="text-sm text-zinc-400">
-                  Showing <span className="font-medium text-white">{(page - 1) * limit + 1}</span> to{' '}
-                  <span className="font-medium text-white">{Math.min(page * limit, total)}</span> of{' '}
-                  <span className="font-medium text-white">{total}</span> results
+              <div className="bg-muted/10 border-t border-border px-6 py-4 flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium text-foreground">{(page - 1) * limit + 1}</span> to{' '}
+                  <span className="font-medium text-foreground">{Math.min(page * limit, total)}</span> of{' '}
+                  <span className="font-medium text-foreground">{total}</span> results
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700 transition-colors"
+                    className="px-4 py-2 bg-background border border-border rounded-lg text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="px-4 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-700 transition-colors"
+                    className="px-4 py-2 bg-background border border-border rounded-lg text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
                   >
                     Next
                   </button>
@@ -1366,4 +1378,3 @@ useEffect(() => {
     </div>
   );
 }
-

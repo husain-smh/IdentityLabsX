@@ -13,14 +13,14 @@ import {
 import type { NetworkReachGroup } from '@/lib/user-report';
 
 const COLORS = [
-  '#6366F1',
-  '#8B5CF6',
-  '#EC4899',
-  '#F97316',
-  '#22C55E',
-  '#14B8A6',
-  '#0EA5E9',
-  '#F59E0B',
+  '#4D4DFF', // vibrantBlue
+  '#C4B5FD', // lightPurple
+  '#A78BFA', // mediumPurple
+  '#10B981', // success
+  '#3B82F6', // chartLine1
+  '#F472B6',
+  '#FBBF24',
+  '#FB923C',
 ];
 
 type Props = {
@@ -56,7 +56,7 @@ export function NetworkReachSection({ groups }: Props) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <div className="card-base p-5">
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -81,25 +81,34 @@ export function NetworkReachSection({ groups }: Props) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [`${value} profiles`, 'High-signal']}
+                   formatter={(value: number) => [`${value} profiles`, 'High-signal']}
+                   contentStyle={{
+                     backgroundColor: 'var(--popover)',
+                     borderColor: 'var(--border)',
+                     borderRadius: '6px',
+                     color: 'var(--popover-foreground)',
+                     boxShadow: 'var(--shadow-card)',
+                   }}
+                   itemStyle={{ color: 'var(--foreground)' }}
+                   labelStyle={{ color: 'var(--muted-foreground)' }}
                 />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <p className="text-xs text-[var(--muted-foreground)]">
+          <p className="text-xs text-muted-foreground">
             Click a slice to inspect the underlying accounts.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+        <div className="card-base p-5">
           {selectedGroup ? (
             <div className="space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-wide text-zinc-400">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   {selectedGroup.role}
                 </p>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-foreground/80">
                   {selectedGroup.engagers.length} high-importance accounts
                 </p>
               </div>
@@ -107,20 +116,20 @@ export function NetworkReachSection({ groups }: Props) {
                 {selectedGroup.engagers.map((engager) => (
                   <div
                     key={engager.userId}
-                    className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3"
+                    className="rounded-xl border border-border bg-muted/20 p-3"
                   >
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-foreground">
                       {engager.name}{' '}
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs text-muted-foreground">
                         @{engager.username}
                       </span>
                     </p>
-                    <p className="text-xs text-zinc-400">
+                    <p className="text-xs text-muted-foreground">
                       {engager.engagementTypes.length > 0
                         ? engager.engagementTypes.join(', ')
                         : 'latent interest'}
                     </p>
-                    <p className="mt-2 text-xs text-zinc-400">
+                    <p className="mt-2 text-xs text-muted-foreground">
                       Importance {engager.importanceScore.toFixed(1)} ·{' '}
                       {followerFormatter.format(Math.round(engager.followers))}{' '}
                       followers
@@ -130,7 +139,7 @@ export function NetworkReachSection({ groups }: Props) {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-muted-foreground">
               Select a slice to see the underlying accounts.
             </p>
           )}
@@ -139,5 +148,3 @@ export function NetworkReachSection({ groups }: Props) {
     </div>
   );
 }
-
-

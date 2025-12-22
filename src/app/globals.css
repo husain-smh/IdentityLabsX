@@ -4,37 +4,62 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Design.json: Typography.fontFamily.primary */
   --font-sans: var(--font-inter);
-  --font-serif: var(--font-playfair);
-  --background: #fafaf9;
-  --foreground: #1c1917;
-  --card: #ffffff;
-  --card-foreground: #1c1917;
-  --popover: #ffffff;
-  --popover-foreground: #1c1917;
-  --primary: #1c1917;
-  --primary-foreground: #fafaf9;
-  --secondary: #f5f5f4;
-  --secondary-foreground: #1c1917;
-  --muted: #f5f5f4;
-  --muted-foreground: #78716c;
-  --accent: #f5f5f4;
-  --accent-foreground: #1c1917;
-  --destructive: #ef4444;
-  --destructive-foreground: #fafaf9;
-  --border: #e7e5e4;
-  --input: #e7e5e4;
-  --ring: #a8a29e;
-  --chart-1: #1c1917;
-  --chart-2: #57534e;
-  --chart-3: #78716c;
-  --chart-4: #a8a29e;
-  --chart-5: #d6d3d1;
+  
+  /* Design.json: ColorPalette.neutrals.background (#F5F5F7) */
+  --background: #F5F5F7;
+  /* Design.json: ColorPalette.neutrals.textPrimary (#1F2937) */
+  --foreground: #1F2937;
+
+  /* Design.json: Components.card.background (#FFFFFF) */
+  --card: #FFFFFF;
+  /* Design.json: ColorPalette.neutrals.textPrimary */
+  --card-foreground: #1F2937;
+
+  /* Design.json: Components.card.background (#FFFFFF) for popovers too */
+  --popover: #FFFFFF;
+  --popover-foreground: #1F2937;
+
+  /* Design.json: ColorPalette.primary.vibrantBlue (#4D4DFF) */
+  --primary: #4D4DFF;
+  --primary-foreground: #FFFFFF;
+
+  /* Design.json: ColorPalette.secondary.lightPurple (#C4B5FD) */
+  --secondary: #E0E7FF; /* Using a lighter tint for UI background secondary */
+  --secondary-foreground: #4D4DFF;
+
+  /* Design.json: ColorPalette.neutrals.background or similar for muted */
+  --muted: #F3F4F6;
+  /* Design.json: ColorPalette.neutrals.textSecondary (#6B7280) */
+  --muted-foreground: #6B7280;
+
+  /* Design.json: ColorPalette.neutrals.background (#F5F5F7) used as accent */
+  --accent: #F5F5F7;
+  --accent-foreground: #1F2937;
+
+  /* Design.json: ColorPalette.semantic.error (implied from trend indicator negativeColor) 
+     Standard red for destructive */
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  /* Design.json: ColorPalette.neutrals.border (#E5E7EB) */
+  --border: #E5E7EB;
+  --input: #E5E7EB;
+  --ring: #4D4DFF; /* Primary color for focus rings */
+
+  /* Design.json: DataVisualization Palette */
+  --chart-1: #4D4DFF; /* vibrantBlue */
+  --chart-2: #C4B5FD; /* lightPurple */
+  --chart-3: #A78BFA; /* mediumPurple */
+  --chart-4: #10B981; /* semantic.success */
+  --chart-5: #6366F1; /* chartLine1 */
+
+  /* Design.json: Components.card.borderRadius (12px = 0.75rem) */
   --radius: 0.75rem;
-  --shadow-soft: 0 8px 30px rgba(0, 0, 0, 0.04);
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(231, 229, 228, 0.8);
-  --noise-opacity: 0.12;
+
+  /* Design.json: Components.card.boxShadow */
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
 }
 
 @theme inline {
@@ -66,172 +91,44 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Custom shadow mapping */
+  --shadow-card: var(--shadow-card);
 }
 
+/* Base resets and typography */
 body {
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
   font-weight: 400;
-  line-height: 1.6;
+  line-height: 1.5; /* Design.json: Typography.scale.subtext.lineHeight 1.5 */
   background-color: var(--background);
   color: var(--foreground);
-  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-h1,
-h2,
-h3,
-.serif-display {
-  font-family: var(--font-serif), "Playfair Display", "Times New Roman", serif;
-  letter-spacing: -0.01em;
-}
-
-p,
-span,
-label,
-button,
-input {
-  font-family: inherit;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--gray-dark);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--gray-light);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* Smooth transitions */
-* {
-  transition: all 0.2s ease-in-out;
-}
-
-.paper-gradient {
-  background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.85), rgba(250, 250, 249, 0) 55%), radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.5), rgba(250, 250, 249, 0) 45%), radial-gradient(circle at 50% 100%, rgba(214, 210, 196, 0.35), rgba(250, 250, 249, 0) 60%), linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(250, 250, 249, 0.2));
-}
-
-.paper-noise {
-  position: relative;
-}
-
-.paper-noise::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none' viewBox='0 0 400 400'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-  mix-blend-mode: multiply;
-  opacity: var(--noise-opacity);
-}
-
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow-soft);
-  border-radius: var(--radius-xl);
-}
-
-.stone-theme .bg-black,
-.stone-theme .bg-zinc-900,
-.stone-theme .bg-zinc-800 {
-  background-color: var(--background) !important;
+/* Heading styles based on Design.json hierarchy */
+h1, h2, h3, h4, h5, h6 {
   color: var(--foreground);
+  font-weight: 600; /* Design.json: Typography.scale.cardTitle.fontWeight */
+  letter-spacing: -0.025em;
 }
 
-.stone-theme .bg-black\/95,
-.stone-theme .bg-black\/90,
-.stone-theme .bg-black\/80,
-.stone-theme .bg-zinc-900\/95,
-.stone-theme .bg-zinc-900\/80,
-.stone-theme .bg-zinc-900\/60,
-.stone-theme .bg-zinc-900\/50 {
-  background-color: color-mix(in srgb, var(--background) 85%, #ffffff) !important;
-  backdrop-filter: blur(20px);
-  color: var(--foreground);
-}
-
-.stone-theme .text-white,
-.stone-theme .text-zinc-100 {
-  color: var(--foreground) !important;
-}
-
-.stone-theme .text-zinc-400,
-.stone-theme .text-zinc-500,
-.stone-theme .text-zinc-600 {
-  color: var(--muted-foreground) !important;
-}
-
-.stone-theme .border-zinc-900,
-.stone-theme .border-zinc-800,
-.stone-theme .border-zinc-700,
-.stone-theme .border-zinc-600 {
-  border-color: var(--border) !important;
-}
-
-.dark {
-  --background: #0c0a09;
-  --foreground: #fafaf9;
-  --card: #1c1917;
-  --card-foreground: #fafaf9;
-  --popover: #1c1917;
-  --popover-foreground: #fafaf9;
-  --primary: #fafaf9;
-  --primary-foreground: #1c1917;
-  --secondary: #292524;
-  --secondary-foreground: #fafaf9;
-  --muted: #292524;
-  --muted-foreground: #a8a29e;
-  --accent: #292524;
-  --accent-foreground: #fafaf9;
-  --destructive: #7f1d1d;
-  --destructive-foreground: #fafaf9;
-  --border: #292524;
-  --input: #292524;
-  --ring: #d6d3d1;
-  --chart-1: #fafaf9;
-  --chart-2: #d6d3d1;
-  --chart-3: #a8a29e;
-  --chart-4: #78716c;
-  --chart-5: #57534e;
-}
-
-/* 75% scale - applies to entire site */
-html {
-  zoom: 0.75;
-}
-
-/* Firefox fallback - zoom not supported, use transform instead */
-@-moz-document url-prefix() {
-  html {
-    zoom: normal;
-    transform: scale(0.75);
-    transform-origin: top left;
-    width: 133.33%; /* Compensate for 75% scale (100/0.75 = 133.33) */
-    height: 133.33%;
-  }
-  
-  body {
-    width: 133.33%;
-    height: 133.33%;
-  }
+/* Card overrides to match Design.json specifically */
+.card-base {
+  background-color: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid rgba(0, 0, 0, 0.04); /* Design.json: Components.card.border */
+  box-shadow: var(--shadow-card);
+  padding: 24px; /* Design.json: Components.card.padding */
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    border-color: var(--border);
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--background);
+    color: var(--foreground);
   }
 }
