@@ -8,9 +8,9 @@ export interface Job {
   _id?: string;
   campaign_id: string;
   tweet_id: string;
-  job_type: 'retweets' | 'replies' | 'quotes' | 'metrics';
+  job_type: 'retweets' | 'replies' | 'quotes' | 'metrics' | 'liking_users';
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying';
-  priority: number; // 1=metrics (highest), 2=retweets, 3=replies/quotes
+  priority: number; // 1=metrics (highest), 2=retweets, 3=replies/quotes, 4=liking_users (lowest)
   claimed_by: string | null; // worker instance ID
   claimed_at: Date | null;
   error_message?: string;
@@ -63,6 +63,7 @@ function getJobPriority(jobType: Job['job_type']): number {
     retweets: 2,
     replies: 3,
     quotes: 3,
+    liking_users: 4, // Lowest priority (OAuth-dependent, opt-in feature)
   };
   return priorities[jobType];
 }
@@ -139,13 +140,17 @@ export async function enqueueJob(input: EnqueueJobInput): Promise<Job> {
 /**
  * Enqueue jobs for all tweets in a campaign
  * OPTIMIZED: Uses MongoDB bulkWrite instead of individual operations
+ * INDEPENDENT: Conditionally includes liking_users jobs based on campaign features
  */
 export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
   const { getTweetsByCampaign, getCampaignTweetsCollection } = await import('../models/socap/tweets');
+  const { getCampaignById } = await import('../models/socap/campaigns');
   
   // Enhanced logging for debugging
   console.log(`[enqueueCampaignJobs] Starting for campaign ID: ${campaignId} (type: ${typeof campaignId})`);
   
+  // Get campaign to check features
+  const campaign = await getCampaignById(campaignId);
   const tweets = await getTweetsByCampaign(campaignId);
   
   console.log(`[enqueueCampaignJobs] Found ${tweets.length} tweets for campaign ${campaignId}`);
@@ -185,21 +190,28 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
     return 0;
   }
   
-  const jobTypes: Array<'retweets' | 'replies' | 'quotes' | 'metrics'> = [
+  // Base job types for all tweets
+  const baseJobTypes: Array<'retweets' | 'replies' | 'quotes' | 'metrics'> = [
     'retweets',
     'replies',
     'quotes',
     'metrics',
   ];
   
-  console.log(`Enqueuing jobs for campaign ${campaignId}: ${tweets.length} tweets × ${jobTypes.length} job types = ${tweets.length * jobTypes.length} total jobs`);
+  // Check if liking users tracking is enabled
+  const trackLikingUsers = campaign?.features?.track_liking_users || false;
+  
+  if (trackLikingUsers) {
+    console.log(`[enqueueCampaignJobs] ✅ Liking users tracking enabled for campaign ${campaignId}`);
+  }
   
   // Build bulk operations array - ONE DB call instead of N*4 calls
   const collection = await getJobQueueCollection();
   const now = new Date();
   
-  const bulkOps = tweets.flatMap(tweet => 
-    jobTypes.map(jobType => ({
+  const bulkOps = tweets.flatMap(tweet => {
+    // Base jobs for all tweets
+    const tweetJobs = baseJobTypes.map(jobType => ({
       updateOne: {
         filter: {
           campaign_id: campaignId,
@@ -226,19 +238,63 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
         },
         upsert: true,
       },
-    }))
-  );
+    }));
+    
+    // Add liking_users job ONLY for main tweets if feature is enabled
+    if (trackLikingUsers && tweet.category === 'main_twt') {
+      tweetJobs.push({
+        updateOne: {
+          filter: {
+            campaign_id: campaignId,
+            tweet_id: tweet.tweet_id,
+            job_type: 'liking_users' as const,
+          },
+          update: {
+            $setOnInsert: {
+              campaign_id: campaignId,
+              tweet_id: tweet.tweet_id,
+              job_type: 'liking_users' as const,
+              created_at: now,
+            },
+            $set: {
+              status: 'pending' as const,
+              priority: getJobPriority('liking_users'),
+              claimed_by: null,
+              claimed_at: null,
+              retry_count: 0,
+              retry_after: null,
+              max_retries: 3,
+              updated_at: now,
+            },
+          },
+          upsert: true,
+        },
+      });
+    }
+    
+    return tweetJobs;
+  });
   
   if (bulkOps.length === 0) {
     console.log(`Campaign ${campaignId}: No jobs to enqueue`);
     return 0;
   }
   
+  const mainTweetsCount = tweets.filter(t => t.category === 'main_twt').length;
+  const expectedJobsPerTweet = trackLikingUsers ? 5 : 4; // 5 if liking_users enabled for main tweets
+  const expectedTotal = (tweets.length * 4) + (trackLikingUsers ? mainTweetsCount : 0);
+  
+  console.log(`Enqueuing jobs for campaign ${campaignId}: ${tweets.length} tweets (${mainTweetsCount} main tweets) × ~${expectedJobsPerTweet} job types ≈ ${expectedTotal} total jobs`);
+  
   try {
     const result = await collection.bulkWrite(bulkOps, { ordered: false });
     const enqueued = result.upsertedCount + result.modifiedCount;
     
     console.log(`Campaign ${campaignId}: ${enqueued} jobs enqueued via bulkWrite (${result.upsertedCount} new, ${result.modifiedCount} updated)`);
+    
+    if (trackLikingUsers && mainTweetsCount > 0) {
+      console.log(`Campaign ${campaignId}: Including liking_users jobs for ${mainTweetsCount} main tweets`);
+    }
     
     return enqueued;
   } catch (error) {

@@ -4,7 +4,7 @@
  * Initiates the OAuth 2.0 flow for a client.
  * 
  * Query parameters:
- * - client_email: The email of the client who needs to authorize
+ * - client: The client identifier (typically their Twitter username)
  * 
  * Flow:
  * 1. Generate PKCE codes and state
@@ -18,26 +18,26 @@ import { generateAuthorizationUrl } from '@/lib/socap/twitter-oauth';
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const clientEmail = searchParams.get('client_email');
+    const clientId = searchParams.get('client');
 
-    if (!clientEmail) {
+    if (!clientId) {
       return NextResponse.json(
-        { success: false, error: 'client_email query parameter is required' },
+        { success: false, error: 'client query parameter is required' },
         { status: 400 }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(clientEmail)) {
+    // Validate client_id format (alphanumeric, underscores, hyphens - like Twitter usernames)
+    const clientIdRegex = /^[a-zA-Z0-9_-]{1,50}$/;
+    if (!clientIdRegex.test(clientId)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid email format' },
+        { success: false, error: 'Invalid client identifier format. Use alphanumeric characters, underscores, or hyphens (1-50 chars).' },
         { status: 400 }
       );
     }
 
     // Generate authorization URL with PKCE
-    const { url } = generateAuthorizationUrl({ clientEmail });
+    const { url } = generateAuthorizationUrl({ clientId });
 
     // Redirect to Twitter
     return NextResponse.redirect(url);

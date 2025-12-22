@@ -12,7 +12,7 @@
  * 2. Exchange code for tokens
  * 3. Fetch user info
  * 4. Store tokens in database
- * 5. Redirect to success page
+ * 5. Redirect to success page with username
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       console.error('[OAuth Callback] Twitter error:', error, errorDescription);
       const errorUrl = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
       return NextResponse.redirect(
-        `${errorUrl}?error=${encodeURIComponent(error || 'Authorization failed')}`
+        `${errorUrl}?error=${encodeURIComponent(errorDescription || error || 'Authorization failed')}`
       );
     }
 
@@ -58,10 +58,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { codeVerifier, clientEmail } = stateData;
+    const { codeVerifier, clientId } = stateData;
 
     // Exchange authorization code for tokens
-    console.log(`[OAuth Callback] Exchanging code for tokens for ${clientEmail}...`);
+    console.log(`[OAuth Callback] Exchanging code for tokens for client: ${clientId}...`);
     const tokens = await exchangeCodeForTokens(code, codeVerifier);
 
     // Fetch user info to get X user ID and username
@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
     const userInfo = await fetchTwitterUserInfo(tokens.accessToken);
 
     // Store tokens in database
-    console.log(`[OAuth Callback] Storing tokens for ${clientEmail} (X: @${userInfo.username})...`);
+    console.log(`[OAuth Callback] Storing tokens for ${clientId} (X: @${userInfo.username})...`);
     await upsertClientOAuth({
-      client_email: clientEmail,
+      client_id: clientId,
       x_user_id: userInfo.id,
       x_username: userInfo.username,
       x_name: userInfo.name,
@@ -81,11 +81,12 @@ export async function GET(request: NextRequest) {
       scopes: tokens.scopes,
     });
 
-    console.log(`[OAuth Callback] ✅ Successfully authorized ${clientEmail}`);
+    console.log(`[OAuth Callback] ✅ Successfully authorized client ${clientId} as @${userInfo.username}`);
 
-    // Redirect to success page
+    // Redirect to success page with username info
     const successUrl = process.env.TWITTER_OAUTH_SUCCESS_URL || '/socap/auth/success';
-    return NextResponse.redirect(successUrl);
+    const successUrlWithParams = `${successUrl}?username=${encodeURIComponent(userInfo.username)}&name=${encodeURIComponent(userInfo.name)}`;
+    return NextResponse.redirect(successUrlWithParams);
   } catch (error) {
     console.error('[OAuth Callback] Error:', error);
     

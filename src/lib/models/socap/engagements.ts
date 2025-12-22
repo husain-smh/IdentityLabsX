@@ -9,7 +9,7 @@ export interface Engagement {
   tweet_id: string; // Original tweet being engaged with
   tweet_category?: 'main_twt' | 'influencer_twt' | 'investor_twt'; // denormalized from socap_tweets
   user_id: string;
-  action_type: 'retweet' | 'reply' | 'quote';
+  action_type: 'retweet' | 'reply' | 'quote' | 'like';
   timestamp: Date;
   text?: string; // for replies/quotes
   engagement_tweet_id?: string; // ID of the actual quote/reply tweet (for quotes and replies)
@@ -52,7 +52,7 @@ export interface EngagementInput {
   tweet_id: string;
   tweet_category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
   user_id: string;
-  action_type: 'retweet' | 'reply' | 'quote';
+  action_type: 'retweet' | 'reply' | 'quote' | 'like';
   timestamp: Date;
   text?: string;
   engagement_tweet_id?: string; // ID of the actual quote/reply tweet
@@ -201,7 +201,7 @@ export async function getEngagementsByCampaign(
     offset?: number;
     sort?: 'importance_score' | 'timestamp';
     category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
-    action_type?: 'retweet' | 'reply' | 'quote';
+    action_type?: 'retweet' | 'reply' | 'quote' | 'like';
     min_importance?: number;
   }
 ): Promise<Engagement[]> {
@@ -275,7 +275,7 @@ export async function getUniqueEngagersByCampaign(campaignId: string): Promise<n
 export async function getAllUniqueEngagersByCampaign(
   campaignId: string,
   options?: {
-    action_type?: 'retweet' | 'reply' | 'quote';
+    action_type?: 'retweet' | 'reply' | 'quote' | 'like';
   }
 ): Promise<Engagement[]> {
   const collection = await getEngagementsCollection();
@@ -367,7 +367,7 @@ export async function getEngagementTimeSeriesByCampaign(
     startDate?: Date;
     endDate?: Date;
     granularity?: 'half_hour' | 'hour' | 'day';
-    action_type?: 'retweet' | 'reply' | 'quote';
+    action_type?: 'retweet' | 'reply' | 'quote' | 'like';
     category?: 'main_twt' | 'influencer_twt' | 'investor_twt';
   }
 ): Promise<
@@ -376,6 +376,7 @@ export async function getEngagementTimeSeriesByCampaign(
     retweets: number;
     replies: number;
     quotes: number;
+    likes: number;
     total: number;
   }>
 > {
@@ -453,6 +454,11 @@ export async function getEngagementTimeSeriesByCampaign(
             $cond: [{ $eq: ['$action_type', 'quote'] }, 1, 0],
           },
         },
+        likes: {
+          $sum: {
+            $cond: [{ $eq: ['$action_type', 'like'] }, 1, 0],
+          },
+        },
         total: { $sum: 1 },
       },
     },
@@ -470,6 +476,7 @@ export async function getEngagementTimeSeriesByCampaign(
     retweets: r.retweets ?? 0,
     replies: r.replies ?? 0,
     quotes: r.quotes ?? 0,
+    likes: r.likes ?? 0,
     total: r.total ?? 0,
   }));
 }

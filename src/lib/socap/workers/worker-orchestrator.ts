@@ -3,6 +3,7 @@ import { RetweetsWorker } from './retweets-worker';
 import { RepliesWorker } from './replies-worker';
 import { QuotesWorker } from './quotes-worker';
 import { MetricsWorker } from './metrics-worker';
+import { LikingUsersWorker } from './liking-users-worker';
 import { BaseWorker } from './base-worker';
 
 /**
@@ -41,6 +42,9 @@ export class WorkerOrchestrator {
         case 'metrics':
           worker = new MetricsWorker(workerId);
           break;
+        case 'liking_users':
+          worker = new LikingUsersWorker(workerId);
+          break;
         default:
           throw new Error(`Unknown job type: ${job.job_type}`);
       }
@@ -77,6 +81,8 @@ export class WorkerOrchestrator {
           console.error('Error processing metric snapshot:', error);
         }
       }
+      
+      // Note: liking_users jobs also trigger alert detection since they're engagement jobs
     } catch (error) {
       // Mark job as failed
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -18,7 +18,7 @@ import {
   updateClientOAuthTokens,
   updateClientOAuthStatus,
   getDecryptedRefreshToken,
-  getClientOAuthByEmail,
+  getClientOAuthById,
   decryptToken,
   updateClientOAuthLastUsed,
 } from '../models/socap/client-oauth';
@@ -82,7 +82,7 @@ export function generateState(): string {
 
 interface OAuthStateData {
   codeVerifier: string;
-  clientEmail: string;
+  clientId: string;
   expiresAt: number;
 }
 
@@ -131,7 +131,7 @@ export function retrieveOAuthState(state: string): OAuthStateData | null {
 // ===== Authorization URL =====
 
 export interface AuthorizationUrlParams {
-  clientEmail: string;
+  clientId: string;
 }
 
 export interface AuthorizationUrlResult {
@@ -144,10 +144,10 @@ export interface AuthorizationUrlResult {
  * Generate the Twitter authorization URL for a client.
  */
 export function generateAuthorizationUrl(params: AuthorizationUrlParams): AuthorizationUrlResult {
-  const clientId = process.env.TWITTER_OAUTH_CLIENT_ID;
+  const twitterClientId = process.env.TWITTER_OAUTH_CLIENT_ID;
   const callbackUrl = process.env.TWITTER_OAUTH_CALLBACK_URL;
   
-  if (!clientId) {
+  if (!twitterClientId) {
     throw new Error('TWITTER_OAUTH_CLIENT_ID environment variable is not set');
   }
   if (!callbackUrl) {
@@ -164,13 +164,13 @@ export function generateAuthorizationUrl(params: AuthorizationUrlParams): Author
   // Store state and verifier for callback
   storeOAuthState(state, {
     codeVerifier,
-    clientEmail: params.clientEmail,
+    clientId: params.clientId,
   });
   
   // Build authorization URL
   const urlParams = new URLSearchParams({
     response_type: 'code',
-    client_id: clientId,
+    client_id: twitterClientId,
     redirect_uri: callbackUrl,
     scope: REQUIRED_SCOPES.join(' '),
     state: state,
@@ -324,8 +324,8 @@ export async function fetchTwitterUserInfo(accessToken: string): Promise<Twitter
  * Get a valid access token for a client, refreshing if necessary.
  * Returns null if no OAuth or refresh fails.
  */
-export async function getValidAccessToken(clientEmail: string): Promise<string | null> {
-  const oauth = await getClientOAuthByEmail(clientEmail);
+export async function getValidAccessToken(clientId: string): Promise<string | null> {
+  const oauth = await getClientOAuthById(clientId);
   
   if (!oauth || oauth.status !== 'active') {
     return null;
@@ -337,7 +337,7 @@ export async function getValidAccessToken(clientEmail: string): Promise<string |
   
   // Check if token needs refresh (expires within 5 minutes)
   if (now + fiveMinutes >= expiresAt) {
-    console.log(`[TwitterOAuth] Access token for ${clientEmail} expires soon, refreshing...`);
+    console.log(`[TwitterOAuth] Access token for ${clientId} expires soon, refreshing...`);
     
     try {
       const refreshToken = decryptToken(oauth.refresh_token_encrypted);
@@ -345,19 +345,19 @@ export async function getValidAccessToken(clientEmail: string): Promise<string |
       
       // Update tokens in database
       await updateClientOAuthTokens(
-        clientEmail,
+        clientId,
         newTokens.accessToken,
         newTokens.refreshToken,
         newTokens.expiresIn
       );
       
-      console.log(`[TwitterOAuth] Successfully refreshed tokens for ${clientEmail}`);
+      console.log(`[TwitterOAuth] Successfully refreshed tokens for ${clientId}`);
       return newTokens.accessToken;
     } catch (error) {
-      console.error(`[TwitterOAuth] Failed to refresh token for ${clientEmail}:`, error);
+      console.error(`[TwitterOAuth] Failed to refresh token for ${clientId}:`, error);
       
       // Mark as expired so we don't keep trying
-      await updateClientOAuthStatus(clientEmail, 'expired');
+      await updateClientOAuthStatus(clientId, 'expired');
       return null;
     }
   }
@@ -365,10 +365,10 @@ export async function getValidAccessToken(clientEmail: string): Promise<string |
   // Token is still valid, decrypt and return
   try {
     const accessToken = decryptToken(oauth.access_token_encrypted);
-    await updateClientOAuthLastUsed(clientEmail);
+    await updateClientOAuthLastUsed(clientId);
     return accessToken;
   } catch (error) {
-    console.error(`[TwitterOAuth] Failed to decrypt access token for ${clientEmail}:`, error);
+    console.error(`[TwitterOAuth] Failed to decrypt access token for ${clientId}:`, error);
     return null;
   }
 }

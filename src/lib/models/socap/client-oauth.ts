@@ -2,7 +2,7 @@
  * SOCAP Client OAuth Model
  * 
  * Stores OAuth tokens for clients who have authorized access to their X/Twitter account.
- * Tokens are stored per client (by email) and shared across all their campaigns.
+ * Tokens are stored per client (by client_id - typically their Twitter username).
  * 
  * This enables fetching "liking users" for the client's main tweets.
  * 
@@ -78,8 +78,12 @@ export function decryptToken(encryptedToken: string): string {
 export interface ClientOAuth {
   _id?: string;
   
-  // Client identification (links to campaigns via client_info.email)
-  client_email: string;
+  /**
+   * Client identifier - typically the client's Twitter username (without @).
+   * This is used to link OAuth tokens to campaigns.
+   * Example: "johndoe" or "acme_corp"
+   */
+  client_id: string;
   
   // X/Twitter user info (fetched from /users/me after auth)
   x_user_id: string;
@@ -107,7 +111,7 @@ export interface ClientOAuth {
 }
 
 export interface ClientOAuthInput {
-  client_email: string;
+  client_id: string;
   x_user_id: string;
   x_username: string;
   x_name: string;
@@ -130,9 +134,9 @@ export async function getClientOAuthCollection(): Promise<Collection<ClientOAuth
 export async function createClientOAuthIndexes(): Promise<void> {
   const collection = await getClientOAuthCollection();
   
-  // Unique index on client_email - one OAuth per client
+  // Unique index on client_id - one OAuth per client
   await collection.createIndex(
-    { client_email: 1 },
+    { client_id: 1 },
     { unique: true }
   );
   
@@ -160,7 +164,7 @@ export async function upsertClientOAuth(input: ClientOAuthInput): Promise<Client
   const refreshTokenEncrypted = encryptToken(input.refresh_token);
   
   const result = await collection.findOneAndUpdate(
-    { client_email: input.client_email },
+    { client_id: input.client_id },
     {
       $set: {
         x_user_id: input.x_user_id,
@@ -175,7 +179,7 @@ export async function upsertClientOAuth(input: ClientOAuthInput): Promise<Client
         updated_at: now,
       },
       $setOnInsert: {
-        client_email: input.client_email,
+        client_id: input.client_id,
         authorized_at: now,
         last_used_at: null,
         created_at: now,
@@ -191,11 +195,11 @@ export async function upsertClientOAuth(input: ClientOAuthInput): Promise<Client
 }
 
 /**
- * Get OAuth tokens for a client by email.
+ * Get OAuth tokens for a client by client_id.
  */
-export async function getClientOAuthByEmail(clientEmail: string): Promise<ClientOAuth | null> {
+export async function getClientOAuthById(clientId: string): Promise<ClientOAuth | null> {
   const collection = await getClientOAuthCollection();
-  return await collection.findOne({ client_email: clientEmail });
+  return await collection.findOne({ client_id: clientId });
 }
 
 /**
@@ -210,7 +214,7 @@ export async function getClientOAuthByXUserId(xUserId: string): Promise<ClientOA
  * Update tokens after a refresh.
  */
 export async function updateClientOAuthTokens(
-  clientEmail: string,
+  clientId: string,
   accessToken: string,
   refreshToken: string,
   expiresIn: number
@@ -221,7 +225,7 @@ export async function updateClientOAuthTokens(
   const expiresAt = new Date(now.getTime() + expiresIn * 1000);
   
   const result = await collection.updateOne(
-    { client_email: clientEmail },
+    { client_id: clientId },
     {
       $set: {
         access_token_encrypted: encryptToken(accessToken),
@@ -240,11 +244,11 @@ export async function updateClientOAuthTokens(
 /**
  * Update the last_used_at timestamp.
  */
-export async function updateClientOAuthLastUsed(clientEmail: string): Promise<void> {
+export async function updateClientOAuthLastUsed(clientId: string): Promise<void> {
   const collection = await getClientOAuthCollection();
   
   await collection.updateOne(
-    { client_email: clientEmail },
+    { client_id: clientId },
     {
       $set: {
         last_used_at: new Date(),
@@ -258,13 +262,13 @@ export async function updateClientOAuthLastUsed(clientEmail: string): Promise<vo
  * Update OAuth status (e.g., mark as expired or revoked).
  */
 export async function updateClientOAuthStatus(
-  clientEmail: string,
+  clientId: string,
   status: ClientOAuth['status']
 ): Promise<boolean> {
   const collection = await getClientOAuthCollection();
   
   const result = await collection.updateOne(
-    { client_email: clientEmail },
+    { client_id: clientId },
     {
       $set: {
         status,
@@ -279,10 +283,10 @@ export async function updateClientOAuthStatus(
 /**
  * Delete OAuth tokens for a client (revoke access).
  */
-export async function deleteClientOAuth(clientEmail: string): Promise<boolean> {
+export async function deleteClientOAuth(clientId: string): Promise<boolean> {
   const collection = await getClientOAuthCollection();
   
-  const result = await collection.deleteOne({ client_email: clientEmail });
+  const result = await collection.deleteOne({ client_id: clientId });
   return result.deletedCount > 0;
 }
 
@@ -290,8 +294,8 @@ export async function deleteClientOAuth(clientEmail: string): Promise<boolean> {
  * Get decrypted access token for a client.
  * Returns null if no OAuth or status is not active.
  */
-export async function getDecryptedAccessToken(clientEmail: string): Promise<string | null> {
-  const oauth = await getClientOAuthByEmail(clientEmail);
+export async function getDecryptedAccessToken(clientId: string): Promise<string | null> {
+  const oauth = await getClientOAuthById(clientId);
   
   if (!oauth || oauth.status !== 'active') {
     return null;
@@ -300,7 +304,7 @@ export async function getDecryptedAccessToken(clientEmail: string): Promise<stri
   try {
     return decryptToken(oauth.access_token_encrypted);
   } catch (error) {
-    console.error(`Failed to decrypt access token for ${clientEmail}:`, error);
+    console.error(`Failed to decrypt access token for ${clientId}:`, error);
     return null;
   }
 }
@@ -308,8 +312,8 @@ export async function getDecryptedAccessToken(clientEmail: string): Promise<stri
 /**
  * Get decrypted refresh token for a client.
  */
-export async function getDecryptedRefreshToken(clientEmail: string): Promise<string | null> {
-  const oauth = await getClientOAuthByEmail(clientEmail);
+export async function getDecryptedRefreshToken(clientId: string): Promise<string | null> {
+  const oauth = await getClientOAuthById(clientId);
   
   if (!oauth) {
     return null;
@@ -318,7 +322,7 @@ export async function getDecryptedRefreshToken(clientEmail: string): Promise<str
   try {
     return decryptToken(oauth.refresh_token_encrypted);
   } catch (error) {
-    console.error(`Failed to decrypt refresh token for ${clientEmail}:`, error);
+    console.error(`Failed to decrypt refresh token for ${clientId}:`, error);
     return null;
   }
 }
@@ -326,17 +330,12 @@ export async function getDecryptedRefreshToken(clientEmail: string): Promise<str
 /**
  * Check if a client has valid (non-expired) OAuth.
  */
-export async function hasValidOAuth(clientEmail: string): Promise<boolean> {
-  const oauth = await getClientOAuthByEmail(clientEmail);
+export async function hasValidOAuth(clientId: string): Promise<boolean> {
+  const oauth = await getClientOAuthById(clientId);
   
   if (!oauth || oauth.status !== 'active') {
     return false;
   }
-  
-  // Check if token is expired (with 5 min buffer)
-  const now = Date.now();
-  const fiveMinutes = 5 * 60 * 1000;
-  const expiresAt = oauth.token_expires_at.getTime();
   
   // Even if access token is expired, we can refresh using refresh token
   // So we return true as long as status is active

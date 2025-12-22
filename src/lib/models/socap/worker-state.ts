@@ -7,7 +7,7 @@ export interface WorkerState {
   _id?: string;
   campaign_id: string;
   tweet_id: string;
-  job_type: 'retweets' | 'replies' | 'quotes' | 'metrics';
+  job_type: 'retweets' | 'replies' | 'quotes' | 'metrics' | 'liking_users';
   last_success: Date | null;
   cursor: string | null;
   blocked_until: Date | null;
