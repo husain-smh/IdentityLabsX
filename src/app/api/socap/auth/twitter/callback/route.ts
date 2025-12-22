@@ -23,7 +23,15 @@ import {
 } from '@/lib/socap/twitter-oauth';
 import { upsertClientOAuth } from '@/lib/models/socap/client-oauth';
 
+// Helper to build absolute URL
+function buildAbsoluteUrl(baseUrl: string, path: string): string {
+  return path.startsWith('http') ? path : `${baseUrl}${path}`;
+}
+
 export async function GET(request: NextRequest) {
+  // Get base URL for redirects
+  const baseUrl = request.nextUrl.origin;
+  
   try {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
@@ -34,7 +42,8 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors from Twitter
     if (error) {
       console.error('[OAuth Callback] Twitter error:', error, errorDescription);
-      const errorUrl = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+      const errorPath = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+      const errorUrl = buildAbsoluteUrl(baseUrl, errorPath);
       return NextResponse.redirect(
         `${errorUrl}?error=${encodeURIComponent(errorDescription || error || 'Authorization failed')}`
       );
@@ -52,7 +61,8 @@ export async function GET(request: NextRequest) {
     const stateData = retrieveOAuthState(state);
     if (!stateData) {
       console.error('[OAuth Callback] Invalid or expired state:', state);
-      const errorUrl = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+      const errorPath = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+      const errorUrl = buildAbsoluteUrl(baseUrl, errorPath);
       return NextResponse.redirect(
         `${errorUrl}?error=${encodeURIComponent('Invalid or expired authorization request. Please try again.')}`
       );
@@ -84,16 +94,19 @@ export async function GET(request: NextRequest) {
     console.log(`[OAuth Callback] ✅ Successfully authorized client ${clientId} as @${userInfo.username}`);
 
     // Redirect to success page with username info
-    const successUrl = process.env.TWITTER_OAUTH_SUCCESS_URL || '/socap/auth/success';
-    const successUrlWithParams = `${successUrl}?username=${encodeURIComponent(userInfo.username)}&name=${encodeURIComponent(userInfo.name)}`;
-    return NextResponse.redirect(successUrlWithParams);
+    const successPath = process.env.TWITTER_OAUTH_SUCCESS_URL || '/socap/auth/success';
+    const successUrl = buildAbsoluteUrl(baseUrl, successPath);
+    return NextResponse.redirect(
+      `${successUrl}?username=${encodeURIComponent(userInfo.username)}&name=${encodeURIComponent(userInfo.name)}`
+    );
   } catch (error) {
     console.error('[OAuth Callback] Error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
     // Redirect to error page
-    const errorUrl = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+    const errorPath = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+    const errorUrl = buildAbsoluteUrl(baseUrl, errorPath);
     return NextResponse.redirect(
       `${errorUrl}?error=${encodeURIComponent(errorMessage)}`
     );

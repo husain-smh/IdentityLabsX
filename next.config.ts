@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
   
   // Ensure mongodb is treated as external for proper serverless bundling
   serverExternalPackages: ['mongodb'],
+  
+  // URL rewrites for cleaner OAuth callback URLs
+  async rewrites() {
+    return [
+      // Clean callback URL: /auth/twitter/callback → /api/socap/auth/twitter/callback
+      {
+        source: '/auth/twitter/callback',
+        destination: '/api/socap/auth/twitter/callback',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

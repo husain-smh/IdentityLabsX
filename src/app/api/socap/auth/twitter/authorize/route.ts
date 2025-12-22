@@ -16,6 +16,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateAuthorizationUrl } from '@/lib/socap/twitter-oauth';
 
 export async function GET(request: NextRequest) {
+  // Get the base URL for redirects
+  const baseUrl = request.nextUrl.origin;
+  
   try {
     const searchParams = request.nextUrl.searchParams;
     const clientId = searchParams.get('client');
@@ -46,8 +49,9 @@ export async function GET(request: NextRequest) {
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    // Redirect to error page
-    const errorUrl = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+    // Redirect to error page (use absolute URL)
+    const errorPath = process.env.TWITTER_OAUTH_ERROR_URL || '/socap/auth/error';
+    const errorUrl = errorPath.startsWith('http') ? errorPath : `${baseUrl}${errorPath}`;
     return NextResponse.redirect(`${errorUrl}?error=${encodeURIComponent(errorMessage)}`);
   }
 }
