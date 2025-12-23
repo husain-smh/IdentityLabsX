@@ -17,11 +17,11 @@ function SuccessContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-stone-50 to-stone-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center border border-stone-200">
+      <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full text-center border border-stone-200">
         {/* Success Icon */}
-        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
           <svg
-            className="w-8 h-8 text-emerald-600"
+            className="w-6 h-6 text-emerald-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -36,43 +36,43 @@ function SuccessContent() {
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-stone-800 mb-2">
+        <h1 className="text-xl font-bold text-stone-800 mb-1">
           You're Connected!
         </h1>
 
         {/* Connected Account Info */}
         {username && (
-          <div className="bg-stone-50 rounded-xl p-4 mb-6 border border-stone-100">
-            <div className="flex items-center justify-center gap-3">
-              <div className="w-10 h-10 bg-stone-900 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+          <div className="bg-stone-50 rounded-lg p-3 mb-5 border border-stone-100">
+            <div className="flex items-center justify-center gap-2.5">
+              <div className="w-8 h-8 bg-stone-900 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </div>
               <div className="text-left">
-                <p className="font-semibold text-stone-800">@{username}</p>
-                {name && <p className="text-sm text-stone-500">{name}</p>}
+                <p className="font-semibold text-sm text-stone-800">@{username}</p>
+                {name && <p className="text-xs text-stone-500">{name}</p>}
               </div>
             </div>
           </div>
         )}
 
         {/* Message */}
-        <p className="text-stone-600 mb-6">
+        <p className="text-stone-600 text-sm mb-5">
           Your X account has been connected successfully. We'll start tracking engagement on your posts automatically.
         </p>
 
         {/* Close Button */}
         <button
           onClick={() => window.close()}
-          className="w-full py-3 px-4 bg-stone-900 text-white rounded-xl font-medium 
+          className="w-full py-2.5 px-4 bg-stone-900 text-white rounded-lg font-medium text-sm
                      hover:bg-stone-800 transition-all duration-200"
         >
           Close Window
         </button>
 
         {/* Footer note */}
-        <p className="text-xs text-stone-400 mt-4">
+        <p className="text-[10px] text-stone-400 mt-3">
           You can revoke access anytime from your X settings.
         </p>
       </div>
