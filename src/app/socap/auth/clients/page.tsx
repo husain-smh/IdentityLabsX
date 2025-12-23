@@ -149,7 +149,7 @@ export default function AuthClientsPage() {
               disabled={!username.trim()}
               className="px-6 py-3 bg-stone-900 text-white rounded-xl font-medium
                        hover:bg-stone-800 transition-all duration-200
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+                       disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed"
             >
               Generate Link
             </button>
