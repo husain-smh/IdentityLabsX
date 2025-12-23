@@ -53,8 +53,8 @@ export class LikingUsersWorker extends BaseWorker {
     }
     
     // Get tweet category - only process main tweets
-    const { getTweetById } = await import('../../models/socap/tweets');
-    const tweet = await getTweetById(campaignId, tweetId);
+    const { getTweetByTweetId } = await import('../../models/socap/tweets');
+    const tweet = await getTweetByTweetId(tweetId);
     
     if (!tweet) {
       throw new Error(`Tweet not found: ${tweetId} in campaign ${campaignId}`);
@@ -137,8 +137,8 @@ export class LikingUsersWorker extends BaseWorker {
             userId: user.id,
             username: user.username,
             name: user.name,
-            bio: user.description,
-            location: undefined, // Not provided by liking users API
+            bio: user.description ?? null,
+            location: null, // Not provided by liking users API
             followers: user.public_metrics?.followers_count || 0,
             verified: user.verified || false,
           };
@@ -240,8 +240,8 @@ export class LikingUsersWorker extends BaseWorker {
             userId: user.id,
             username: user.username,
             name: user.name,
-            bio: user.description,
-            location: undefined,
+            bio: user.description ?? null,
+            location: null,
             followers: user.public_metrics?.followers_count || 0,
             verified: user.verified || false,
           };

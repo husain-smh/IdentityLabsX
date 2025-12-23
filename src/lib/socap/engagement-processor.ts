@@ -67,7 +67,7 @@ export async function processEngagement(
   campaignId: string,
   tweetId: string,
   user: FilteredUser,
-  actionType: 'retweet' | 'reply' | 'quote',
+  actionType: 'retweet' | 'reply' | 'quote' | 'like',
   timestamp: Date,
   text?: string
 ): Promise<EngagementInput> {

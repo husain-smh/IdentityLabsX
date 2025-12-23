@@ -8,7 +8,7 @@ export interface AlertHistory {
   _id?: string;
   campaign_id: string;
   user_id: string;
-  action_type: 'retweet' | 'reply' | 'quote';
+  action_type: 'retweet' | 'reply' | 'quote' | 'like';
   timestamp_hour: Date; // Rounded to hour for deduplication
   sent_at: Date;
   channel: 'slack' | 'email';
@@ -17,7 +17,7 @@ export interface AlertHistory {
 export interface CreateAlertHistoryInput {
   campaign_id: string;
   user_id: string;
-  action_type: 'retweet' | 'reply' | 'quote';
+  action_type: 'retweet' | 'reply' | 'quote' | 'like';
   timestamp_hour: Date;
   sent_at: Date;
   channel: 'slack' | 'email';
@@ -69,7 +69,7 @@ export async function createAlertHistory(input: CreateAlertHistoryInput): Promis
 export async function checkRecentAlert(
   campaignId: string,
   userId: string,
-  actionType: 'retweet' | 'reply' | 'quote',
+  actionType: 'retweet' | 'reply' | 'quote' | 'like',
   timestamp: Date,
   frequencyWindowMinutes: number
 ): Promise<boolean> {

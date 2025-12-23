@@ -8,7 +8,7 @@ export interface AlertQueue {
   campaign_id: string;
   engagement_id: string; // Reference to engagements collection
   user_id: string;
-  action_type: 'retweet' | 'reply' | 'quote';
+  action_type: 'retweet' | 'reply' | 'quote' | 'like';
   importance_score: number;
   run_batch: string; // Timestamp of worker run (rounded to 30-min interval)
   scheduled_send_time: Date;
@@ -25,7 +25,7 @@ export interface CreateAlertInput {
   campaign_id: string;
   engagement_id: string;
   user_id: string;
-  action_type: 'retweet' | 'reply' | 'quote';
+  action_type: 'retweet' | 'reply' | 'quote' | 'like';
   importance_score: number;
   run_batch: string;
   scheduled_send_time: Date;

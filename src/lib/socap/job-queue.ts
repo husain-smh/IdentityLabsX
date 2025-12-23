@@ -209,9 +209,29 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
   const collection = await getJobQueueCollection();
   const now = new Date();
   
+  type BulkJobOp = {
+    updateOne: {
+      filter: { campaign_id: string; tweet_id: string; job_type: Job['job_type'] };
+      update: {
+        $setOnInsert: { campaign_id: string; tweet_id: string; job_type: Job['job_type']; created_at: Date };
+        $set: {
+          status: 'pending';
+          priority: number;
+          claimed_by: null;
+          claimed_at: null;
+          retry_count: number;
+          retry_after: null;
+          max_retries: number;
+          updated_at: Date;
+        };
+      };
+      upsert: true;
+    };
+  };
+
   const bulkOps = tweets.flatMap(tweet => {
     // Base jobs for all tweets
-    const tweetJobs = baseJobTypes.map(jobType => ({
+    const tweetJobs: BulkJobOp[] = baseJobTypes.map(jobType => ({
       updateOne: {
         filter: {
           campaign_id: campaignId,
@@ -247,13 +267,13 @@ export async function enqueueCampaignJobs(campaignId: string): Promise<number> {
           filter: {
             campaign_id: campaignId,
             tweet_id: tweet.tweet_id,
-            job_type: 'liking_users' as const,
+            job_type: 'liking_users',
           },
           update: {
             $setOnInsert: {
               campaign_id: campaignId,
               tweet_id: tweet.tweet_id,
-              job_type: 'liking_users' as const,
+              job_type: 'liking_users',
               created_at: now,
             },
             $set: {

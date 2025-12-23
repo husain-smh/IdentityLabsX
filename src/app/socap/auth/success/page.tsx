@@ -37,7 +37,7 @@ function SuccessContent() {
 
         {/* Title */}
         <h1 className="text-xl font-bold text-stone-800 mb-1">
-          You're Connected!
+          You&apos;re Connected!
         </h1>
 
         {/* Connected Account Info */}
@@ -59,7 +59,7 @@ function SuccessContent() {
 
         {/* Message */}
         <p className="text-stone-600 text-sm mb-5">
-          Your X account has been connected successfully. We'll start tracking engagement on your posts automatically.
+          Your X account has been connected successfully. We&apos;ll start tracking engagement on your posts automatically.
         </p>
 
         {/* Close Button */}

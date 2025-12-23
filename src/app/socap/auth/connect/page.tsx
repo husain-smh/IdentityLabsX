@@ -1,6 +1,6 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useState, Suspense } from 'react';
 
 /**
@@ -14,7 +14,6 @@ import { useState, Suspense } from 'react';
 
 function ConnectContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const clientId = searchParams.get('client');
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -65,7 +64,7 @@ function ConnectContent() {
 
         {/* What we access */}
         <div className="mb-5">
-          <h3 className="text-xs font-medium text-stone-700 mb-2">What we'll access:</h3>
+          <h3 className="text-xs font-medium text-stone-700 mb-2">What we&apos;ll access:</h3>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 text-stone-600">
               <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
@@ -88,7 +87,7 @@ function ConnectContent() {
 
         {/* What we DON'T do */}
         <div className="mb-6">
-          <h3 className="text-xs font-medium text-stone-700 mb-2">What we'll never do:</h3>
+          <h3 className="text-xs font-medium text-stone-700 mb-2">What we&apos;ll never do:</h3>
           <div className="space-y-1.5">
             <div className="flex items-center gap-2.5 text-stone-500">
               <div className="w-4 h-4 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0">
