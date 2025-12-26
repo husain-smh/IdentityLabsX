@@ -65,35 +65,37 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border text-foreground">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo/Brand */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary text-primary-foreground rounded-xl flex items-center justify-center">
-              <span className="font-bold text-sm">IL</span>
-            </div>
-            <span className="text-foreground font-semibold hidden sm:inline">Identity Labs</span>
-          </Link>
+      <div className="origin-top-left scale-75" style={{ width: '133.33%' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo/Brand */}
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary text-primary-foreground rounded-xl flex items-center justify-center">
+                <span className="font-bold text-sm">IL</span>
+              </div>
+              <span className="text-foreground font-semibold hidden sm:inline">Identity Labs</span>
+            </Link>
 
-          {/* Navigation Items */}
-          <div className="flex items-center gap-1 overflow-x-auto">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {item.icon}
-                  <span className="hidden sm:inline">{item.name}</span>
-                </Link>
-              );
-            })}
+            {/* Navigation Items */}
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href || (item.href !== '/' && pathname?.startsWith(item.href));
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                      isActive
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    {item.icon}
+                    <span className="hidden sm:inline">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
