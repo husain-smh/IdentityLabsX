@@ -42,7 +42,7 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`text-sm font-serif transition-colors whitespace-nowrap border-b-2 py-1 ${
+                  className={`text-base font-serif transition-colors whitespace-nowrap border-b-2 py-1 ${
                     isActive
                       ? 'text-[#4A4A4A] border-[#4A4A4A]'
                       : 'text-[#6B6B6B] border-transparent hover:text-[#4A4A4A] hover:border-[#E0DDD8]'

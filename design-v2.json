@@ -86,6 +86,12 @@
             "weight": "400",
             "usage": "Body text, paragraphs"
           },
+          "navigation": {
+            "size": "1rem",
+            "lineHeight": "1.6",
+            "weight": "400",
+            "usage": "Navigation links, menu items"
+          },
           "small": {
             "size": "0.875rem",
             "lineHeight": "1.6",
@@ -148,9 +154,9 @@
       
       "components": {
         "header": {
-          "style": "Minimal, small text navigation",
+          "style": "Minimal, refined navigation",
           "spacing": "Large top padding, subtle below",
-          "typography": "Small serif, understated",
+          "typography": "Navigation size serif, understated but readable",
           "alignment": "Left or centered, depending on context"
         },
         "dividers": {
