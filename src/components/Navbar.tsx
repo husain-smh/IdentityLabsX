@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
@@ -21,6 +22,13 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-20">
           {/* Logo/Brand */}
           <Link href="/" className="flex items-center gap-2 group">
+            <Image 
+              src="/identity-labs-logo.png" 
+              alt="Identity Labs Logo" 
+              width={24} 
+              height={24}
+              className="object-contain"
+            />
             <span className="font-serif text-lg text-[#4A4A4A] group-hover:text-[#6B6B6B] transition-colors">
               Identity Labs
             </span>
