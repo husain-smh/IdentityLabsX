@@ -8,7 +8,7 @@ export interface Job {
   _id?: string;
   campaign_id: string;
   tweet_id: string;
-  job_type: 'retweets' | 'replies' | 'quotes' | 'metrics' | 'liking_users';
+  job_type: 'retweets' | 'replies' | 'quotes' | 'metrics' | 'liking_users' | 'location_enrichment';
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'retrying';
   priority: number; // 1=metrics (highest), 2=retweets, 3=replies/quotes, 4=liking_users (lowest)
   claimed_by: string | null; // worker instance ID
@@ -63,7 +63,8 @@ function getJobPriority(jobType: Job['job_type']): number {
     retweets: 2,
     replies: 3,
     quotes: 3,
-    liking_users: 4, // Lowest priority (OAuth-dependent, opt-in feature)
+    liking_users: 4,
+    location_enrichment: 5, // Lowest priority (background enrichment, non-blocking)
   };
   return priorities[jobType];
 }
@@ -529,6 +530,31 @@ export async function getJobQueueStats(): Promise<{
   ]);
   
   return { pending, processing, completed, failed };
+}
+
+/**
+ * Enqueue location enrichment job for a campaign
+ * Location enrichment is per-campaign (not per-tweet), so we use a special tweet_id
+ * 
+ * @param campaignId - Campaign ID to enqueue location enrichment for
+ */
+export async function enqueueLocationEnrichmentJob(campaignId: string): Promise<Job | null> {
+  // For location enrichment, we use a special tweet_id format: "LOCATION_ENRICHMENT"
+  // This distinguishes it from regular tweet-based jobs
+  const specialTweetId = 'LOCATION_ENRICHMENT';
+  
+  try {
+    const job = await enqueueJob({
+      campaign_id: campaignId,
+      tweet_id: specialTweetId,
+      job_type: 'location_enrichment',
+    });
+    
+    return job;
+  } catch (error) {
+    console.error(`Error enqueuing location enrichment job for campaign ${campaignId}:`, error);
+    return null;
+  }
 }
 
 /**

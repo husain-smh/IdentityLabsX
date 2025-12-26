@@ -4,65 +4,58 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Design.json: Typography.fontFamily.primary */
-  --font-sans: var(--font-inter);
+  /* Design System v1.0: Minimalist Editorial */
   
-  /* Design.json: ColorPalette.neutrals.background (#F5F5F7) */
-  --background: #F5F5F7;
-  /* Design.json: ColorPalette.neutrals.textPrimary (#1F2937) */
-  --foreground: #1F2937;
-
-  /* Design.json: Components.card.background (#FFFFFF) */
+  /* Typography */
+  --font-serif: Georgia, 'Times New Roman', serif;
+  
+  /* Colors */
+  --background: #F5F3F0; /* Warm off-white */
+  --foreground: #4A4A4A; /* Charcoal gray */
+  
   --card: #FFFFFF;
-  /* Design.json: ColorPalette.neutrals.textPrimary */
-  --card-foreground: #1F2937;
-
-  /* Design.json: Components.card.background (#FFFFFF) for popovers too */
+  --card-foreground: #4A4A4A;
+  
   --popover: #FFFFFF;
-  --popover-foreground: #1F2937;
-
-  /* Design.json: ColorPalette.primary.vibrantBlue (#4D4DFF) */
-  --primary: #4D4DFF;
-  --primary-foreground: #FFFFFF;
-
-  /* Design.json: ColorPalette.secondary.lightPurple (#C4B5FD) */
-  --secondary: #E0E7FF; /* Using a lighter tint for UI background secondary */
-  --secondary-foreground: #4D4DFF;
-
-  /* Design.json: ColorPalette.neutrals.background or similar for muted */
-  --muted: #F3F4F6;
-  /* Design.json: ColorPalette.neutrals.textSecondary (#6B7280) */
-  --muted-foreground: #6B7280;
-
-  /* Design.json: ColorPalette.neutrals.background (#F5F5F7) used as accent */
-  --accent: #F5F5F7;
-  --accent-foreground: #1F2937;
-
-  /* Design.json: ColorPalette.semantic.error (implied from trend indicator negativeColor) 
-     Standard red for destructive */
-  --destructive: #EF4444;
+  --popover-foreground: #4A4A4A;
+  
+  --primary: #4A4A4A; /* Using charcoal for primary actions instead of blue */
+  --primary-foreground: #F5F3F0;
+  
+  --secondary: #E0DDD8; /* Subtle gray/taupe for secondary backgrounds */
+  --secondary-foreground: #4A4A4A;
+  
+  --muted: #E0DDD8;
+  --muted-foreground: #6B6B6B; /* Secondary text */
+  
+  --accent: #8B8680; /* Muted taupe */
+  --accent-foreground: #FFFFFF;
+  
+  --destructive: #EF4444; /* Keep for errors, but use sparingly */
   --destructive-foreground: #FFFFFF;
-
-  /* Design.json: ColorPalette.neutrals.border (#E5E7EB) */
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #4D4DFF; /* Primary color for focus rings */
-
-  /* Design.json: DataVisualization Palette */
-  --chart-1: #4D4DFF; /* vibrantBlue */
-  --chart-2: #C4B5FD; /* lightPurple */
-  --chart-3: #A78BFA; /* mediumPurple */
-  --chart-4: #10B981; /* semantic.success */
-  --chart-5: #6366F1; /* chartLine1 */
-
-  /* Design.json: Components.card.borderRadius (12px = 0.75rem) */
-  --radius: 0.75rem;
-
-  /* Design.json: Components.card.boxShadow */
-  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  
+  --border: #E0DDD8; /* Subtle gray divider */
+  --input: #E0DDD8;
+  --ring: #8B8680;
+  
+  /* Data Visualization - Muted/Natural tones */
+  --chart-1: #4A4A4A; 
+  --chart-2: #6B6B6B;
+  --chart-3: #8B8680;
+  --chart-4: #A3A3A3;
+  --chart-5: #C4C4C4;
+  
+  /* Spacing & Radius */
+  --radius: 0.25rem; /* Minimal rounding (4px) */
+  
+  /* Shadows - Removed or very subtle */
+  --shadow-card: none;
+  --shadow-soft: none;
 }
 
 @theme inline {
+  --font-serif: var(--font-serif);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -87,40 +80,47 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius); /* No large radii */
+  --radius-xl: var(--radius); /* No extra large radii */
   
-  /* Custom shadow mapping */
   --shadow-card: var(--shadow-card);
 }
 
 /* Base resets and typography */
 body {
-  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  font-family: var(--font-serif);
   font-weight: 400;
-  line-height: 1.5; /* Design.json: Typography.scale.subtext.lineHeight 1.5 */
+  line-height: 1.75; /* Generous line height */
   background-color: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Heading styles based on Design.json hierarchy */
+/* Heading styles */
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
   color: var(--foreground);
-  font-weight: 600; /* Design.json: Typography.scale.cardTitle.fontWeight */
-  letter-spacing: -0.025em;
+  font-weight: 400; /* Regular weight */
+  letter-spacing: normal;
 }
 
-/* Card overrides to match Design.json specifically */
+/* Component overrides */
 .card-base {
   background-color: var(--card);
   border-radius: var(--radius);
-  border: 1px solid rgba(0, 0, 0, 0.04); /* Design.json: Components.card.border */
-  box-shadow: var(--shadow-card);
-  padding: 24px; /* Design.json: Components.card.padding */
+  border: 1px solid var(--border);
+  box-shadow: none;
+  padding: 2rem; /* Generous padding */
+}
+
+/* Remove glass effects */
+.glass {
+  background: white;
+  backdrop-filter: none;
+  border: 1px solid var(--border);
 }
 
 @layer base {

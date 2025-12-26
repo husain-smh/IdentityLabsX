@@ -4,6 +4,7 @@ import { RepliesWorker } from './replies-worker';
 import { QuotesWorker } from './quotes-worker';
 import { MetricsWorker } from './metrics-worker';
 import { LikingUsersWorker } from './liking-users-worker';
+import { LocationEnrichmentWorker } from './location-enrichment-worker';
 import { BaseWorker } from './base-worker';
 
 /**
@@ -45,6 +46,9 @@ export class WorkerOrchestrator {
         case 'liking_users':
           worker = new LikingUsersWorker(workerId);
           break;
+        case 'location_enrichment':
+          worker = new LocationEnrichmentWorker(workerId);
+          break;
         default:
           throw new Error(`Unknown job type: ${job.job_type}`);
       }
@@ -62,8 +66,8 @@ export class WorkerOrchestrator {
         await completeJob(job._id);
       }
       
-      // If this was an engagement job (not metrics), trigger alert detection
-      if (job.job_type !== 'metrics') {
+      // If this was an engagement job (not metrics or location_enrichment), trigger alert detection
+      if (job.job_type !== 'metrics' && job.job_type !== 'location_enrichment') {
         try {
           const { detectAndQueueAlerts } = await import('../alert-detector');
           await detectAndQueueAlerts(job.campaign_id);
@@ -71,7 +75,7 @@ export class WorkerOrchestrator {
           // Log but don't fail the job
           console.error('Error detecting alerts:', error);
         }
-      } else {
+      } else if (job.job_type === 'metrics') {
         // If this was a metrics job, check if we should create snapshot
         try {
           const { processMetricSnapshots } = await import('../metric-snapshot-processor');

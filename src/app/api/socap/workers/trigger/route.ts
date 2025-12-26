@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getActiveCampaigns } from '@/lib/models/socap/campaigns';
-import { enqueueCampaignJobs } from '@/lib/socap/job-queue';
+import { enqueueCampaignJobs, enqueueLocationEnrichmentJob } from '@/lib/socap/job-queue';
 import { checkAndCompleteCampaigns } from '@/lib/socap/campaign-completion';
 
 // Extend timeout for Vercel Pro (default is 10s for hobby, 60s for pro)
@@ -58,12 +58,16 @@ export async function POST() {
       try {
         console.log(`Processing campaign: ${campaign.launch_name} (${campaignId})`);
         const jobsEnqueued = await enqueueCampaignJobs(campaignId);
-        console.log(`✓ Campaign ${campaign.launch_name}: ${jobsEnqueued} jobs enqueued`);
+        
+        // Also enqueue location enrichment job (runs in background, low priority)
+        await enqueueLocationEnrichmentJob(campaignId);
+        
+        console.log(`✓ Campaign ${campaign.launch_name}: ${jobsEnqueued} jobs enqueued (+ location enrichment)`);
         
         return {
           campaign_id: campaignId,
           campaign_name: campaign.launch_name,
-          jobs_enqueued: jobsEnqueued,
+          jobs_enqueued: jobsEnqueued + 1, // +1 for location enrichment job
           status: 'success' as const,
         };
       } catch (error) {

@@ -18,7 +18,8 @@ export interface Engagement {
     username: string;
     name: string;
     bio?: string;
-    location?: string;
+    location?: string; // User-provided location (may be inaccurate)
+    account_based_in?: string; // Accurate location from Twitter API (for heatmap)
     followers: number;
     verified: boolean;
   };
@@ -61,7 +62,8 @@ export interface EngagementInput {
     username: string;
     name: string;
     bio?: string;
-    location?: string;
+    location?: string; // User-provided location (may be inaccurate)
+    account_based_in?: string; // Accurate location from Twitter API (for heatmap)
     followers: number;
     verified: boolean;
   };
@@ -111,6 +113,12 @@ export async function createEngagementIndexes(): Promise<void> {
   await collection.createIndex({ campaign_id: 1, importance_score: -1 });
   await collection.createIndex({ user_id: 1, campaign_id: 1 });
   await collection.createIndex({ 'account_profile.username': 1 });
+  
+  // Index for heatmap aggregation (location-based queries)
+  await collection.createIndex({
+    campaign_id: 1,
+    'account_profile.account_based_in': 1,
+  });
 
   // Additional covering indexes for filtered/sorted queries and time-series
   await collection.createIndex({ campaign_id: 1, timestamp: -1 });

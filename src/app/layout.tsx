@@ -1,15 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
+import RouteScaler from "@/components/RouteScaler";
 
 export const metadata: Metadata = {
-  title: "Quote Tweet Analytics | Identity Labs",
-  description: "Reverse-engineer viral content performance. Advanced quote tweet analytics with precision-grade metrics that reveal true social impact.",
+  title: "Identity Labs",
+  description: "Analytics and intelligence tools.",
 };
 
 export default function RootLayout({
@@ -19,10 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} antialiased`}
-      >
-        {children}
+      <body className="antialiased">
+        <RouteScaler>
+          {children}
+        </RouteScaler>
       </body>
     </html>
   );

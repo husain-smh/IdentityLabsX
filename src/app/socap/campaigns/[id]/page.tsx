@@ -16,6 +16,23 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import dynamic from 'next/dynamic';
+import type { LocationHeatmapData } from '@/components/WorldHeatmap';
+
+// Lazy load WorldHeatmap (maps don't need SSR)
+const WorldHeatmap = dynamic(() => import('@/components/WorldHeatmap').then(mod => ({ default: mod.WorldHeatmap })), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+      <span className="ml-3 text-muted-foreground text-sm">Loading map...</span>
+    </div>
+  ),
+});
+
+const HeatmapLegend = dynamic(() => import('@/components/WorldHeatmap').then(mod => ({ default: mod.HeatmapLegend })), {
+  ssr: false,
+});
 
 declare global {
   interface Window {
@@ -267,6 +284,21 @@ export default function CampaignDashboardPage() {
   const [mainEngagementLastUpdated, setMainEngagementLastUpdated] = useState<Date | null>(null);
   const [influencerEngagementLastUpdated, setInfluencerEngagementLastUpdated] = useState<Date | null>(null);
 
+  const [heatmapData, setHeatmapData] = useState<{
+    locations: LocationHeatmapData[];
+    total_engagements: number;
+    total_locations: number;
+    metadata: {
+      locations_with_data: number;
+      locations_missing_data: number;
+      locations_unmapped: number;
+      last_updated: string;
+    };
+  } | null>(null);
+  const [isLoadingHeatmap, setIsLoadingHeatmap] = useState(false);
+  const [heatmapLoaded, setHeatmapLoaded] = useState(false);
+  const heatmapSectionRef = useRef<HTMLDivElement | null>(null);
+  
   const [secondDegreeTotals, setSecondDegreeTotals] = useState<{
     main_twt: SecondDegreeTotals;
     influencer_twt: SecondDegreeTotals;
@@ -552,6 +584,22 @@ export default function CampaignDashboardPage() {
     [campaignId, engagementLimit, actionTypeFilter]
   );
 
+  const fetchHeatmap = useCallback(async () => {
+    if (!campaignId) return;
+    setIsLoadingHeatmap(true);
+    try {
+      const response = await fetch(`/api/socap/campaigns/${campaignId}/heatmap?distribute_regions=true`);
+      const result = await response.json();
+      if (result.success) {
+        setHeatmapData(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching heatmap data:', error);
+    } finally {
+      setIsLoadingHeatmap(false);
+    }
+  }, [campaignId]);
+
   const fetchSecondDegree = useCallback(async () => {
     try {
       const response = await fetch(`/api/socap/campaigns/${campaignId}/second-degree`);
@@ -664,6 +712,43 @@ export default function CampaignDashboardPage() {
     fetchEngagementsPage(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionTypeFilter, engagementsLoaded]);
+
+  // Lazy load heatmap when section becomes visible
+  useEffect(() => {
+    if (loading || heatmapLoaded) return;
+    
+    const sectionElement = heatmapSectionRef.current;
+    if (!sectionElement) {
+      return;
+    }
+
+    let hasTriggered = false;
+    
+    const triggerLoad = () => {
+      if (hasTriggered) return;
+      hasTriggered = true;
+      setHeatmapLoaded(true);
+      fetchHeatmap();
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          triggerLoad();
+          observer.disconnect();
+        }
+      },
+      { 
+        threshold: 0,
+      }
+    );
+
+    observer.observe(sectionElement);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loading, heatmapLoaded, fetchHeatmap]);
 
   useEffect(() => {
     if (loading || secondDegreeLoaded) return;
@@ -1292,6 +1377,50 @@ export default function CampaignDashboardPage() {
                       metric="likes"
                       chartData={getCategoryChartData('likes', 'main_twt')}
                     />
+                  </div>
+
+                  {/* ===== Location Heatmap Section ===== */}
+                  <div ref={heatmapSectionRef} className="card-base p-6 border border-border">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-xl font-semibold text-foreground">Engagement Heatmap</h3>
+                      <span className="text-xs text-muted-foreground">Geographic distribution of engagers</span>
+                    </div>
+                    {isLoadingHeatmap ? (
+                      <div className="flex items-center justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+                        <span className="ml-3 text-muted-foreground text-sm">Loading heatmap...</span>
+                      </div>
+                    ) : !heatmapLoaded ? (
+                      <div className="text-center py-12 text-muted-foreground text-sm">
+                        Scroll down to load heatmap...
+                      </div>
+                    ) : heatmapData && heatmapData.locations.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="bg-muted/20 rounded-lg p-4 border border-border">
+                          <WorldHeatmap 
+                            data={heatmapData.locations} 
+                            height={400}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <HeatmapLegend 
+                            maxCount={Math.max(...heatmapData.locations.map(l => l.engagement_count))} 
+                          />
+                          <div className="text-xs text-muted-foreground">
+                            {heatmapData.metadata.locations_with_data} locations • {heatmapData.metadata.locations_missing_data > 0 && `${heatmapData.metadata.locations_missing_data} unknown`}
+                          </div>
+                        </div>
+                        {heatmapData.metadata.locations_unmapped > 0 && (
+                          <div className="text-xs text-yellow-600 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2">
+                            ⚠️ {heatmapData.metadata.locations_unmapped} location(s) could not be mapped to countries
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-muted-foreground text-sm">
+                        No location data available yet. Location enrichment is in progress.
+                      </div>
+                    )}
                   </div>
 
                   <div className="card-base p-6">
