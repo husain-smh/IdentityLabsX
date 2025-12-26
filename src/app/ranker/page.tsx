@@ -86,7 +86,7 @@ export default function RankerAdmin() {
   
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [allPeople, setAllPeople] = useState<ImportantPerson[]>([]); // Store all people for search/tag filters
+  const [allPeople, setAllPeople] = useState<ImportantPerson[]>([]);
   const [hasLoadedAllPeople, setHasLoadedAllPeople] = useState(false);
   const [isFetchingAllPeople, setIsFetchingAllPeople] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -121,7 +121,6 @@ export default function RankerAdmin() {
     setHasLoadedAllPeople(false);
   };
 
-  // Fetch important people on mount
   useEffect(() => {
     fetchImportantPeople();
     fetchSyncStatus();
@@ -129,7 +128,6 @@ export default function RankerAdmin() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch all people for search/tag filtering
   const fetchAllPeople = async (reason: 'search' | 'filter' = 'search') => {
     if (hasLoadedAllPeople || isFetchingAllPeople) {
       return;
@@ -168,21 +166,19 @@ export default function RankerAdmin() {
     }
   };
 
-  // Trigger search when query changes (with debounce)
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (trimmed) {
       if (!hasLoadedAllPeople) {
         const timeoutId = setTimeout(() => {
           fetchAllPeople('search');
-        }, 300); // 300ms debounce
+        }, 300);
         return () => clearTimeout(timeoutId);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, hasLoadedAllPeople]);
 
-  // Ensure full dataset is available when filtering by tags
   useEffect(() => {
     if (selectedTags.length > 0 && !hasLoadedAllPeople) {
       fetchAllPeople('filter');
@@ -196,7 +192,6 @@ export default function RankerAdmin() {
   const isAwaitingFullDataset =
     requiresFullDataset && !hasLoadedAllPeople && (isSearching || isLoadingTagFilterData);
 
-  // Combined filters for search, tags, and sync status
   const filteredPeople = baseList.filter((person) => {
     const query = searchQuery.trim().toLowerCase();
     const matchesSearch =
@@ -290,7 +285,7 @@ export default function RankerAdmin() {
 
       if (response.ok && data.success) {
         const result: AccountImportanceResult = {
-          id: `${usernameToCheck}-${Date.now()}`, // unique ID for removal
+          id: `${usernameToCheck}-${Date.now()}`,
           username: usernameToCheck,
           found: data.data.found,
           followed_username: data.data.followed_username,
@@ -299,9 +294,8 @@ export default function RankerAdmin() {
           followed_by: data.data.followed_by || [],
         };
         
-        // Add result to the list (allows multiple checks)
         setCheckResults((prev) => [result, ...prev]);
-        setCheckUsername(''); // Clear input after successful check
+        setCheckUsername('');
       } else {
         setMessage({
           type: 'error',
@@ -334,7 +328,6 @@ export default function RankerAdmin() {
       return;
     }
 
-    // Client-side duplicate check
     const usernameToAdd = username.trim().toLowerCase();
     const existingPerson = importantPeople.find(
       (person) => person.username.toLowerCase() === usernameToAdd
@@ -365,7 +358,6 @@ export default function RankerAdmin() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Handle multiple username additions
         const summary = data.summary;
         if (summary && summary.total > 1) {
           setMessage({
@@ -375,12 +367,12 @@ export default function RankerAdmin() {
         } else {
           setMessage({
             type: 'success',
-            text: data.message || 'Important person added successfully! You can now sync their following data.',
+            text: data.message || 'Important person added successfully!',
           });
         }
         setUsername('');
-        clearAllPeopleCache(); // Clear search cache to include new person
-        fetchImportantPeople(1); // Reset to page 1 after adding
+        clearAllPeopleCache();
+        fetchImportantPeople(1);
         fetchSyncStatus();
       } else {
         setMessage({
@@ -416,7 +408,7 @@ export default function RankerAdmin() {
           type: 'success',
           text: `@${username} removed successfully`,
         });
-        clearAllPeopleCache(); // Clear search cache after removal
+        clearAllPeopleCache();
         fetchImportantPeople();
         fetchSyncStatus();
       } else {
@@ -435,7 +427,6 @@ export default function RankerAdmin() {
   };
 
   const handleSyncPerson = async (username: string) => {
-    // Prevent multiple syncs at once
     if (syncingUsername) {
       setMessage({
         type: 'error',
@@ -447,13 +438,12 @@ export default function RankerAdmin() {
     setSyncingUsername(username);
     setMessage({
       type: 'success',
-      text: `Syncing @${username}... This may take a minute.`,
+      text: `Syncing @${username}...`,
     });
 
     try {
-      // Create an AbortController with a longer timeout (5 minutes for sync operations)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
 
       const response = await fetch('/api/ranker/admin/sync-person', {
         method: 'POST',
@@ -468,7 +458,6 @@ export default function RankerAdmin() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Handle multiple usernames response
         const summary = data.summary;
         if (summary && summary.total > 1) {
           setMessage({
@@ -478,10 +467,10 @@ export default function RankerAdmin() {
         } else {
           setMessage({
             type: 'success',
-            text: `@${username} synced successfully! Following: ${data.results?.[0]?.following_count || 0}`,
+            text: `@${username} synced successfully!`,
           });
         }
-        clearAllPeopleCache(); // Clear search cache after sync (data might have changed)
+        clearAllPeopleCache();
         fetchImportantPeople();
         fetchSyncStatus();
       } else {
@@ -495,7 +484,7 @@ export default function RankerAdmin() {
       if ((error as Error).name === 'AbortError') {
         setMessage({
           type: 'error',
-          text: 'Sync operation timed out. The person may have too many followers. Please try again.',
+          text: 'Sync operation timed out.',
         });
       } else {
         setMessage({
@@ -544,7 +533,7 @@ export default function RankerAdmin() {
     }
 
     if (Math.abs(parsedWeight - (person.weight ?? 1)) < 0.0001) {
-      return; // No change
+      return;
     }
 
     setUpdatingWeight(person.username);
@@ -585,7 +574,7 @@ export default function RankerAdmin() {
       console.error('Error updating weight:', error);
       setMessage({
         type: 'error',
-        text: 'Network error. Please try again.',
+        text: 'Network error.',
       });
     } finally {
       setUpdatingWeight(null);
@@ -603,7 +592,6 @@ export default function RankerAdmin() {
     const inputValue = networthEdits[person.username] ?? (person.networth !== undefined ? person.networth.toString() : '');
     const trimmedValue = inputValue.trim();
     
-    // Allow empty string to clear networth
     let parsedNetworth: number | null;
     if (trimmedValue === '') {
       parsedNetworth = null;
@@ -612,16 +600,15 @@ export default function RankerAdmin() {
       if (!Number.isFinite(parsedNetworth) || parsedNetworth < 0) {
         setMessage({
           type: 'error',
-          text: 'Networth must be a non-negative number or empty to clear',
+          text: 'Networth must be non-negative',
         });
         return;
       }
     }
 
-    // Check if value actually changed
     const currentNetworth = person.networth ?? null;
     if (parsedNetworth === currentNetworth) {
-      return; // No change
+      return;
     }
 
     setUpdatingNetworth(person.username);
@@ -662,7 +649,7 @@ export default function RankerAdmin() {
       console.error('Error updating networth:', error);
       setMessage({
         type: 'error',
-        text: 'Network error. Please try again.',
+        text: 'Network error.',
       });
     } finally {
       setUpdatingNetworth(null);
@@ -760,15 +747,15 @@ export default function RankerAdmin() {
       setMessage({
         type: 'success',
         text: usernames.length === 1
-          ? `@${usernames[0]} added to important people. Remember to sync them.`
-          : `${addedUsernames.length} candidates added. Remember to sync them.`,
+          ? `@${usernames[0]} added.`
+          : `${addedUsernames.length} candidates added.`,
       });
 
       setCandidateList((prev) =>
         prev.filter((item) => !addedUsernames.includes(item.followed_username))
       );
       setSelectedCandidates((prev) => prev.filter((name) => !addedUsernames.includes(name)));
-      clearAllPeopleCache(); // ensure future fetch reflects new person
+      clearAllPeopleCache();
       fetchImportantPeople(1);
       fetchSyncStatus();
     } catch (error) {
@@ -908,64 +895,58 @@ export default function RankerAdmin() {
       : [];
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="relative min-h-screen bg-white text-zinc-900">
       <Navbar />
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(99,102,241,0.1),transparent_70%)]"></div>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(99,102,241,0.08),transparent_65%)]"></div>
 
-      <div className="relative z-10">
-        {/* Header Section */}
-        <div className="pt-24 pb-16">
-          <div className="max-w-6xl mx-auto px-6 text-center">
-            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-full">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-zinc-400 text-sm font-medium">Importance Ranker</span>
+      <div className="relative z-10 origin-top-left scale-75" style={{ width: '133.33%', height: '133.33%' }}>
+        <div className="pt-20 pb-12">
+          <div className="mx-auto max-w-5xl px-6 text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 shadow-sm">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></div>
+              <span className="text-xs font-medium text-zinc-500">Importance Ranker</span>
             </div>
 
-            <h1 className="text-6xl md:text-7xl font-bold mb-6 leading-tight">
-              <span className="gradient-text">Important Accounts</span>
-              <br />
-              <span className="text-white"></span>
+            <h1 className="mb-6 text-3xl font-semibold leading-tight text-zinc-900 md:text-4xl">
+              Important Accounts
             </h1>
-
 
             {/* Stats Overview */}
             {syncStatus && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mt-12">
-                <div className="glass rounded-xl p-6">
-                  <div className="text-3xl font-bold text-white mb-2">
+              <div className="mx-auto mt-6 grid max-w-2xl grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-white shadow-xl">
+                  <div className="mb-1 text-3xl font-bold">
                     {syncStatus.summary.total_people}
                   </div>
-                  <div className="text-sm text-zinc-400">Total Important People</div>
+                  <div className="text-xs text-zinc-400">Total Important People</div>
                 </div>
-                <div className="glass rounded-xl p-6">
-                  <div className="text-3xl font-bold text-emerald-400 mb-2">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-white shadow-xl">
+                  <div className="mb-1 text-3xl font-bold text-emerald-400">
                     {syncStatus.summary.synced_people}
                   </div>
-                  <div className="text-sm text-zinc-400">Synced</div>
+                  <div className="text-xs text-zinc-400">Synced</div>
                 </div>
-                <div className="glass rounded-xl p-6">
-                  <div className="text-3xl font-bold text-yellow-400 mb-2">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 text-white shadow-xl">
+                  <div className="mb-1 text-3xl font-bold text-amber-400">
                     {syncStatus.summary.unsynced_people}
                   </div>
-                  <div className="text-sm text-zinc-400">Pending Sync</div>
+                  <div className="text-xs text-zinc-400">Pending Sync</div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-6xl mx-auto px-6 pb-20">
+        <div className="mx-auto max-w-5xl px-6 pb-16">
           {/* Check Important Score Section */}
-          <div className="glass rounded-2xl p-8 mb-8">
+          <div className="mb-8 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
             <button
               onClick={() => setIsCheckSectionOpen(!isCheckSectionOpen)}
-              className="w-full flex items-center justify-between text-left"
+              className="flex w-full items-center justify-between text-left"
             >
-              <h2 className="text-2xl font-bold text-white">Check Importance Score</h2>
+              <h2 className="text-lg font-bold text-zinc-900">Check Importance Score</h2>
               <svg
-                className={`w-6 h-6 text-zinc-400 transition-transform ${isCheckSectionOpen ? 'rotate-180' : ''}`}
+                className={`h-5 w-5 text-zinc-400 transition-transform ${isCheckSectionOpen ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -976,44 +957,44 @@ export default function RankerAdmin() {
 
             {isCheckSectionOpen && (
               <div className="mt-6 space-y-6">
-                <form onSubmit={handleCheckImportance} className="space-y-6">
+                <form onSubmit={handleCheckImportance} className="space-y-4">
                   <div>
-                    <label htmlFor="check-username" className="block text-sm font-semibold text-white mb-3">
+                    <label htmlFor="check-username" className="mb-2 block text-xs font-semibold text-zinc-900">
                       Twitter Username
                     </label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-lg">@</span>
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">@</span>
                       <input
                         type="text"
                         id="check-username"
                         value={checkUsername}
                         onChange={(e) => setCheckUsername(e.target.value)}
                         placeholder="elonmusk"
-                        className="w-full pl-10 pr-4 py-4 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all text-lg"
+                        className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-8 pr-4 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition-all focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
                         disabled={isCheckLoading}
                       />
                     </div>
-                    <p className="mt-3 text-sm text-zinc-500">
-                      Enter a username to check their importance score and see which important people follow them.
+                    <p className="mt-2 text-xs text-zinc-500">
+                      Enter a username to check their importance score.
                     </p>
                   </div>
 
                   <button
                     type="submit"
                     disabled={isCheckLoading || !checkUsername.trim()}
-                    className="w-full gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-indigo-500/25"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-zinc-800 disabled:opacity-50"
                   >
                     {isCheckLoading ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                         Checking...
                       </>
                     ) : (
                       <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        Check Importance Score
+                        Check Score
                       </>
                     )}
                   </button>
@@ -1021,67 +1002,61 @@ export default function RankerAdmin() {
 
                 {/* Results Display */}
                 {checkResults.length > 0 && (
-                  <div className="space-y-4 mt-8">
-                    <h3 className="text-lg font-semibold text-white">Results</h3>
+                  <div className="mt-6 space-y-4">
+                    <h3 className="text-sm font-semibold text-zinc-900">Results</h3>
                     {checkResults.map((result) => (
                       <div
                         key={result.id}
-                        className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4 relative"
+                        className="relative space-y-4 rounded-xl border border-zinc-200 bg-zinc-50 p-6"
                       >
                         <button
                           onClick={() => handleRemoveResult(result.id)}
-                          className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
+                          className="absolute right-4 top-4 text-zinc-400 hover:text-zinc-600"
                           title="Remove result"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
 
                         <div className="flex items-start justify-between pr-8">
                           <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className="px-4 py-2 bg-zinc-100 text-zinc-900 font-semibold rounded-lg text-base">
+                            <div className="mb-2 flex items-center gap-2">
+                              <span className="rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-zinc-900 border border-zinc-200 shadow-sm">
                                 @{result.found ? result.followed_username || result.username : result.username}
                               </span>
                             </div>
                             {!result.found && (
-                              <p className="text-sm text-zinc-500 mt-1">Account not found in the reverse index</p>
+                              <p className="mt-1 text-xs text-zinc-500">Account not found in index</p>
                             )}
                           </div>
                           <div className="text-right">
-                            <div className="text-sm text-zinc-400 mb-1">Importance Score</div>
-                            <div className="text-3xl font-bold text-indigo-400">{result.importance_score.toFixed(2)}</div>
+                            <div className="mb-1 text-xs text-zinc-500">Importance Score</div>
+                            <div className="text-2xl font-bold text-indigo-600">{result.importance_score.toFixed(2)}</div>
                           </div>
                         </div>
 
                         {result.found && result.followed_by.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-zinc-800">
-                            <div className="text-sm font-semibold text-zinc-300 mb-3">
+                          <div className="mt-4 border-t border-zinc-200 pt-4">
+                            <div className="mb-3 text-xs font-semibold text-zinc-600">
                               Followed by {result.followed_by.length} important {result.followed_by.length === 1 ? 'person' : 'people'}:
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {result.followed_by.map((follower) => (
                                 <div
                                   key={`${result.id}-${follower.user_id}`}
-                                  className="px-3 py-2 bg-zinc-100 border border-zinc-200 rounded-lg"
+                                  className="rounded-lg border border-zinc-200 bg-white px-2 py-1.5 shadow-sm"
                                 >
-                                  <div className="text-zinc-900 font-semibold text-sm">@{follower.username}</div>
+                                  <div className="text-xs font-medium text-zinc-900">@{follower.username}</div>
                                   {follower.name && (
-                                    <div className="text-zinc-700 text-xs mt-0.5">{follower.name}</div>
+                                    <div className="mt-0.5 text-[10px] text-zinc-500">{follower.name}</div>
                                   )}
                                   {follower.weight !== undefined && follower.weight !== 1 && (
-                                    <div className="text-zinc-600 text-xs mt-1">Weight: {follower.weight}</div>
+                                    <div className="mt-0.5 text-[10px] text-zinc-400">Weight: {follower.weight}</div>
                                   )}
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-
-                        {result.found && result.followed_by.length === 0 && (
-                          <div className="mt-4 pt-4 border-t border-zinc-800">
-                            <p className="text-sm text-zinc-500">No important people follow this account</p>
                           </div>
                         )}
                       </div>
@@ -1093,44 +1068,44 @@ export default function RankerAdmin() {
           </div>
 
           {/* Add Important Person Form */}
-          <div className="glass rounded-2xl p-8 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-6">Add Important Person</h2>
+          <div className="mb-8 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-lg font-bold text-zinc-900">Add Important Person</h2>
             
-            <form onSubmit={handleAddPerson} className="space-y-6">
+            <form onSubmit={handleAddPerson} className="space-y-4">
               <div>
-                <label htmlFor="username" className="block text-sm font-semibold text-white mb-3">
+                <label htmlFor="username" className="mb-2 block text-xs font-semibold text-zinc-900">
                   Twitter Username
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 text-lg">@</span>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">@</span>
                   <input
                     type="text"
                     id="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="elonmusk"
-                    className="w-full pl-10 pr-4 py-4 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all text-lg"
+                    className="w-full rounded-xl border border-zinc-200 bg-white py-3 pl-8 pr-4 text-sm text-zinc-900 placeholder-zinc-400 outline-none transition-all focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
                     disabled={isLoading}
                   />
                 </div>
-                <p className="mt-3 text-sm text-zinc-500">
-                  Enter just the username. N8N will fetch user ID and name during the first sync.
+                <p className="mt-2 text-xs text-zinc-500">
+                  Enter just the username.
                 </p>
               </div>
 
               <button
                 type="submit"
                 disabled={isLoading || !username.trim()}
-                className="w-full gradient-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-xl transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-indigo-500/25"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-zinc-800 disabled:opacity-50"
               >
                 {isLoading ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                     Adding...
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Add Important Person
@@ -1139,83 +1114,51 @@ export default function RankerAdmin() {
               </button>
             </form>
 
-            {/* Message Display */}
             {message && (
               <div
-                className={`mt-6 p-4 rounded-xl border ${
+                className={`mt-4 rounded-xl border p-4 ${
                   message.type === 'success'
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                    : 'bg-red-500/10 border-red-500/20 text-red-400'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-600'
+                    : 'border-red-200 bg-red-50 text-red-600'
                 }`}
               >
-                <div className="flex items-center gap-3">
-                  {message.type === 'success' ? (
-                    <div className="flex-shrink-0 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="flex-shrink-0 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                  <span className="font-medium">{message.text}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{message.text}</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Important People Table */}
-          <div className="glass rounded-2xl p-8">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Important People</h2>
-              <div className="flex flex-wrap gap-3">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <h2 className="text-lg font-bold text-zinc-900">Important People</h2>
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={openCandidateModal}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-all"
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-medium text-white hover:bg-indigo-500"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
-                  Extract important accounts
+                  Extract Candidates
                 </button>
                 <button
                   onClick={() => {
-                    clearAllPeopleCache(); // Clear search cache on refresh
+                    clearAllPeopleCache();
                     fetchImportantPeople();
                     fetchSyncStatus();
                   }}
                   disabled={isFetching}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
                 >
                   <svg
-                    className={`w-4 h-4 ${isFetching ? 'animate-spin' : ''}`}
+                    className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
                   Refresh
                 </button>
@@ -1228,863 +1171,320 @@ export default function RankerAdmin() {
                 <div className="flex flex-wrap gap-2">
                   {(['all', 'synced', 'unsynced'] as const).map((filterKey) => {
                     const isActive = syncFilter === filterKey;
-                    const label =
-                      filterKey === 'all'
-                        ? 'All'
-                        : filterKey === 'synced'
-                        ? 'Synced'
-                        : 'Not synced';
                     return (
                       <button
                         key={filterKey}
                         onClick={() => setSyncFilter(filterKey)}
-                        className={`px-3 py-1.5 rounded-full border text-xs font-medium transition ${
+                        className={`rounded-full border px-3 py-1 text-[10px] font-medium transition ${
                           isActive
-                            ? 'border-indigo-400 bg-indigo-500/20 text-indigo-200'
-                            : 'border-zinc-700 text-zinc-400 hover:text-white'
+                            ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                            : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
                         }`}
                       >
-                        {label}
+                        {filterKey === 'all' ? 'All' : filterKey === 'synced' ? 'Synced' : 'Not synced'}
                       </button>
                     );
                   })}
                 </div>
+                
                 <div className="relative">
                   <button
                     onClick={() => setIsTagFilterOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-sm text-white hover:border-indigo-500/50 transition"
+                    className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
                   >
-                    <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-                    </svg>
                     Tag filter
                     {selectedTags.length > 0 && (
-                      <span className="inline-flex items-center justify-center text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-500/40">
+                      <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] text-indigo-700">
                         {selectedTags.length}
                       </span>
                     )}
-                    {isLoadingTagFilterData && (
-                      <svg
-                        className="w-3.5 h-3.5 text-indigo-300 animate-spin"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 12a8 8 0 018-8m8 8a8 8 0 01-8 8"
-                        />
-                      </svg>
-                    )}
                   </button>
                   {isTagFilterOpen && (
-                    <div className="absolute right-0 mt-2 w-64 rounded-xl border border-zinc-800 bg-zinc-950 shadow-2xl z-20">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
-                        <p className="text-sm font-medium text-white">Filter by tags</p>
+                    <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-zinc-200 bg-white shadow-xl">
+                      <div className="flex items-center justify-between border-b border-zinc-100 px-4 py-3">
+                        <p className="text-xs font-medium text-zinc-900">Filter by tags</p>
                         <button
-                          onClick={() => {
-                            setSelectedTags([]);
-                            setIsTagFilterOpen(false);
-                          }}
-                          className="text-xs text-zinc-500 hover:text-white transition"
+                          onClick={() => { setSelectedTags([]); setIsTagFilterOpen(false); }}
+                          className="text-[10px] text-zinc-500 hover:text-zinc-900"
                         >
                           Clear
                         </button>
                       </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {availableTags.length === 0 ? (
-                          <div className="px-4 py-6 text-sm text-zinc-500 text-center">
-                            Tags will appear after you start tagging people.
-                          </div>
-                        ) : (
-                          <div className="p-2 flex flex-wrap gap-2">
-                            {availableTags.map((tag) => {
-                              const isSelected = selectedTags.some(
-                                (selected) => selected.toLowerCase() === tag.toLowerCase()
-                              );
-                              return (
-                                <button
-                                  key={`dropdown-tag-${tag}`}
-                                  onClick={() =>
-                                    setSelectedTags((prev) =>
-                                      isSelected
-                                        ? prev.filter(
-                                            (item) => item.toLowerCase() !== tag.toLowerCase()
-                                          )
-                                        : [...prev, tag]
-                                    )
-                                  }
-                                  className={`px-3 py-1 rounded-full border text-xs transition ${
-                                    isSelected
-                                      ? 'border-indigo-400 bg-indigo-500/20 text-indigo-100'
-                                      : 'border-zinc-700 text-zinc-300 hover:border-indigo-500/40'
-                                  }`}
-                                >
-                                  #{tag}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      <div className="px-4 py-3 border-t border-zinc-800">
-                        <button
-                          onClick={() => setIsTagFilterOpen(false)}
-                          className="w-full py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition"
-                        >
-                          Apply
-                        </button>
+                      <div className="max-h-64 overflow-y-auto p-2">
+                        <div className="flex flex-wrap gap-2">
+                          {availableTags.map((tag) => {
+                            const isSelected = selectedTags.some(s => s.toLowerCase() === tag.toLowerCase());
+                            return (
+                              <button
+                                key={`dropdown-tag-${tag}`}
+                                onClick={() => setSelectedTags(prev => isSelected ? prev.filter(i => i.toLowerCase() !== tag.toLowerCase()) : [...prev, tag])}
+                                className={`rounded-full border px-2 py-1 text-[10px] transition ${isSelected ? 'border-indigo-200 bg-indigo-50 text-indigo-700' : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'}`}
+                              >
+                                #{tag}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {selectedTags.length > 0 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                  {selectedTags.slice(0, 5).map((tag) => (
-                    <span
-                      key={`active-tag-${tag}`}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/40 text-sm text-indigo-100"
-                    >
-                      #{tag}
-                      <button
-                        onClick={() =>
-                          setSelectedTags((prev) =>
-                            prev.filter((item) => item.toLowerCase() !== tag.toLowerCase())
-                          )
-                        }
-                        className="text-xs text-indigo-200 hover:text-white transition"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                  {selectedTags.length > 5 && (
-                    <span className="text-xs text-zinc-500">
-                      +{selectedTags.length - 5} more
-                    </span>
-                  )}
-                </div>
-              )}
-
               <div className="relative">
-                <svg
-                  className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-500 ${isSearching ? 'animate-pulse' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search across all important people..."
-                  className="w-full pl-12 pr-4 py-3 bg-zinc-900 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
+                  placeholder="Search..."
+                  className="w-full rounded-xl border border-zinc-200 bg-white py-2 pl-4 pr-10 text-xs text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-900"
                   disabled={isSearching}
                 />
                 {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
+                  <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">
+                    ×
                   </button>
-                )}
-              </div>
-              <div className="text-sm text-zinc-400">
-                {isSearching ? (
-                  <span className="inline-flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-zinc-400 border-t-transparent"></div>
-                    Searching across all people...
-                  </span>
-                ) : isLoadingTagFilterData ? (
-                  <span className="inline-flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-zinc-400 border-t-transparent"></div>
-                    Fetching all accounts for tag filtering...
-                  </span>
-                ) : (
-                  <>
-                    Showing {filteredPeople.length} of {baseList.length || totalPeople} account
-                    {filteredPeople.length === 1 ? '' : 's'}
-                    {syncFilter !== 'all' && ` • ${syncFilter === 'synced' ? 'Synced' : 'Not synced'} only`}
-                    {selectedTags.length > 0 && (
-                      <>
-                        {' '}
-                        • Tags: {selectedTags.slice(0, 3).join(', ')}
-                        {selectedTags.length > 3 && ` +${selectedTags.length - 3}`}
-                      </>
-                    )}
-                    {syncFilter !== 'synced' && ` • ${unsyncedCount} unsynced`}
-                    {isAwaitingFullDataset && ' • Completing full dataset...'}
-                  </>
                 )}
               </div>
             </div>
 
             {importantPeople.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-zinc-400">No important people added yet</p>
-                <p className="text-sm text-zinc-500 mt-2">Add someone using the form above to get started</p>
-              </div>
+              <div className="py-12 text-center text-sm text-zinc-500">No people added yet.</div>
             ) : filteredPeople.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-zinc-400">No results found for &quot;{searchQuery}&quot;</p>
-                <p className="text-sm text-zinc-500 mt-2">Try a different search term</p>
-              </div>
+              <div className="py-12 text-center text-sm text-zinc-500">No results found.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-zinc-800">
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Username</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Name</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Weight</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Networth</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Tags</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Following</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Last Synced</th>
-                      <th className="text-left py-4 px-4 text-sm font-semibold text-zinc-400">Status</th>
-                      <th className="text-right py-4 px-4 text-sm font-semibold text-zinc-400">Actions</th>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50 font-semibold text-zinc-500">
+                    <tr>
+                      <th className="px-4 py-3">Username</th>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Weight</th>
+                      <th className="px-4 py-3">Networth</th>
+                      <th className="px-4 py-3">Tags</th>
+                      <th className="px-4 py-3">Following</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {filteredPeople.map((person) => {
-                      const weightValue = weightEdits[person.username] ?? (person.weight ?? 1).toString();
-                      const parsedWeight = Number(weightValue);
-                      const isWeightValid = Number.isFinite(parsedWeight) && parsedWeight > 0;
-                      const hasWeightChanged = isWeightValid && Math.abs(parsedWeight - (person.weight ?? 1)) >= 0.0001;
-                      const isUpdatingThisWeight = updatingWeight === person.username;
-                      
-                      const networthValue = networthEdits[person.username] ?? (person.networth !== undefined ? person.networth.toString() : '');
-                      const trimmedNetworthValue = networthValue.trim();
-                      const parsedNetworth = trimmedNetworthValue === '' ? null : Number(trimmedNetworthValue);
-                      const isNetworthValid = trimmedNetworthValue === '' || (Number.isFinite(parsedNetworth) && parsedNetworth !== null && parsedNetworth >= 0);
-                      const hasNetworthChanged = isNetworthValid && parsedNetworth !== (person.networth ?? null);
-                      const isUpdatingThisNetworth = updatingNetworth === person.username;
-                      
-                      const personTags = person.tags ?? [];
-
-                      return (
-                        <tr key={person.username} className="border-b border-zinc-800/50 hover:bg-zinc-900/30 transition-colors">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-indigo-500/20 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84" />
-                              </svg>
-                            </div>
-                            <span className="text-white font-medium">@{person.username}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-zinc-300">{person.name || <span className="text-zinc-500 italic">Not synced yet</span>}</td>
-                        <td className="py-4 px-4">
+                  <tbody className="divide-y divide-zinc-100 bg-white">
+                    {filteredPeople.map((person) => (
+                      <tr key={person.username} className="hover:bg-zinc-50">
+                        <td className="px-4 py-3 font-medium text-zinc-900">@{person.username}</td>
+                        <td className="px-4 py-3 text-zinc-600">{person.name || '-'}</td>
+                        <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
                             <input
                               type="number"
                               min={0.1}
                               step={0.1}
-                              value={weightValue}
-                              disabled={isUpdatingThisWeight}
+                              value={weightEdits[person.username] ?? (person.weight ?? 1).toString()}
                               onChange={(e) => handleWeightInputChange(person.username, e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  if (hasWeightChanged && isWeightValid && !isUpdatingThisWeight) {
-                                    handleWeightSave(person);
-                                  }
-                                }
-                              }}
-                              className="w-20 px-3 py-1.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                              onKeyDown={(e) => e.key === 'Enter' && handleWeightSave(person)}
+                              className="w-16 rounded border border-zinc-200 px-2 py-1 text-xs"
                             />
-                            <button
-                              onClick={() => handleWeightSave(person)}
-                              disabled={!hasWeightChanged || !isWeightValid || isUpdatingThisWeight}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isUpdatingThisWeight ? (
-                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
-                                </svg>
-                              ) : (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                              <span>Save</span>
-                            </button>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min={0}
-                              step={1000000}
-                              placeholder="Enter networth..."
-                              value={networthValue}
-                              disabled={isUpdatingThisNetworth}
-                              onChange={(e) => handleNetworthInputChange(person.username, e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  if (hasNetworthChanged && isNetworthValid && !isUpdatingThisNetworth) {
-                                    handleNetworthSave(person);
-                                  }
-                                }
-                              }}
-                              className="w-32 px-3 py-1.5 bg-zinc-900 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 placeholder-zinc-600"
-                            />
-                            <button
-                              onClick={() => handleNetworthSave(person)}
-                              disabled={!hasNetworthChanged || !isNetworthValid || isUpdatingThisNetworth}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-xs rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isUpdatingThisNetworth ? (
-                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
-                                </svg>
-                              ) : (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                              <span>Save</span>
-                            </button>
-                          </div>
-                          {person.networth !== undefined && (
-                            <div className="text-xs text-zinc-500 mt-1">
-                              ${person.networth.toLocaleString()}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {personTags.length > 0 ? (
-                              personTags.map((tag) => (
-                                <span
-                                  key={`${person.username}-${tag}`}
-                                  className="px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-200"
-                                >
-                                  #{tag}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-sm text-zinc-500">No tags</span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => openTagModal(person)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 text-xs text-zinc-200 rounded-lg hover:bg-zinc-800 transition"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                            Edit tags
-                          </button>
-                        </td>
-                        <td className="py-4 px-4">
-                          <span className="text-zinc-300">{person.following_count.toLocaleString()}</span>
-                        </td>
-                        <td className="py-4 px-4">
-                          <div className="text-sm">
-                            <div className="text-zinc-300">{getTimeSince(person.last_synced)}</div>
-                            {person.last_synced && (
-                              <div className="text-zinc-500 text-xs">{formatDate(person.last_synced)}</div>
+                            {weightEdits[person.username] && (
+                              <button onClick={() => handleWeightSave(person)} className="text-[10px] text-indigo-600 hover:underline">Save</button>
                             )}
                           </div>
                         </td>
-                        <td className="py-4 px-4">
-                          {person.last_synced ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
-                              <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
-                              Synced
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30">
-                              <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full"></div>
-                              Not Synced
-                            </span>
-                          )}
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            placeholder="Networth"
+                            value={networthEdits[person.username] ?? (person.networth !== undefined ? person.networth.toString() : '')}
+                            onChange={(e) => handleNetworthInputChange(person.username, e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleNetworthSave(person)}
+                            className="w-24 rounded border border-zinc-200 px-2 py-1 text-xs"
+                          />
                         </td>
-                        <td className="py-4 px-4 text-right">
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              onClick={() => handleSyncPerson(person.username)}
-                              disabled={syncingUsername !== null}
-                              className="inline-flex items-center justify-center w-10 h-10 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              title={syncingUsername ? `Wait for @${syncingUsername} to finish syncing` : 'Sync following data from Twitter'}
-                            >
-                              <svg className={`w-4 h-4 ${syncingUsername === person.username ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                                />
-                              </svg>
-                              <span className="sr-only">Sync @{person.username}</span>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {person.tags?.map(tag => (
+                              <span key={tag} className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-600">#{tag}</span>
+                            ))}
+                            <button onClick={() => openTagModal(person)} className="text-[10px] text-zinc-400 hover:text-zinc-600">+</button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-zinc-600">{person.following_count.toLocaleString()}</td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${person.last_synced ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {person.last_synced ? 'Synced' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => handleSyncPerson(person.username)} className="text-zinc-400 hover:text-indigo-600" title="Sync">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                             </button>
-                            <button
-                              onClick={() => handleRemovePerson(person.username)}
-                              className="inline-flex items-center justify-center w-10 h-10 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-lg transition-all"
-                              title={`Remove @${person.username}`}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                />
-                              </svg>
-                              <span className="sr-only">Remove @{person.username}</span>
+                            <button onClick={() => handleRemovePerson(person.username)} className="text-zinc-400 hover:text-red-600" title="Remove">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </td>
-                        </tr>
-                      );
-                    })}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             )}
-
+            
             {/* Pagination Controls */}
             {!searchQuery && totalPages > 1 && (
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-zinc-800">
-                <div className="text-sm text-zinc-400">
-                  Showing page {currentPage} of {totalPages} ({totalPeople} total people)
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => fetchImportantPeople(currentPage - 1)}
-                    disabled={currentPage === 1 || isFetching}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Previous
-                  </button>
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => fetchImportantPeople(pageNum)}
-                          disabled={isFetching}
-                          className={`w-10 h-10 rounded-lg font-medium transition-all ${
-                            currentPage === pageNum
-                              ? 'bg-indigo-500 text-white'
-                              : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button
-                    onClick={() => fetchImportantPeople(currentPage + 1)}
-                    disabled={currentPage === totalPages || isFetching}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+              <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-4 text-xs text-zinc-500">
+                <div>Page {currentPage} of {totalPages}</div>
+                <div className="flex gap-2">
+                  <button onClick={() => fetchImportantPeople(currentPage - 1)} disabled={currentPage === 1} className="rounded border border-zinc-200 px-3 py-1 hover:bg-zinc-50 disabled:opacity-50">Prev</button>
+                  <button onClick={() => fetchImportantPeople(currentPage + 1)} disabled={currentPage === totalPages} className="rounded border border-zinc-200 px-3 py-1 hover:bg-zinc-50 disabled:opacity-50">Next</button>
                 </div>
               </div>
             )}
           </div>
-
         </div>
 
+        {/* Candidate Modal (Light) */}
         {isCandidateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur">
-            <div className="glass max-w-4xl w-full mx-4 rounded-2xl border border-zinc-800 p-6 relative">
-              <button
-                onClick={closeCandidateModal}
-                className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              <div className="flex items-center justify-between mb-4 pr-8">
-                <div>
-                  <h3 className="text-2xl font-bold text-white">Candidate Important Accounts</h3>
-                  <p className="text-sm text-zinc-400">
-                    Accounts followed by multiple important people but not yet in your list.
-                  </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-zinc-900">Candidates</h3>
+                <button onClick={closeCandidateModal} className="text-zinc-400 hover:text-zinc-600">×</button>
+              </div>
+              
+              <div className="mb-4 flex flex-wrap gap-4 rounded-xl bg-zinc-50 p-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-zinc-700">Min Important Followers</label>
+                  <input
+                    type="number"
+                    value={candidateMinFollowers}
+                    onChange={(e) => setCandidateMinFollowers(Math.max(1, Number(e.target.value)))}
+                    className="w-24 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold text-zinc-700">Min Weight</label>
+                  <input
+                    type="number"
+                    value={candidateMinWeight}
+                    onChange={(e) => setCandidateMinWeight(Math.max(0, Number(e.target.value)))}
+                    className="w-24 rounded-lg border border-zinc-200 bg-white px-2 py-1 text-sm"
+                  />
                 </div>
                 <button
                   onClick={fetchCandidates}
                   disabled={candidateLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-white disabled:opacity-50"
+                  className="self-end rounded-lg bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
                 >
-                  <svg
-                    className={`w-4 h-4 ${candidateLoading ? 'animate-spin' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  Refresh
+                  Apply & Refresh
                 </button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
-                <label className="flex flex-col gap-2 text-sm text-white">
-                  Minimum important followers
-                  <input
-                    type="number"
-                    min={1}
-                    placeholder="e.g. 3 followers"
-                    value={candidateMinFollowers}
-                    onChange={(e) => setCandidateMinFollowers(Math.max(1, Number(e.target.value)))}
-                    className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                  />
-                  <span className="text-xs text-zinc-400">
-                    Only show accounts followed by at least this many important people.
-                  </span>
-                </label>
-                <label className="flex flex-col gap-2 text-sm text-white">
-                  Minimum total weight
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    placeholder="e.g. 5 weight"
-                    value={candidateMinWeight}
-                    onChange={(e) =>
-                      setCandidateMinWeight(Math.max(0, Number(e.target.value)))
-                    }
-                    className="px-3 py-2 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                  />
-                  <span className="text-xs text-zinc-400">
-                    Weighted by follower importance. Raise to prioritize higher-signal overlaps.
-                  </span>
-                </label>
-                <div className="flex flex-col justify-end gap-2">
-                  <button
-                    onClick={fetchCandidates}
-                    disabled={candidateLoading}
-                    className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium disabled:opacity-50"
-                  >
-                    Apply filters
-                  </button>
-                  <span className="text-xs text-zinc-500">
-                    Use filters when the list feels too broad or too sparse.
-                  </span>
-                </div>
-              </div>
-              {candidateError && (
-                <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                  {candidateError}
-                </div>
-              )}
+
               {candidateLoading ? (
-                <div className="flex items-center justify-center py-12 text-zinc-400">
-                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-zinc-600 border-t-transparent mr-3"></div>
-                  Extracting potential accounts...
-                </div>
+                <div className="py-12 text-center text-sm text-zinc-500">Loading candidates...</div>
               ) : candidateList.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-zinc-300 font-medium mb-2">No candidates found</p>
-                  <p className="text-sm text-zinc-500">
-                    Try syncing more important people or lowering the threshold.
-                  </p>
-                </div>
+                <div className="py-12 text-center text-sm text-zinc-500">No candidates found.</div>
               ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex justify-end">
+                <>
+                  <div className="mb-4 flex justify-end">
                     <button
                       onClick={handleBatchAdd}
                       disabled={selectedCandidates.length === 0 || isBatchAdding}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 rounded-lg text-sm font-medium disabled:opacity-50"
+                      className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
                     >
-                      {isBatchAdding ? (
-                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                        </svg>
-                      )}
-                      Add selected ({selectedCandidates.length})
+                      Add Selected ({selectedCandidates.length})
                     </button>
                   </div>
-                  <div className="overflow-x-auto max-h-[500px] pr-2">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-zinc-800/80 text-left text-zinc-400">
-                          <th className="py-3 px-2">
-                            <input
-                              type="checkbox"
-                              checked={
-                                candidateList.length > 0 &&
-                                selectedCandidates.length === candidateList.length
-                              }
-                              ref={(el) => {
-                                if (el) {
-                                  el.indeterminate =
-                                    selectedCandidates.length > 0 &&
-                                    selectedCandidates.length < candidateList.length;
-                                }
-                              }}
-                              onChange={toggleSelectAllCandidates}
-                            />
-                          </th>
-                          <th className="py-3 px-2">Username</th>
-                          <th className="py-3 px-2">Followers</th>
-                          <th className="py-3 px-2">Weight Sum</th>
-                          <th className="py-3 px-2">Score</th>
-                          <th className="py-3 px-2">Followed By</th>
-                          <th className="py-3 px-2 text-right">Action</th>
+                  <div className="max-h-[400px] overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-zinc-50 text-zinc-500">
+                        <tr>
+                          <th className="px-2 py-2"><input type="checkbox" onChange={toggleSelectAllCandidates} /></th>
+                          <th className="px-2 py-2">Username</th>
+                          <th className="px-2 py-2">Followers</th>
+                          <th className="px-2 py-2">Weight Sum</th>
+                          <th className="px-2 py-2">Score</th>
+                          <th className="px-2 py-2">Followed By</th>
+                          <th className="px-2 py-2 text-right">Action</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {candidateList.map((candidate) => {
-                          const isSelected = selectedCandidates.includes(candidate.followed_username);
-                          return (
-                            <tr
-                              key={candidate.followed_user_id || candidate.followed_username}
-                              className="border-b border-zinc-800/40"
-                            >
-                              <td className="py-3 px-2">
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleCandidateSelection(candidate.followed_username)}
-                                />
-                              </td>
-                              <td className="py-3 px-2">
-                                <span className="text-white font-medium">@{candidate.followed_username}</span>
-                                <div className="text-xs text-zinc-500">{candidate.followed_user_id}</div>
-                              </td>
-                              <td className="py-3 px-2 text-zinc-200">{candidate.follower_count}</td>
-                              <td className="py-3 px-2 text-zinc-200">{candidate.total_weight.toFixed(1)}</td>
-                              <td className="py-3 px-2 text-zinc-200">{candidate.importance_score.toFixed(1)}</td>
-                              <td className="py-3 px-2">
-                                <div className="flex flex-wrap gap-1">
-                                  {candidate.sample_followed_by.map((follower) => (
-                                    <span
-                                      key={`${candidate.followed_username}-${follower.user_id}`}
-                                      className="px-2 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs text-zinc-300"
-                                    >
-                                      @{follower.username}
-                                    </span>
-                                  ))}
-                                  {candidate.follower_count > candidate.sample_followed_by.length && (
-                                    <span className="text-xs text-zinc-500">
-                                      +{candidate.follower_count - candidate.sample_followed_by.length} more
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-3 px-2 text-right">
-                                <button
-                                  onClick={() => handleAddCandidate(candidate)}
-                                  disabled={!!candidateAdding[candidate.followed_username]}
-                                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium disabled:opacity-50"
-                                >
-                                  {candidateAdding[candidate.followed_username] ? (
-                                    <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
-                                    </svg>
-                                  ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                    </svg>
-                                  )}
-                                  Add
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                      <tbody className="divide-y divide-zinc-100">
+                        {candidateList.map((candidate) => (
+                          <tr key={candidate.followed_username}>
+                            <td className="px-2 py-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedCandidates.includes(candidate.followed_username)}
+                                onChange={() => toggleCandidateSelection(candidate.followed_username)}
+                              />
+                            </td>
+                            <td className="px-2 py-2 font-medium text-zinc-900">@{candidate.followed_username}</td>
+                            <td className="px-2 py-2 text-zinc-600">{candidate.follower_count}</td>
+                            <td className="px-2 py-2 text-zinc-600">{candidate.total_weight.toFixed(1)}</td>
+                            <td className="px-2 py-2 text-zinc-600">{candidate.importance_score.toFixed(1)}</td>
+                            <td className="px-2 py-2">
+                              <div className="flex flex-wrap gap-1">
+                                {candidate.sample_followed_by.slice(0, 3).map(f => (
+                                  <span key={f.username} className="rounded bg-zinc-100 px-1 text-[10px] text-zinc-600">@{f.username}</span>
+                                ))}
+                                {candidate.sample_followed_by.length > 3 && <span className="text-[10px] text-zinc-400">+{candidate.sample_followed_by.length - 3}</span>}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2 text-right">
+                              <button
+                                onClick={() => handleAddCandidate(candidate)}
+                                disabled={!!candidateAdding[candidate.followed_username]}
+                                className="text-emerald-600 hover:underline"
+                              >
+                                Add
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </>
               )}
             </div>
           </div>
         )}
 
+        {/* Tag Modal (Light) */}
         {tagModalPerson && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-            <div className="glass max-w-lg w-full mx-4 rounded-2xl border border-zinc-800 p-6 relative">
-              <button
-                onClick={closeTagModal}
-                className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors"
-                aria-label="Close tag modal"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-              <div className="pr-8">
-                <p className="text-sm text-zinc-500 uppercase tracking-wide mb-2">Tags</p>
-                <h3 className="text-2xl font-bold text-white mb-1">Manage @{tagModalPerson.username}</h3>
-                <p className="text-sm text-zinc-400">
-                  Add descriptive tags to group this account by niche. Tags are free-form, but you can reuse existing ones below.
-                </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-zinc-900">Edit Tags: @{tagModalPerson.username}</h3>
+                <button onClick={closeTagModal} className="text-zinc-400 hover:text-zinc-600">×</button>
               </div>
-              <div className="mt-6 space-y-4">
-                <div>
-                  <label className="text-sm text-zinc-300 font-medium mb-2 block">Current tags</label>
-                  {tagDraft.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {tagDraft.map((tag) => (
-                        <span
-                          key={`${tagModalPerson.username}-draft-${tag}`}
-                          className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/15 text-indigo-100 border border-indigo-500/30 rounded-full text-sm"
-                        >
-                          #{tag}
-                          <button
-                            onClick={() => removeTagFromDraft(tag)}
-                            className="text-indigo-200 hover:text-white transition"
-                            aria-label={`Remove ${tag}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-zinc-500">No tags yet. Add the first one below.</p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-sm text-zinc-300 font-medium mb-2 block">Add new tag</label>
-                  <input
-                    type="text"
-                    value={tagInputValue}
-                    placeholder="Type a tag and press Enter"
-                    onChange={(e) => setTagInputValue(e.target.value)}
-                    onKeyDown={handleTagInputKeyDown}
-                    className="w-full px-4 py-3 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-                  />
-                  <p className="text-xs text-zinc-500 mt-2">
-                    Suggestions show tags already used elsewhere. Click to reuse and avoid duplicates.
-                  </p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-zinc-300 font-medium">Suggestions</span>
-                    {isFetchingTags && (
-                      <span className="text-xs text-zinc-500 inline-flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-zinc-500 animate-pulse"></span>
-                        Loading tags...
-                      </span>
-                    )}
-                  </div>
-                  {availableTags.length === 0 ? (
-                    <p className="text-sm text-zinc-500">Tags will appear here once you start adding them.</p>
-                  ) : tagSuggestions.length === 0 ? (
-                    <p className="text-sm text-zinc-500">No suggestions match your search.</p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {tagSuggestions.map((tag) => (
-                        <button
-                          key={`suggestion-${tag}`}
-                          onClick={() => {
-                            addTagToDraft(tag);
-                            setTagInputValue('');
-                          }}
-                          className="px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-sm text-zinc-200 hover:border-indigo-500/60 transition"
-                        >
-                          #{tag}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center justify-end gap-3 pt-2">
-                  <button
-                    onClick={closeTagModal}
-                    className="px-4 py-2 text-sm font-medium text-zinc-300 hover:text-white transition"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveTags}
-                    disabled={isSavingTags}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold disabled:opacity-50"
-                  >
-                    {isSavingTags && (
-                      <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 018-8M20 12a8 8 0 01-8 8" />
-                      </svg>
-                    )}
-                    Save tags
-                  </button>
-                </div>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {tagDraft.map(tag => (
+                  <span key={tag} className="flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-1 text-xs text-indigo-700">
+                    #{tag}
+                    <button onClick={() => removeTagFromDraft(tag)} className="hover:text-indigo-900">×</button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={tagInputValue}
+                onChange={(e) => setTagInputValue(e.target.value)}
+                onKeyDown={handleTagInputKeyDown}
+                placeholder="Add tag..."
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+              />
+              <div className="mt-4 flex justify-end gap-2">
+                <button onClick={closeTagModal} className="rounded-lg px-3 py-2 text-xs font-medium text-zinc-500 hover:text-zinc-700">Cancel</button>
+                <button onClick={handleSaveTags} disabled={isSavingTags} className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50">Save</button>
               </div>
             </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className="mt-20 py-8 border-t border-zinc-800">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <p className="text-zinc-500 text-sm">
+        <div className="mt-12 border-t border-zinc-100 py-6">
+          <div className="mx-auto max-w-4xl px-6 text-center">
+            <p className="text-xs text-zinc-400">
               Powered by Identity Labs • Importance Ranking System
             </p>
           </div>
@@ -2093,4 +1493,3 @@ export default function RankerAdmin() {
     </div>
   );
 }
-

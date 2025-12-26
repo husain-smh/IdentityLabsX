@@ -220,6 +220,7 @@ export default function TweetDetailPage() {
       'chatgpt',
       'ai researcher',
       'ai practitioner',
+      'llm',
     ];
     if (aiCreatorKeywords.some(kw => combined.includes(kw))) {
       categories.push('ai_creators');
@@ -362,12 +363,12 @@ export default function TweetDetailPage() {
 
   if (loading && !tweet) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="relative min-h-screen bg-white text-zinc-900">
         <Navbar />
-        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+        <div className="flex min-h-screen items-center justify-center pt-20">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading tweet data...</p>
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
+            <p className="mt-4 text-sm text-zinc-500">Loading tweet data...</p>
           </div>
         </div>
       </div>
@@ -376,12 +377,12 @@ export default function TweetDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="relative min-h-screen bg-white text-zinc-900">
         <Navbar />
-        <div className="relative z-10 pt-20 flex items-center justify-center min-h-screen">
+        <div className="flex min-h-screen items-center justify-center pt-20">
           <div className="text-center">
-            <p className="text-destructive text-lg">{error}</p>
-            <Link href="/tweets" className="mt-4 inline-block px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-all">
+            <p className="text-lg text-red-500">{error}</p>
+            <Link href="/tweets" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">
               Back to Tweets
             </Link>
           </div>
@@ -393,15 +394,17 @@ export default function TweetDetailPage() {
   const totalPages = Math.ceil(total / limit);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="relative min-h-screen bg-white text-zinc-900">
       <Navbar />
+      {/* Background Pattern */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(99,102,241,0.08),transparent_65%)]"></div>
       
-      <div className="relative z-10">
+      <div className="relative z-10 origin-top-left scale-75" style={{ width: '133.33%', height: '133.33%' }}>
         {/* Header Section */}
-        <div className="pt-24 pb-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Link href="/tweets" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 text-sm mb-6 transition-colors">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="pt-20 pb-8">
+          <div className="mx-auto max-w-5xl px-6">
+            <Link href="/tweets" className="mb-4 inline-flex items-center gap-2 text-sm text-indigo-500 transition-colors hover:text-indigo-600 hover:underline">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               Back to all tweets
@@ -409,84 +412,93 @@ export default function TweetDetailPage() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-          {/* Tweet Header */}
-          <div className="card-base mb-6">
+        <div className="mx-auto max-w-5xl px-6 pb-16">
+          {/* Tweet Header - Scaled */}
+          <div className="mb-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-foreground mb-2">
+                <h1 className="mb-2 text-xl font-bold text-zinc-900">
                   {tweet?.author_name}
                 </h1>
                 <a
                   href={tweet?.tweet_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:text-primary/80 hover:underline text-sm transition-colors"
+                  className="text-sm text-indigo-500 transition-colors hover:text-indigo-600 hover:underline"
                 >
                   View on Twitter →
                 </a>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="mt-2 text-xs text-zinc-500">
                   Analyzed: {tweet?.created_at && new Date(tweet.created_at).toLocaleString()}
                 </p>
               </div>
-              <div className={`px-4 py-2 rounded-full font-semibold text-sm border ${
-                tweet?.status === 'completed' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
-                tweet?.status === 'analyzing' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
-                'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+              <div className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                tweet?.status === 'completed' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                tweet?.status === 'analyzing' ? 'border-blue-200 bg-blue-50 text-blue-700' :
+                'border-yellow-200 bg-yellow-50 text-yellow-700'
               }`}>
                 {tweet?.status}
               </div>
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats - Scaled & Themed */}
           {stats && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              <div className="card-base p-4">
-                <p className="text-sm text-muted-foreground">Total Unique Engagers</p>
-                <p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
+            <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-xs text-zinc-500">Total Unique Engagers</p>
+                <p className="mt-1 text-xl font-bold text-zinc-900">{stats.total.toLocaleString()}</p>
               </div>
-              <div className="card-base p-4">
-                <p className="text-sm text-muted-foreground">&gt;10k Followers</p>
-                <p className="text-2xl font-bold text-primary mt-1">{stats.above_10k}</p>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-xs text-zinc-500">&gt;10k Followers</p>
+                <p className="mt-1 text-xl font-bold text-indigo-600">{stats.above_10k.toLocaleString()}</p>
               </div>
-              <div className="card-base p-4">
-                <p className="text-sm text-muted-foreground">&lt;10k Followers</p>
-                <p className="text-2xl font-bold text-foreground/70 mt-1">{stats.below_10k}</p>
+              <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <p className="text-xs text-zinc-500">&lt;10k Followers</p>
+                <p className="mt-1 text-xl font-bold text-zinc-700">{stats.below_10k.toLocaleString()}</p>
               </div>
             </div>
           )}
 
+          {/* Metrics Collapsible Section - Dark Glass */}
           {tweet?.metrics && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-              {[
-                { label: 'View Count', value: tweet.metrics.viewCount },
-                { label: 'Reply Count', value: tweet.metrics.replyCount },
-                { label: 'Like Count', value: tweet.metrics.likeCount },
-                { label: 'Retweet Count', value: tweet.metrics.retweetCount },
-                { label: 'Bookmark Count', value: tweet.metrics.bookmarkCount },
-                { label: 'Quote Count', value: tweet.metrics.quoteCount },
-              ].map(card => (
-                <div key={card.label} className="card-base p-4">
-                  <p className="text-sm text-muted-foreground">{card.label}</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">{card.value?.toLocaleString?.() ?? card.value ?? 0}</p>
-                </div>
-              ))}
-            </div>
+            <details className="group mb-6 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 shadow-lg backdrop-blur-sm" open>
+              <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-4 text-white hover:bg-white/5">
+                <span className="text-sm font-semibold uppercase tracking-wide text-indigo-300">Engagement Metrics</span>
+                <svg className="h-5 w-5 text-zinc-500 transition-transform duration-200 group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </summary>
+              <div className="grid grid-cols-2 gap-4 p-6 md:grid-cols-3 lg:grid-cols-6">
+                {[
+                  { label: 'Views', value: tweet.metrics.viewCount },
+                  { label: 'Replies', value: tweet.metrics.replyCount },
+                  { label: 'Likes', value: tweet.metrics.likeCount },
+                  { label: 'Retweets', value: tweet.metrics.retweetCount },
+                  { label: 'Bookmarks', value: tweet.metrics.bookmarkCount },
+                  { label: 'Quotes', value: tweet.metrics.quoteCount },
+                ].map(card => (
+                  <div key={card.label} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-zinc-400">{card.label}</p>
+                    <p className="mt-1 text-xl font-bold text-white">{card.value?.toLocaleString?.() ?? card.value ?? 0}</p>
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
 
-          {/* AI Report Section */}
-          <div className="card-base p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">AI Engagement Report</h3>
+          {/* AI Report Section - Light Card */}
+          <div className="mb-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-900">AI Engagement Report</h3>
               <button
                 onClick={handleGenerateReport}
                 disabled={generatingReport || !tweetId}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed text-primary-foreground rounded-lg font-medium transition-colors flex items-center gap-2"
+                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
               >
                 {generatingReport ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
                     Generating...
                   </>
                 ) : aiReport ? (
@@ -498,64 +510,38 @@ export default function TweetDetailPage() {
             </div>
 
             {reportError && (
-              <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-600">
                 {reportError}
               </div>
             )}
 
             {generatingReport && (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-t-transparent mx-auto"></div>
-                <p className="mt-4 text-muted-foreground">Analyzing engagers and generating report...</p>
-                <p className="mt-2 text-sm text-muted-foreground/80">This may take 10-30 seconds</p>
+              <div className="py-8 text-center">
+                <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent"></div>
+                <p className="mt-2 text-xs text-zinc-500">Analyzing engagers...</p>
               </div>
             )}
 
             {aiReport && !generatingReport && (
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {/* Formatted Narrative Report */}
-                <div className="bg-muted/30 rounded-lg border border-border">
+                <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
                   <button
                     onClick={() => setIsNarrativeOpen(!isNarrativeOpen)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
+                    className="flex w-full items-center justify-between bg-zinc-100 p-4 text-left transition-colors hover:bg-zinc-200/50"
                   >
-                    <h4 className="text-lg font-semibold text-foreground">Narrative Report</h4>
-                    <svg
-                      className={`w-5 h-5 text-muted-foreground transition-transform ${isNarrativeOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <h4 className="text-sm font-semibold text-zinc-900">Narrative Analysis</h4>
+                    <svg className={`h-4 w-4 text-zinc-500 transition-transform ${isNarrativeOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   {isNarrativeOpen && (
                     <div className="p-6">
-                      {!aiReport.narrative || aiReport.narrative.trim().length === 0 ? (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <p className="text-yellow-800 text-sm">
-                            ⚠️ Report generated but narrative text is missing. Check console logs for details.
-                          </p>
-                        </div>
+                      {!aiReport.narrative ? (
+                        <p className="text-xs text-yellow-600">No narrative text available.</p>
                       ) : (
-                        <div className="bg-card rounded-lg p-8 shadow-sm border border-border">
-                          <div className="prose prose-sm max-w-none text-foreground">
-                            <ReactMarkdown
-                              components={{
-                              h1: (props) => <h1 className="text-2xl font-bold text-foreground mb-4 mt-6 first:mt-0" {...props} />,
-                              h2: (props) => <h2 className="text-xl font-bold text-foreground mb-3 mt-5 first:mt-0" {...props} />,
-                              h3: (props) => <h3 className="text-lg font-bold text-foreground mb-2 mt-4 first:mt-0" {...props} />,
-                              p: (props) => <p className="text-foreground/90 mb-3 last:mb-0" {...props} />,
-                              ul: (props) => <ul className="list-disc list-outside ml-6 text-foreground/90 mb-3 space-y-2" {...props} />,
-                              ol: (props) => <ol className="list-decimal list-outside ml-6 text-foreground/90 mb-3 space-y-2" {...props} />,
-                              li: (props) => <li className="text-foreground/90" {...props} />,
-                              strong: (props) => <strong className="font-bold text-foreground" {...props} />,
-                              code: (props) => <code className="bg-muted px-1.5 py-0.5 rounded text-foreground text-xs font-mono" {...props} />,
-                            }}
-                          >
-                            {aiReport.narrative}
-                          </ReactMarkdown>
-                          </div>
+                        <div className="prose prose-sm max-w-none text-zinc-700 prose-headings:font-semibold prose-headings:text-zinc-900 prose-strong:text-zinc-900 prose-code:text-zinc-800 prose-code:bg-zinc-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
+                          <ReactMarkdown>{aiReport.narrative}</ReactMarkdown>
                         </div>
                       )}
                     </div>
@@ -563,552 +549,87 @@ export default function TweetDetailPage() {
                 </div>
 
                 {/* Charts Section */}
-                <div className="bg-muted/30 rounded-lg border border-border">
+                <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50">
                   <button
                     onClick={() => setIsChartsOpen(!isChartsOpen)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
+                    className="flex w-full items-center justify-between bg-zinc-100 p-4 text-left transition-colors hover:bg-zinc-200/50"
                   >
-                    <h4 className="text-lg font-semibold text-foreground">Charts & Visualizations</h4>
-                    <svg
-                      className={`w-5 h-5 text-muted-foreground transition-transform ${isChartsOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
+                    <h4 className="text-sm font-semibold text-zinc-900">Visualizations</h4>
+                    <svg className={`h-4 w-4 text-zinc-500 transition-transform ${isChartsOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
                   {isChartsOpen && (
-                    <div className="p-6 space-y-6">
-                  {/* Pie Chart - Category Breakdown with interactive details */}
-                  {(() => {
-                    const pieData = CATEGORY_CONFIG.map(cfg => ({
-                      key: cfg.key,
-                      name: cfg.label,
-                      color: cfg.color,
-                      value: aiReport.structured_stats.categories[cfg.key]?.count || 0,
-                    })).filter(item => item.value > 0);
+                    <div className="space-y-6 p-6">
+                      {/* Pie Chart */}
+                      {(() => {
+                        const pieData = CATEGORY_CONFIG.map(cfg => ({
+                          key: cfg.key,
+                          name: cfg.label,
+                          color: cfg.color,
+                          value: aiReport.structured_stats.categories[cfg.key]?.count || 0,
+                        })).filter(item => item.value > 0);
 
-                    const activeCategory = selectedCategory && pieData.find(d => d.key === selectedCategory)
-                      ? selectedCategory
-                      : null;
-
-                    const handleSliceClick = (_: any, index: number) => {
-                      const clicked = pieData[index];
-                      if (!clicked) return;
-                      setSelectedCategory(prev => {
-                        const newCategory = prev === clicked.key ? null : (clicked.key as CategoryKey);
-                        // Reset displayed count when switching categories
-                        if (newCategory !== prev) {
-                          setDisplayedCount(20);
-                        }
-                        return newCategory;
-                      });
-                    };
-
-                    // Get engagers for selected category and deduplicate by userId
-                    const rawSelectedEngagers = activeCategory ? categorizedEngagers[activeCategory] ?? [] : [];
-                    
-                    // Deduplicate engagers by userId (in case same person appears multiple times)
-                    const seenUserIds = new Set<string>();
-                    const selectedEngagers = rawSelectedEngagers.filter((engager: Engager) => {
-                      if (seenUserIds.has(engager.userId)) {
-                        return false;
-                      }
-                      seenUserIds.add(engager.userId);
-                      return true;
-                    });
-                    
-                    // Get total count from pie chart data (all engagers)
-                    const totalCountForCategory = activeCategory
-                      ? pieData.find(d => d.key === activeCategory)?.value || 0
-                      : 0;
-                    
-                    // Check if we're using full data or fallback (current page only)
-                    const isUsingFullData = !!aiReport?.structured_stats?.categorized_engagers;
-                    const isLimited = !isUsingFullData && displayedCount < totalCountForCategory;
-
-                    return pieData.length > 0 ? (
-                      <div
-                        className={`bg-card rounded-lg p-6 transition-all duration-200 border border-border ${
-                          activeCategory ? 'lg:flex lg:items-start lg:gap-6' : ''
-                        }`}
-                      >
-                        <div className={activeCategory ? 'lg:w-1/2' : ''}>
-                          <div className="flex items-center justify-between mb-2 gap-2">
-                            <h4 className="text-lg font-semibold text-foreground">
-                              Profile Type Distribution
-                            </h4>
-                            <button
-                              type="button"
-                              className="shrink-0 w-5 h-5 rounded-full border border-muted-foreground/30 text-[10px] text-muted-foreground flex items-center justify-center hover:bg-muted hover:text-foreground"
-                              title="One account can be in many groups (founder, VC, etc). This chart shows each group's share of all group labels, not unique people, so the slices always add up to 100%."
-                            >
-                              i
-                            </button>
-                          </div>
-                          <p className="text-xs text-muted-foreground mb-4">
-                            Click a segment to see the specific accounts in that category.
-                          </p>
-                          <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                              <Pie
-                                data={pieData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={({ name, percent }) =>
-                                  `${name}: ${(percent * 100).toFixed(0)}%`
-                                }
-                                outerRadius={100}
-                                fill="var(--chart-1)"
-                                dataKey="value"
-                                onClick={handleSliceClick}
-                              >
-                                {pieData.map((entry, index) => {
-                                  const isActive =
-                                    activeCategory && entry.key === activeCategory;
-                                  return (
-                                    <Cell
-                                      key={`cell-${index}`}
-                                      fill={entry.color}
-                                      stroke={isActive ? 'var(--background)' : 'transparent'}
-                                      strokeWidth={isActive ? 2 : 0}
-                                      className="cursor-pointer"
-                                    />
-                                  );
-                                })}
-                              </Pie>
-                              <Tooltip 
-                                contentStyle={{
-                                  backgroundColor: 'var(--popover)',
-                                  borderColor: 'var(--border)',
-                                  borderRadius: '6px',
-                                  color: 'var(--popover-foreground)',
-                                  boxShadow: 'var(--shadow-card)',
-                                }}
-                              />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-
-                        {activeCategory && (
-                          <div className="mt-6 lg:mt-0 lg:w-1/2">
-                            <h5 className="text-sm font-semibold text-foreground mb-2 flex items-center justify-between">
-                              <span>
-                                {CATEGORY_CONFIG.find(c => c.key === activeCategory)?.label}{' '}
-                                {isLimited ? (
-                                  <span className="text-muted-foreground">
-                                    ({displayedCount} shown of {totalCountForCategory} total)
-                                  </span>
-                                ) : (
-                                  <span>({totalCountForCategory} accounts)</span>
-                                )}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedCategory(null)}
-                                className="text-xs text-muted-foreground hover:text-foreground underline"
-                              >
-                                Clear
-                              </button>
-                            </h5>
-                            {isLimited && (
-                              <div className="mb-3 p-2 bg-yellow-500/10 border border-yellow-500/20 rounded text-xs text-yellow-600">
-                                ⚠️ Showing limited results. Regenerate the report to see all {totalCountForCategory} accounts in this category.
-                              </div>
-                            )}
-                            {selectedEngagers.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">
-                                No accounts found in this category.
-                              </p>
-                            ) : (
-                              <>
-                                <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
-                                  {selectedEngagers
-                                    .slice()
-                                    .sort((a: Engager, b: Engager) => b.followers - a.followers)
-                                    .slice(0, displayedCount)
-                                    .map((engager: Engager, index: number) => (
-                                      <div
-                                        key={`${activeCategory}-${engager.userId}-${index}`}
-                                        className="bg-muted/30 rounded-md p-3 border border-border"
-                                      >
-                                        <div className="flex items-center justify-between">
-                                          <div>
-                                            <div className="text-sm font-medium text-foreground flex items-center gap-1">
-                                              {engager.name}
-                                              {engager.verified && (
-                                                <svg
-                                                  className="w-4 h-4 text-primary"
-                                                  fill="currentColor"
-                                                  viewBox="0 0 20 20"
-                                                >
-                                                  <path
-                                                    fillRule="evenodd"
-                                                    d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                                    clipRule="evenodd"
-                                                  />
-                                                </svg>
-                                              )}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground">
-                                              @{engager.username}
-                                            </div>
-                                          </div>
-                                          <div className="text-xs text-foreground font-medium ml-4 whitespace-nowrap">
-                                            {engager.followers.toLocaleString()}
-                                          </div>
-                                        </div>
-                                        {engager.bio && (
-                                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                                            {engager.bio}
-                                          </p>
-                                        )}
-                                        <div className="mt-2 flex flex-wrap gap-1">
-                                          {getEngagementBadges(engager).map((badge, idx) => (
-                                            <span
-                                              key={idx}
-                                              className="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full"
-                                            >
-                                              {badge}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    ))}
-                                </div>
-                                {displayedCount < selectedEngagers.length && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setDisplayedCount(prev => Math.min(prev + 20, selectedEngagers.length))}
-                                    className="mt-3 w-full px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
+                        return pieData.length > 0 ? (
+                          <div className="rounded-xl border border-zinc-200 bg-white p-4">
+                            <h5 className="mb-4 text-sm font-semibold text-zinc-900">Profile Distribution</h5>
+                            <div className="h-[300px] w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
                                   >
-                                    Show More ({Math.min(20, selectedEngagers.length - displayedCount)} more)
-                                  </button>
-                                )}
-                              </>
-                            )}
+                                    {pieData.map((entry, index) => (
+                                      <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip 
+                                    contentStyle={{ borderRadius: '8px', border: '1px solid #E4E4E7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                    itemStyle={{ fontSize: '12px', fontWeight: 600, color: '#18181B' }}
+                                  />
+                                </PieChart>
+                              </ResponsiveContainer>
+                            </div>
+                            <div className="mt-4 flex flex-wrap justify-center gap-3">
+                              {pieData.map((entry) => (
+                                <div key={entry.key} className="flex items-center gap-1.5">
+                                  <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                                  <span className="text-xs text-zinc-600">{entry.name}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ) : null;
-                  })()}
-
-                  {/* Bar Chart - Follower Tiers (stacked below) */}
-                  {aiReport.structured_stats.follower_tiers &&
-                    aiReport.structured_stats.follower_tiers.length > 0 && (
-                      <div className="bg-card rounded-lg p-6 border border-border">
-                        <h4 className="text-lg font-semibold text-foreground mb-4">
-                          Follower Count Tiers
-                        </h4>
-                        <ResponsiveContainer width="100%" height={300}>
-                          <BarChart data={aiReport.structured_stats.follower_tiers}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                            <XAxis dataKey="tier" stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
-                            <YAxis stroke="var(--muted-foreground)" tickLine={false} axisLine={false} />
-                            <Tooltip
-                              cursor={{ fill: 'var(--muted)', opacity: 0.2 }}
-                              contentStyle={{
-                                backgroundColor: 'var(--popover)',
-                                borderColor: 'var(--border)',
-                                borderRadius: '6px',
-                                color: 'var(--popover-foreground)',
-                                boxShadow: 'var(--shadow-card)',
-                              }}
-                              labelStyle={{ color: 'var(--muted-foreground)' }}
-                            />
-                            <Bar dataKey="count" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-                    )}
+                        ) : null;
+                      })()}
                     </div>
                   )}
                 </div>
-
-                {/* VC Firms */}
-                {aiReport.structured_stats.vc_firms && aiReport.structured_stats.vc_firms.length > 0 && (
-                  <div className="bg-muted/30 rounded-lg border border-border">
-                    <button
-                      onClick={() => setIsVCFirmsOpen(!isVCFirmsOpen)}
-                      className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
-                    >
-                      <h4 className="text-lg font-semibold text-foreground">VCs by Firm Affiliation</h4>
-                      <svg
-                        className={`w-5 h-5 text-muted-foreground transition-transform ${isVCFirmsOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {isVCFirmsOpen && (
-                      <div className="p-6">
-                        <div className="space-y-4">
-                          {aiReport.structured_stats.vc_firms.map((firm: any, idx: number) => (
-                            <div key={idx} className="bg-card rounded-lg p-4 border border-border">
-                              <h5 className="text-foreground font-semibold mb-3">{firm.firm_name}</h5>
-                              <div className="space-y-2">
-                                {firm.partners.map((partner: any, pIdx: number) => (
-                                  <div key={pIdx} className="flex items-center justify-between text-sm">
-                                    <div>
-                                      <span className="text-foreground font-medium">{partner.name}</span>
-                                      <span className="text-primary ml-2">@{partner.username}</span>
-                                    </div>
-                                    <span className="text-muted-foreground">{(partner.followers / 1000).toFixed(1)}K followers</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Hardcoded VC Firms by Firm Affiliation */}
-                {aiReport.structured_stats.hardcoded_vc_firms && aiReport.structured_stats.hardcoded_vc_firms.length > 0 && (
-                  <div className="bg-muted/30 rounded-lg border border-border">
-                    <button
-                      onClick={() => setIsHardcodedVCFirmsOpen(!isHardcodedVCFirmsOpen)}
-                      className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
-                    >
-                      <h4 className="text-lg font-semibold text-foreground">VCs by Firm Affiliation (Hardcoded)</h4>
-                      <svg
-                        className={`w-5 h-5 text-muted-foreground transition-transform ${isHardcodedVCFirmsOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {isHardcodedVCFirmsOpen && (
-                      <div className="p-6">
-                        {(() => {
-                          const firms = aiReport.structured_stats.hardcoded_vc_firms || [];
-                          const pieData = firms.map((firm: any) => ({
-                            name: firm.firm_name,
-                            value: firm.partners.length,
-                            firmName: firm.firm_name,
-                          }));
-
-                          const selectedFirmData = selectedVCFirm
-                            ? firms.find((f: any) => f.firm_name === selectedVCFirm)
-                            : null;
-
-                          // Design.json-ish colors for firms (cycling)
-                          const COLORS = ['#4D4DFF', '#C4B5FD', '#10B981', '#F472B6', '#FBBF24', '#FB923C', '#3B82F6'];
-
-                          return pieData.length > 0 ? (
-                            <div
-                              className={`bg-card rounded-lg p-6 transition-all duration-200 border border-border ${
-                                selectedVCFirm ? 'lg:flex lg:items-start lg:gap-6' : ''
-                              }`}
-                            >
-                              <div className={selectedVCFirm ? 'lg:w-1/2' : ''}>
-                                <div className="flex items-center justify-between mb-2 gap-2">
-                                  <h5 className="text-lg font-semibold text-foreground">
-                                    Firm Distribution
-                                  </h5>
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-4">
-                                  Click a segment to see the VCs/investors from that firm.
-                                </p>
-                                <ResponsiveContainer width="100%" height={300}>
-                                  <PieChart>
-                                    <Pie
-                                      data={pieData}
-                                      cx="50%"
-                                      cy="50%"
-                                      labelLine={false}
-                                      label={({ name, percent }) =>
-                                        `${name}: ${(percent * 100).toFixed(0)}%`
-                                      }
-                                      outerRadius={100}
-                                      fill="var(--chart-1)"
-                                      dataKey="value"
-                                      onClick={(_: any, index: number) => {
-                                        const clicked = pieData[index];
-                                        if (!clicked) return;
-                                        setSelectedVCFirm(prev => 
-                                          prev === clicked.firmName ? null : clicked.firmName
-                                        );
-                                      }}
-                                    >
-                                      {pieData.map((entry: any, index: number) => {
-                                        const isActive = selectedVCFirm === entry.firmName;
-                                        return (
-                                          <Cell
-                                            key={`cell-${index}`}
-                                            fill={COLORS[index % COLORS.length]}
-                                            stroke={isActive ? 'var(--background)' : 'transparent'}
-                                            strokeWidth={isActive ? 2 : 0}
-                                            className="cursor-pointer"
-                                          />
-                                        );
-                                      })}
-                                    </Pie>
-                                    <Tooltip 
-                                      contentStyle={{
-                                        backgroundColor: 'var(--popover)',
-                                        borderColor: 'var(--border)',
-                                        borderRadius: '6px',
-                                        color: 'var(--popover-foreground)',
-                                        boxShadow: 'var(--shadow-card)',
-                                      }}
-                                    />
-                                  </PieChart>
-                                </ResponsiveContainer>
-                              </div>
-
-                              {selectedVCFirm && selectedFirmData && (
-                                <div className="mt-6 lg:mt-0 lg:w-1/2">
-                                  <h5 className="text-sm font-semibold text-foreground mb-2 flex items-center justify-between">
-                                    <span>
-                                      {selectedFirmData.firm_name} ({selectedFirmData.partners.length} VC{selectedFirmData.partners.length !== 1 ? 's' : ''})
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedVCFirm(null)}
-                                      className="text-xs text-muted-foreground hover:text-foreground underline"
-                                    >
-                                      Clear
-                                    </button>
-                                  </h5>
-                                  {selectedFirmData.partners.length === 0 ? (
-                                    <p className="text-xs text-muted-foreground">
-                                      No VCs/investors found in this firm.
-                                    </p>
-                                  ) : (
-                                    <div className="max-h-72 overflow-y-auto pr-1 space-y-2">
-                                      {selectedFirmData.partners
-                                        .slice()
-                                        .sort((a: any, b: any) => b.followers - a.followers)
-                                        .map((partner: any, pIdx: number) => (
-                                          <div
-                                            key={`${selectedVCFirm}-${partner.username}-${pIdx}`}
-                                            className="bg-muted/30 rounded-md p-3 border border-border"
-                                          >
-                                            <div className="flex items-center justify-between">
-                                              <div>
-                                                <div className="text-sm font-medium text-foreground flex items-center gap-1">
-                                                  {partner.name}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                  @{partner.username}
-                                                </div>
-                                              </div>
-                                              <div className="text-xs text-foreground font-medium ml-4 whitespace-nowrap">
-                                                {partner.followers.toLocaleString()} followers
-                                              </div>
-                                            </div>
-                                            {partner.bio && (
-                                              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                                                {partner.bio}
-                                              </p>
-                                            )}
-                                          </div>
-                                        ))}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          ) : null;
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Quality Metrics */}
-                <div className="bg-muted/30 rounded-lg border border-border">
-                  <button
-                    onClick={() => setIsQualityMetricsOpen(!isQualityMetricsOpen)}
-                    className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50 transition-colors rounded-t-lg"
-                  >
-                    <h4 className="text-lg font-semibold text-foreground">Quality Metrics</h4>
-                    <svg
-                      className={`w-5 h-5 text-muted-foreground transition-transform ${isQualityMetricsOpen ? 'rotate-180' : ''}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {isQualityMetricsOpen && (
-                    <div className="p-6">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-card rounded-lg p-4 text-center border border-border">
-                          <p className="text-sm text-muted-foreground">Verified</p>
-                          <p className="text-2xl font-bold text-emerald-500 mt-1">
-                            {aiReport.structured_stats.quality_metrics?.verified_percentage || 0}%
-                          </p>
-                        </div>
-                        <div className="bg-card rounded-lg p-4 text-center border border-border">
-                          <p className="text-sm text-muted-foreground">Replied</p>
-                          <p className="text-2xl font-bold text-blue-500 mt-1">
-                            {aiReport.structured_stats.engagement.replied_percentage}%
-                          </p>
-                        </div>
-                        <div className="bg-card rounded-lg p-4 text-center border border-border">
-                          <p className="text-sm text-muted-foreground">Retweeted</p>
-                          <p className="text-2xl font-bold text-primary mt-1">
-                            {aiReport.structured_stats.engagement.retweeted_percentage}%
-                          </p>
-                        </div>
-                        <div className="bg-card rounded-lg p-4 text-center border border-border">
-                          <p className="text-sm text-muted-foreground">Top 10 Reach</p>
-                          <p className="text-2xl font-bold text-purple-500 mt-1">
-                            {(aiReport.structured_stats.quality_metrics?.top_10_followers_sum / 1000000).toFixed(2)}M+
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {aiReport.generated_at && (
-                  <p className="text-xs text-muted-foreground text-right">
-                    Generated: {new Date(aiReport.generated_at).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {!aiReport && !generatingReport && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No report generated yet. Click &quot;Generate Report&quot; to create an AI-powered analysis.</p>
               </div>
             )}
           </div>
 
-          {/* Filters */}
-          <div className="card-base mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-foreground">Filters</h3>
+          {/* Filters - Light Card */}
+          <div className="mb-6 rounded-2xl border border-zinc-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-zinc-900">Filters</h3>
               <button
                 onClick={async () => {
                   if (!tweetId || exporting) return;
-                  
                   setExporting(true);
-                  
                   try {
-                    // Fetch ALL engagers (set a high limit to get everyone)
                     const params = new URLSearchParams({
                       include_engagers: 'true',
-                      limit: '10000', // High limit to get all engagers
+                      limit: '10000',
                       skip: '0',
                       sort_by: sortBy,
                       sort_order: 'desc',
                     });
-                    
-                    // Apply current filters to the export
                     if (minFollowers) params.append('min_followers', minFollowers);
                     if (engagementFilter) params.append('engagement_type', engagementFilter);
                     if (verifiedOnly) params.append('verified_only', 'true');
@@ -1122,14 +643,10 @@ export default function TweetDetailPage() {
                     }
                     
                     const allEngagers: Engager[] = data.engagers.engagers;
-                    
-                    // Build CSV content
                     const headers = ['Score', 'Username', 'Name', 'Bio', 'Followers', 'Verified', 'Replied', 'Retweeted', 'Quoted', 'Followed By'];
-                    
                     const escapeCSV = (value: string | undefined | null) => {
                       if (value === undefined || value === null) return '';
                       const str = String(value);
-                      // Escape quotes and wrap in quotes if contains comma, quote, or newline
                       if (str.includes(',') || str.includes('"') || str.includes('\n')) {
                         return `"${str.replace(/"/g, '""')}"`;
                       }
@@ -1149,12 +666,7 @@ export default function TweetDetailPage() {
                       escapeCSV(engager.followed_by?.join(', '))
                     ]);
                     
-                    const csvContent = [
-                      headers.join(','),
-                      ...rows.map(row => row.join(','))
-                    ].join('\n');
-                    
-                    // Create and trigger download
+                    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
                     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement('a');
                     const url = URL.createObjectURL(blob);
@@ -1173,28 +685,27 @@ export default function TweetDetailPage() {
                   }
                 }}
                 disabled={exporting}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors text-sm"
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-emerald-800"
               >
                 {exporting ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                     Exporting...
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Export All CSV
+                    Export CSV
                   </>
                 )}
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Min Followers
-                </label>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-500">Min Followers</label>
                 <input
                   type="number"
                   value={minFollowers}
@@ -1203,21 +714,19 @@ export default function TweetDetailPage() {
                     setPage(1);
                   }}
                   placeholder="e.g. 10000"
-                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground placeholder-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none transition-all"
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Sort By
-                </label>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-500">Sort By</label>
                 <select
                   value={sortBy}
                   onChange={(e) => {
                     setSortBy(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none transition-all"
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
                 >
                   <option value="importance_score">Importance Score</option>
                   <option value="followers">Followers</option>
@@ -1226,16 +735,14 @@ export default function TweetDetailPage() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Engagement Type
-                </label>
+                <label className="mb-1.5 block text-xs font-medium text-zinc-500">Engagement Type</label>
                 <select
                   value={engagementFilter}
                   onChange={(e) => {
                     setEngagementFilter(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full px-3 py-2 bg-background border border-input rounded-lg text-foreground focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none transition-all"
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
                 >
                   <option value="">All</option>
                   <option value="replied">Replied</option>
@@ -1244,11 +751,8 @@ export default function TweetDetailPage() {
                 </select>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">
-                  Verified Only
-                </label>
-                <label className="flex items-center mt-2">
+              <div className="flex items-end pb-2">
+                <label className="flex cursor-pointer items-center gap-2">
                   <input
                     type="checkbox"
                     checked={verifiedOnly}
@@ -1256,116 +760,88 @@ export default function TweetDetailPage() {
                       setVerifiedOnly(e.target.checked);
                       setPage(1);
                     }}
-                    className="rounded border-input bg-background text-primary focus:ring-ring focus:ring-2"
+                    className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <span className="ml-2 text-sm text-muted-foreground">Show only verified</span>
+                  <span className="text-sm text-zinc-600">Verified only</span>
                 </label>
               </div>
             </div>
           </div>
 
-          {/* Engagers Table */}
-          <div className="card-base overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Score
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Followers
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Engagement
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Followed By
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {engagers.map((engager) => (
-                    <tr key={engager.userId} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-lg font-bold text-emerald-500">
-                          {engager.importance_score || 0}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-foreground flex items-center gap-1">
-                              {engager.name}
-                              {engager.verified && (
-                                <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">@{engager.username}</div>
-                            {engager.bio && (
-                              <div className="text-xs text-muted-foreground/80 mt-1 max-w-xs truncate">
-                                {engager.bio}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-medium">
-                        {engager.followers.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1">
-                          {getEngagementBadges(engager).map((badge, idx) => (
-                            <span
-                              key={idx}
-                              className="text-xs bg-primary/10 text-primary border border-primary/20 px-2 py-1 rounded-full"
-                            >
-                              {badge}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-muted-foreground">
-                        {engager.followed_by && engager.followed_by.length > 0 ? (
-                          <div className="max-w-xs">
-                            {engager.followed_by.slice(0, 3).join(', ')}
-                            {engager.followed_by.length > 3 && ` +${engager.followed_by.length - 3} more`}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground/50">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {/* Engagers Table - Light Table */}
+          <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-xl">
+            <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white px-6 py-3 backdrop-blur-sm">
+              <div className="grid grid-cols-[80px_1fr_100px_140px_120px] gap-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                <div>Score</div>
+                <div>User</div>
+                <div>Followers</div>
+                <div>Action</div>
+                <div>Followed By</div>
+              </div>
+            </div>
+            
+            <div className="divide-y divide-zinc-100">
+              {engagers.map((engager) => (
+                <div key={engager.userId} className="grid grid-cols-[80px_1fr_100px_140px_120px] items-center gap-4 px-6 py-4 text-sm hover:bg-zinc-50">
+                  <div className="font-bold text-emerald-600">
+                    {engager.importance_score?.toFixed(1) || '0.0'}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-semibold text-zinc-900">{engager.name}</span>
+                      {engager.verified && (
+                        <svg className="h-3.5 w-3.5 flex-shrink-0 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
+                    <div className="text-xs text-zinc-500">@{engager.username}</div>
+                    {engager.bio && (
+                      <div className="mt-1 truncate text-xs text-zinc-400">{engager.bio}</div>
+                    )}
+                  </div>
+                  <div className="font-medium text-zinc-700">
+                    {engager.followers.toLocaleString()}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {getEngagementBadges(engager).map((badge, idx) => (
+                      <span key={idx} className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-600 border border-indigo-100">
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    {engager.followed_by && engager.followed_by.length > 0 ? (
+                      <span className="truncate block" title={engager.followed_by.join(', ')}>
+                        {engager.followed_by.slice(0, 2).join(', ')}
+                        {engager.followed_by.length > 2 && ` +${engager.followed_by.length - 2}`}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-300">-</span>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
             
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="bg-muted/10 border-t border-border px-6 py-4 flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Showing <span className="font-medium text-foreground">{(page - 1) * limit + 1}</span> to{' '}
-                  <span className="font-medium text-foreground">{Math.min(page * limit, total)}</span> of{' '}
-                  <span className="font-medium text-foreground">{total}</span> results
+              <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-6 py-4">
+                <div className="text-xs text-zinc-500">
+                  Page <span className="font-medium text-zinc-900">{page}</span> of <span className="font-medium text-zinc-900">{totalPages}</span>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPage(p => Math.max(1, p - 1))}
                     disabled={page === 1}
-                    className="px-4 py-2 bg-background border border-border rounded-lg text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:hover:bg-white"
                   >
                     Previous
                   </button>
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
-                    className="px-4 py-2 bg-background border border-border rounded-lg text-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-muted transition-colors"
+                    className="rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 disabled:hover:bg-white"
                   >
                     Next
                   </button>
