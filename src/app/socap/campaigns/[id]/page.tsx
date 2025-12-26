@@ -360,6 +360,26 @@ export default function CampaignDashboardPage() {
     main: INITIAL_IMPORTANT_VISIBLE,
     influencer: INITIAL_IMPORTANT_VISIBLE,
   });
+  
+  // Potential viewers state
+  const [potentialViewers, setPotentialViewers] = useState<Array<{
+    user_id: string;
+    username: string;
+    name: string;
+    bio?: string;
+    location?: string;
+    followers: number;
+    verified: boolean;
+    importance_score: number;
+    connected_to_engagers: Array<{
+      user_id: string;
+      username: string;
+      name: string;
+    }>;
+  }>>([]);
+  const [isLoadingPotentialViewers, setIsLoadingPotentialViewers] = useState(false);
+  const [potentialViewersOpen, setPotentialViewersOpen] = useState(false);
+  const [potentialViewersVisibleCount, setPotentialViewersVisibleCount] = useState(INITIAL_IMPORTANT_VISIBLE);
   const mainTweet = useMemo(
     () => data?.tweets?.find((t) => t.category === 'main_twt'),
     [data]
@@ -583,6 +603,25 @@ export default function CampaignDashboardPage() {
     },
     [campaignId, engagementLimit, actionTypeFilter]
   );
+
+  const fetchPotentialViewers = useCallback(async () => {
+    if (!campaignId) return;
+    setIsLoadingPotentialViewers(true);
+    try {
+      const response = await fetch(
+        `/api/socap/campaigns/${campaignId}/potential-viewers?limit=100&min_importance=0`
+      );
+      const result = await response.json();
+      
+      if (result.success) {
+        setPotentialViewers(result.data?.potential_viewers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching potential viewers:', error);
+    } finally {
+      setIsLoadingPotentialViewers(false);
+    }
+  }, [campaignId]);
 
   const fetchHeatmap = useCallback(async () => {
     if (!campaignId) return;
@@ -1221,6 +1260,26 @@ export default function CampaignDashboardPage() {
     });
   };
 
+  const togglePotentialViewersSection = () => {
+    setPotentialViewersOpen((prev) => {
+      const nextOpen = !prev;
+      if (!nextOpen) {
+        setPotentialViewersVisibleCount(INITIAL_IMPORTANT_VISIBLE);
+      } else if (potentialViewers.length === 0) {
+        fetchPotentialViewers();
+      }
+      return nextOpen;
+    });
+  };
+
+  const showMorePotentialViewers = () => {
+    setPotentialViewersVisibleCount(potentialViewers.length);
+  };
+
+  const showLessPotentialViewers = () => {
+    setPotentialViewersVisibleCount(INITIAL_IMPORTANT_VISIBLE);
+  };
+
   const showMorePeople = (category: 'main' | 'influencer', total: number) => {
     setPeopleVisibleCount((prev) => ({
       ...prev,
@@ -1594,6 +1653,157 @@ export default function CampaignDashboardPage() {
                       </div>
                     ) : (
                       <div className="text-sm text-muted-foreground">Collapsed. Click “Show more” to view important people.</div>
+                    )}
+                  </div>
+
+                  {/* ===== Potential Viewers Section ===== */}
+                  <div className="card-base p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-foreground">Potential Viewers</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Important people who follow top engagers (might have seen your posts but haven't engaged yet)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground">Sorted by importance score</span>
+                        <button
+                          onClick={togglePotentialViewersSection}
+                          className="text-xs px-3 py-1 rounded-md border border-primary/50 text-primary hover:text-primary/80 hover:border-primary transition-colors"
+                        >
+                          <span
+                            className={`inline-block mr-1 transition-transform ${potentialViewersOpen ? 'rotate-90' : ''}`}
+                          >
+                            &gt;
+                          </span>
+                          {potentialViewersOpen ? 'Collapse' : 'Show more'}
+                        </button>
+                      </div>
+                    </div>
+                    {potentialViewersOpen && isLoadingPotentialViewers ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent"></div>
+                        <span className="ml-3 text-muted-foreground text-sm">Loading potential viewers...</span>
+                      </div>
+                    ) : potentialViewersOpen ? (
+                      <div className="space-y-4">
+                        {potentialViewers.slice(0, potentialViewersVisibleCount).map((viewer) => {
+                          return (
+                            <div
+                              key={viewer.user_id}
+                              className="rounded-xl border border-border bg-muted/20 p-4"
+                            >
+                              <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-8">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm font-semibold text-foreground">
+                                        {viewer.name || viewer.username}
+                                      </span>
+                                      {viewer.verified && (
+                                        <svg
+                                          className="w-4 h-4 text-primary"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="text-sm text-muted-foreground mb-1">@{viewer.username}</div>
+                                  {viewer.bio && (
+                                    <div className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                                      {viewer.bio}
+                                    </div>
+                                  )}
+                                  {viewer.followers > 0 && (
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                      {viewer.followers.toLocaleString()} followers
+                                    </div>
+                                  )}
+                                  {viewer.connected_to_engagers.length > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-2 bg-blue-500/5 border border-blue-500/20 rounded-lg p-2">
+                                      <span className="font-medium text-foreground">
+                                        {viewer.name || viewer.username}
+                                      </span>
+                                      {' '}since they follow{' '}
+                                      {viewer.connected_to_engagers.map((engager, idx) => (
+                                        <span key={engager.user_id}>
+                                          <span className="font-medium text-foreground">
+                                            {engager.name || engager.username}
+                                          </span>
+                                          {idx < viewer.connected_to_engagers.length - 2 && ', '}
+                                          {idx === viewer.connected_to_engagers.length - 2 && ' and '}
+                                        </span>
+                                      ))}{' '}
+                                      who have engaged with your posts
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="md:w-2/5 flex flex-col gap-3 border-t border-border pt-3 md:border-t-0 md:border-l md:pl-4">
+                                  <div className="flex items-center justify-between md:justify-end">
+                                    <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                                      Imp. Score - 
+                                    </span>
+                                    <span className="text-lg font-bold text-emerald-600">
+                                      {viewer.importance_score.toFixed(1)}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
+                                    ⚠️ Has not engaged with this campaign
+                                  </div>
+                                  <a
+                                    href={`https://x.com/${viewer.username}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-primary hover:text-primary/80 hover:underline"
+                                  >
+                                    View Profile →
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {potentialViewers.length === 0 && (
+                          <div className="text-center text-muted-foreground py-8">
+                            No potential viewers found. This could mean:
+                            <ul className="list-disc list-inside mt-2 text-xs space-y-1">
+                              <li>Top engagers don't have followers in the important people network</li>
+                              <li>All important accounts in the network have already engaged</li>
+                            </ul>
+                          </div>
+                        )}
+                        {potentialViewers.length > potentialViewersVisibleCount && (
+                          <div className="text-center">
+                            <button
+                              onClick={showMorePotentialViewers}
+                              className="text-sm text-primary hover:text-primary/80"
+                            >
+                              Show more ({potentialViewers.length - potentialViewersVisibleCount} more)
+                            </button>
+                          </div>
+                        )}
+                        {potentialViewers.length > INITIAL_IMPORTANT_VISIBLE &&
+                          potentialViewers.length === potentialViewersVisibleCount && (
+                            <div className="text-center">
+                              <button
+                                onClick={showLessPotentialViewers}
+                                className="text-sm text-primary hover:text-primary/80"
+                              >
+                                Show less
+                              </button>
+                            </div>
+                          )}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">Collapsed. Click "Show more" to view potential viewers.</div>
                     )}
                   </div>
 

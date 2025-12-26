@@ -274,6 +274,207 @@ export async function getUniqueEngagersByCampaign(campaignId: string): Promise<n
 }
 
 /**
+ * Get potential viewers: important people who follow top engagers but haven't engaged.
+ * 
+ * Simple logic:
+ * 1. Get top engagers (sorted by importance_score) - these are accounts that engaged
+ * 2. Find important people who follow these top engagers (from following_index)
+ *    - If important person A follows top engager X, A might have seen your post
+ * 3. Filter out important people who have already engaged
+ * 4. Return only accounts with importance_score > 0
+ * 5. For each potential viewer, track which top engagers they follow
+ * 
+ * Example: Top engager X engaged with your post.
+ *          Important person A follows X (from following_index).
+ *          A might have seen your post (because they follow X).
+ *          If A hasn't engaged, A is a potential viewer.
+ */
+export async function getPotentialViewersByCampaign(
+  campaignId: string,
+  options?: {
+    topEngagersLimit?: number; // How many top engagers to consider (default: 30)
+    minImportanceScore?: number; // Minimum importance score for potential viewers (default: 0)
+    limit?: number; // Max results to return (default: 100)
+  }
+): Promise<Array<{
+  user_id: string;
+  username: string;
+  name: string;
+  bio?: string;
+  location?: string;
+  followers: number;
+  verified: boolean;
+  importance_score: number;
+  connected_to_engagers: Array<{
+    user_id: string;
+    username: string;
+    name: string;
+  }>;
+}>> {
+  const { getFollowingIndexCollection } = await import('../../models/ranker');
+  const followingIndexCollection = await getFollowingIndexCollection();
+  const engagementsCollection = await getEngagementsCollection();
+  
+  const topEngagersLimit = options?.topEngagersLimit ?? 30;
+  const minImportanceScore = options?.minImportanceScore ?? 0;
+  const resultLimit = options?.limit ?? 100;
+  
+  // Step 1: Get top engagers for this campaign (sorted by importance_score)
+  const topEngagers = await engagementsCollection
+    .aggregate([
+      { $match: { campaign_id: campaignId } },
+      {
+        $group: {
+          _id: '$user_id',
+          maxImportanceScore: { $max: '$importance_score' },
+          account_profile: { $first: '$account_profile' },
+        },
+      },
+      { $sort: { maxImportanceScore: -1 } },
+      { $limit: topEngagersLimit },
+    ])
+    .toArray();
+  
+  if (topEngagers.length === 0) {
+    return [];
+  }
+  
+  // Build a map of top engagers with their profile info
+  const topEngagersMap = new Map<string, { user_id: string; username: string; name: string }>();
+  for (const engager of topEngagers as any[]) {
+    topEngagersMap.set(engager._id, {
+      user_id: engager._id,
+      username: engager.account_profile?.username || '',
+      name: engager.account_profile?.name || engager.account_profile?.username || '',
+    });
+  }
+  
+  const topEngagerUserIds = Array.from(topEngagersMap.keys());
+  
+  // Step 2: Get important people who follow these top engagers
+  // The following_index stores: followed_user_id -> [important people who follow them]
+  const topEngagerIndexEntries = await followingIndexCollection
+    .find({ followed_user_id: { $in: topEngagerUserIds } })
+    .toArray();
+  
+  // Build a map: important_person_id -> [top_engager_ids they follow]
+  // These important people are potential viewers (they follow engagers, might have seen the post)
+  const importantPersonToEngagersMap = new Map<string, Set<string>>();
+  const potentialViewerUserIds = new Set<string>();
+  
+  for (const entry of topEngagerIndexEntries) {
+    const engagerId = entry.followed_user_id;
+    if (Array.isArray(entry.followed_by)) {
+      for (const importantPerson of entry.followed_by) {
+        if (importantPerson.user_id) {
+          // This important person follows this top engager
+          if (!importantPersonToEngagersMap.has(importantPerson.user_id)) {
+            importantPersonToEngagersMap.set(importantPerson.user_id, new Set());
+          }
+          importantPersonToEngagersMap.get(importantPerson.user_id)!.add(engagerId);
+          potentialViewerUserIds.add(importantPerson.user_id);
+        }
+      }
+    }
+  }
+  
+  if (potentialViewerUserIds.size === 0) {
+    return [];
+  }
+  
+  // Step 3: Get the following_index entries for these potential viewers
+  // to get their importance_score and profile info
+  const potentialViewerEntries = await followingIndexCollection
+    .find({
+      followed_user_id: { $in: Array.from(potentialViewerUserIds) },
+      importance_score: { $gt: minImportanceScore },
+    })
+    .sort({ importance_score: -1 })
+    .limit(resultLimit * 2) // Get more to account for filtering
+    .toArray();
+  
+  // Step 4: Get all user_ids that have engaged with this campaign
+  const engagedUserIds = new Set(
+    await engagementsCollection.distinct('user_id', { campaign_id: campaignId })
+  );
+  
+  // Step 4: Filter out accounts that have engaged
+  const filteredPotentialViewers = potentialViewerEntries
+    .filter((entry) => !engagedUserIds.has(entry.followed_user_id))
+    .slice(0, resultLimit);
+  
+  if (filteredPotentialViewers.length === 0) {
+    return [];
+  }
+  
+  const potentialViewerUserIds = filteredPotentialViewers.map((entry) => entry.followed_user_id);
+  
+  // Step 6: Try to enrich with profile data from engagements (even from other campaigns)
+  // This gives us name, bio, followers, verified status if the user has engaged elsewhere
+  const profileDataMap = new Map<string, {
+    name: string;
+    bio?: string;
+    location?: string;
+    followers: number;
+    verified: boolean;
+  }>();
+  
+  const recentEngagements = await engagementsCollection
+    .aggregate([
+      { $match: { user_id: { $in: potentialViewerUserIds } } },
+      {
+        $sort: { last_seen_at: -1 }, // Get most recent profile data
+      },
+      {
+        $group: {
+          _id: '$user_id',
+          account_profile: { $first: '$account_profile' },
+        },
+      },
+    ])
+    .toArray();
+  
+  for (const eng of recentEngagements as any[]) {
+    if (eng.account_profile) {
+      profileDataMap.set(eng._id, {
+        name: eng.account_profile.name || '',
+        bio: eng.account_profile.bio,
+        location: eng.account_profile.location,
+        followers: eng.account_profile.followers || 0,
+        verified: eng.account_profile.verified || false,
+      });
+    }
+  }
+  
+  // Step 5: Format results with enriched profile data and which engagers they follow
+  const potentialViewers = filteredPotentialViewers
+    .map((entry) => {
+      const profileData = profileDataMap.get(entry.followed_user_id);
+      const engagerIdsTheyFollow = importantPersonToEngagersMap.get(entry.followed_user_id) || new Set();
+      
+      // Get the top engagers this important person follows
+      const connectedToEngagers = Array.from(engagerIdsTheyFollow)
+        .map((engagerId) => topEngagersMap.get(engagerId))
+        .filter((engager): engager is { user_id: string; username: string; name: string } => engager !== undefined);
+      
+      return {
+        user_id: entry.followed_user_id,
+        username: entry.followed_username,
+        name: profileData?.name || entry.followed_username, // Fallback to username if no name
+        bio: profileData?.bio,
+        location: profileData?.location,
+        followers: profileData?.followers || 0,
+        verified: profileData?.verified || false,
+        importance_score: entry.importance_score,
+        connected_to_engagers: connectedToEngagers,
+      };
+    })
+    .filter((viewer) => viewer.connected_to_engagers.length > 0); // Only return viewers who follow at least one engager
+  
+  return potentialViewers;
+}
+
+/**
  * Get all unique engagers for a campaign, grouped by user_id.
  * Returns one record per user with their highest importance_score, follower count,
  * and all their engagement actions.
