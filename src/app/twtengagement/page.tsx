@@ -270,45 +270,45 @@ export default function TwitterEngagement() {
       {/* Existing Tweet Modal */}
       {showExistingModal && existingTweet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F5F3F0]/90">
-          <div className="bg-white rounded-sm p-8 max-w-lg w-full border border-[#E0DDD8]">
+          <div className="bg-white rounded-sm p-8 max-w-lg w-full border border-[#E8E4DF]">
             <div className="flex items-start justify-between mb-8">
               <div>
-                <h3 className="text-[#4A4A4A] text-xl font-normal mb-2">Analyzed Tweet</h3>
+                <h3 className="text-[#2B2B2B] text-xl font-normal mb-2">Analyzed Tweet</h3>
                 <p className="text-[#6B6B6B] text-sm">{existingTweet.message}</p>
               </div>
               <button
                 onClick={() => setShowExistingModal(false)}
-                className="text-[#6B6B6B] hover:text-[#4A4A4A]"
+                className="text-[#6B6B6B] hover:text-[#2B2B2B]"
               >
                 Close
               </button>
             </div>
             
             <div className="space-y-4 mb-8">
-              <div className="flex justify-between items-center py-2 border-b border-[#E0DDD8]">
+              <div className="flex justify-between items-center py-2 border-b border-[#E8E4DF]">
                 <span className="text-[#6B6B6B]">Author</span>
-                <span className="text-[#4A4A4A]">{existingTweet.author_name}</span>
+                <span className="text-[#2B2B2B]">{existingTweet.author_name}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#E0DDD8]">
+              <div className="flex justify-between items-center py-2 border-b border-[#E8E4DF]">
                 <span className="text-[#6B6B6B]">Status</span>
-                <span className="text-[#4A4A4A]">{existingTweet.status}</span>
+                <span className="text-[#2B2B2B]">{existingTweet.status}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-[#E0DDD8]">
+              <div className="flex justify-between items-center py-2 border-b border-[#E8E4DF]">
                 <span className="text-[#6B6B6B]">Total Engagers</span>
-                <span className="text-[#4A4A4A]">{existingTweet.total_engagers}</span>
+                <span className="text-[#2B2B2B]">{existingTweet.total_engagers}</span>
               </div>
             </div>
             
             <div className="flex gap-4">
               <button
                 onClick={() => router.push(`/tweets/${existingTweet.tweet_id}`)}
-                className="flex-1 bg-[#4A4A4A] text-white hover:bg-[#4A4A4A]/90 py-3 px-4 rounded-sm transition-all"
+                className="flex-1 bg-[#2B2B2B] text-white hover:bg-[#2B2B2B]/90 py-3 px-4 rounded-sm transition-all"
               >
                 View Analysis
               </button>
               <button
                 onClick={handleReanalyze}
-                className="flex-1 bg-white border border-[#E0DDD8] text-[#4A4A4A] hover:bg-[#F5F3F0] py-3 px-4 rounded-sm transition-all"
+                className="flex-1 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:bg-[#F5F3F0] hover:border-[#2F6FED] hover:text-[#2F6FED] py-3 px-4 rounded-sm transition-all"
               >
                 Re-analyze
               </button>
@@ -320,7 +320,7 @@ export default function TwitterEngagement() {
       <main className="relative pt-32 pb-20 px-6">
         {/* Header Section */}
         <div className="max-w-[800px] mx-auto text-center mb-16">
-          <h1 className="text-[2.5rem] leading-[1.3] font-normal mb-6 text-[#4A4A4A]">
+          <h1 className="text-[2.5rem] leading-[1.3] font-normal mb-6 text-[#2B2B2B]">
             Engagement Analysis
           </h1>
           
@@ -335,7 +335,7 @@ export default function TwitterEngagement() {
             <div>
               <label 
                 htmlFor="tweetUrl" 
-                className="block text-sm text-[#4A4A4A] mb-2 font-normal"
+                className="block text-sm text-[#2B2B2B] mb-2 font-normal"
               >
                 Tweet URL
               </label>
@@ -346,7 +346,7 @@ export default function TwitterEngagement() {
                   value={tweetUrl}
                   onChange={(e) => setTweetUrl(e.target.value)}
                   placeholder="https://x.com/..."
-                  className="w-full px-4 py-3 bg-white border border-[#E0DDD8] rounded-sm text-[#4A4A4A] placeholder-[#6B6B6B]/50 focus:border-[#8B8680] focus:outline-none transition-colors text-base font-serif"
+                  className="w-full px-4 py-3 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm text-[#2B2B2B] placeholder-[#6B6B6B]/50 focus:border-[#2F6FED] focus:outline-none transition-colors text-base font-serif"
                   disabled={isLoading}
                 />
               </div>
@@ -359,7 +359,7 @@ export default function TwitterEngagement() {
               <button
                 type="submit"
                 disabled={isLoading || !tweetUrl.trim()}
-                className="flex-1 bg-white text-[#4A4A4A] border border-[#E0DDD8] hover:bg-[#F5F3F0] hover:underline disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
+                className="flex-1 bg-[#FEFEFE] text-[#2B2B2B] border border-[#E8E4DF] hover:bg-[#F5F3F0] hover:border-[#2F6FED] hover:text-[#2F6FED] hover:underline disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
               >
                 {isLoading ? 'Analyzing...' : 'Analyze'}
               </button>
@@ -368,7 +368,7 @@ export default function TwitterEngagement() {
                 type="button"
                 onClick={handleStartMonitoring}
                 disabled={isMonitoringLoading || !tweetUrl.trim()}
-                className="flex-1 bg-white text-[#4A4A4A] border border-[#E0DDD8] hover:bg-[#F5F3F0] hover:underline disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
+                className="flex-1 bg-[#FEFEFE] text-[#2B2B2B] border border-[#E8E4DF] hover:bg-[#F5F3F0] hover:border-[#2F6FED] hover:text-[#2F6FED] hover:underline disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
               >
                 {isMonitoringLoading ? 'Starting...' : 'Monitor (72h)'}
               </button>
@@ -379,8 +379,8 @@ export default function TwitterEngagement() {
           {message && (
             <div className={`mt-6 p-4 border rounded-sm text-sm ${
               message.type === 'success' 
-                ? 'border-[#E0DDD8] text-[#4A4A4A] bg-white' 
-                : 'border-red-200 text-red-600 bg-white'
+                ? 'border-[#E8E4DF] text-[#2B2B2B] bg-[#FEFEFE]' 
+                : 'border-red-200 text-red-600 bg-[#FEFEFE]'
             }`}>
               {message.text}
             </div>
@@ -390,22 +390,22 @@ export default function TwitterEngagement() {
         {/* Engagement Results Display */}
         {engagementData && engagementData.length > 0 && (
           <div className="max-w-[800px] mx-auto space-y-8">
-            <h2 className="text-[1.5rem] leading-[1.5] font-normal text-[#4A4A4A] text-center mb-8">
+            <h2 className="text-[1.5rem] leading-[1.5] font-normal text-[#2B2B2B] text-center mb-8">
               Results
             </h2>
 
             {engagementData.map((item, index) => (
-              <div key={index} className="bg-white border border-[#E0DDD8] p-8 rounded-sm">
+              <div key={index} className="bg-[#FEFEFE] border border-[#E8E4DF] p-8 rounded-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
-                    <h3 className="text-[#4A4A4A] text-lg font-normal mb-2">
+                    <h3 className="text-[#2B2B2B] text-lg font-normal mb-2">
                       @{item.author_name}
                     </h3>
                     <a 
                       href={item.tweet_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-[#6B6B6B] hover:text-[#4A4A4A] hover:underline text-sm"
+                      className="text-[#6B6B6B] hover:text-[#2B2B2B] hover:underline text-sm"
                     >
                       View Original Tweet
                     </a>
@@ -415,7 +415,7 @@ export default function TwitterEngagement() {
                     href={constructSheetsUrl(item.spreadsheetId)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#F5F3F0] text-[#4A4A4A] hover:bg-[#E0DDD8] rounded-sm transition-colors text-sm"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#F5F3F0] text-[#2B2B2B] hover:bg-[#E8E4DF] hover:text-[#2F6FED] rounded-sm transition-colors text-sm"
                   >
                     Open Spreadsheet
                   </a>
@@ -429,7 +429,7 @@ export default function TwitterEngagement() {
                   setEngagementData(null);
                   setMessage(null);
                 }}
-                className="text-[#4A4A4A] border-b border-[#4A4A4A] hover:border-transparent transition-colors pb-1"
+                className="text-[#2B2B2B] border-b border-[#2B2B2B] hover:border-[#2F6FED] hover:text-[#2F6FED] transition-colors pb-1"
               >
                 Analyze Another Tweet
               </button>

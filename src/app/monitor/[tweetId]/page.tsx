@@ -132,7 +132,7 @@ export default function MonitoringDashboard() {
     QuoteTweets: snapshot.quoteTweetCount ?? 0,
   })) || [];
 
-  const chartColor = '#4D4DFF'; // vibrantBlue from Design.json
+  const chartColor = '#2F6FED'; // Vibrant Blue accent (Design-v2 updated)
 
   const metricCharts = [
     { key: 'Likes', title: 'Likes Over Time', color: chartColor },

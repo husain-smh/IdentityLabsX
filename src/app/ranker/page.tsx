@@ -908,32 +908,32 @@ export default function RankerAdmin() {
       : [];
 
   return (
-    <div className="min-h-screen bg-[#F5F3F0] text-[#4A4A4A] font-serif">
+    <div className="min-h-screen bg-[#F5F3F0] text-[#2B2B2B] font-serif">
       <Navbar />
 
       <div className="relative pt-32 pb-20 px-6">
         <div className="max-w-6xl mx-auto text-center mb-16">
-          <h1 className="text-[2.5rem] leading-[1.3] font-normal mb-6 text-[#4A4A4A]">
+          <h1 className="text-[2.5rem] leading-[1.3] font-normal mb-6 text-[#2B2B2B]">
             Important Accounts
           </h1>
 
           {/* Stats Overview */}
           {syncStatus && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto mt-12">
-              <div className="bg-white border border-[#E0DDD8] p-6 rounded-sm">
-                <div className="text-3xl text-[#4A4A4A] mb-2 font-normal">
+              <div className="bg-[#FEFEFE] border border-[#E8E4DF] p-6 rounded-sm">
+                <div className="text-3xl text-[#2B2B2B] mb-2 font-normal">
                   {syncStatus.summary.total_people}
                 </div>
                 <div className="text-sm text-[#6B6B6B]">Total</div>
               </div>
-              <div className="bg-white border border-[#E0DDD8] p-6 rounded-sm">
-                <div className="text-3xl text-[#4A4A4A] mb-2 font-normal">
+              <div className="bg-[#FEFEFE] border border-[#E8E4DF] p-6 rounded-sm">
+                <div className="text-3xl text-[#2B2B2B] mb-2 font-normal">
                   {syncStatus.summary.synced_people}
                 </div>
                 <div className="text-sm text-[#6B6B6B]">Synced</div>
               </div>
-              <div className="bg-white border border-[#E0DDD8] p-6 rounded-sm">
-                <div className="text-3xl text-[#4A4A4A] mb-2 font-normal">
+              <div className="bg-[#FEFEFE] border border-[#E8E4DF] p-6 rounded-sm">
+                <div className="text-3xl text-[#2B2B2B] mb-2 font-normal">
                   {syncStatus.summary.unsynced_people}
                 </div>
                 <div className="text-sm text-[#6B6B6B]">Pending</div>
@@ -945,12 +945,12 @@ export default function RankerAdmin() {
         {/* Main Content */}
         <div className="max-w-6xl mx-auto">
           {/* Check Important Score Section */}
-          <div className="bg-white border border-[#E0DDD8] rounded-sm p-8 mb-8">
+          <div className="bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm p-8 mb-8">
             <button
               onClick={() => setIsCheckSectionOpen(!isCheckSectionOpen)}
               className="w-full flex items-center justify-between text-left"
             >
-              <h2 className="text-xl font-normal text-[#4A4A4A]">Check Importance Score</h2>
+              <h2 className="text-xl font-normal text-[#2B2B2B]">Check Importance Score</h2>
               <span className={`text-[#6B6B6B] transition-transform ${isCheckSectionOpen ? 'rotate-180' : ''}`}>
                 ▼
               </span>
@@ -960,7 +960,7 @@ export default function RankerAdmin() {
               <div className="mt-8 space-y-6">
                 <form onSubmit={handleCheckImportance} className="space-y-6">
                   <div>
-                    <label htmlFor="check-username" className="block text-sm text-[#4A4A4A] mb-2">
+                    <label htmlFor="check-username" className="block text-sm text-[#2B2B2B] mb-2">
                       Twitter Username
                     </label>
                     <div className="relative">
@@ -971,7 +971,7 @@ export default function RankerAdmin() {
                         value={checkUsername}
                         onChange={(e) => setCheckUsername(e.target.value)}
                         placeholder="username"
-                        className="w-full pl-10 pr-4 py-3 bg-white border border-[#E0DDD8] rounded-sm text-[#4A4A4A] placeholder-[#6B6B6B]/50 focus:border-[#8B8680] focus:outline-none transition-all font-serif"
+                        className="w-full pl-10 pr-4 py-3 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm text-[#2B2B2B] placeholder-[#6B6B6B]/50 focus:border-[#2F6FED] focus:outline-none transition-all font-serif"
                         disabled={isCheckLoading}
                       />
                     </div>
@@ -980,7 +980,7 @@ export default function RankerAdmin() {
                   <button
                     type="submit"
                     disabled={isCheckLoading || !checkUsername.trim()}
-                    className="w-full bg-[#4A4A4A] text-white hover:bg-[#4A4A4A]/90 disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
+                    className="w-full bg-[#FEFEFE] text-[#2B2B2B] border border-[#E8E4DF] hover:bg-[#F5F3F0] hover:text-[#2F6FED] hover:border-[#2F6FED] disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
                   >
                     {isCheckLoading ? 'Checking...' : 'Check Score'}
                   </button>
@@ -989,15 +989,15 @@ export default function RankerAdmin() {
                 {/* Results Display */}
                 {checkResults.length > 0 && (
                   <div className="space-y-4 mt-8">
-                    <h3 className="text-lg text-[#4A4A4A]">Results</h3>
+                    <h3 className="text-lg text-[#2B2B2B]">Results</h3>
                     {checkResults.map((result) => (
                       <div
                         key={result.id}
-                        className="bg-[#F5F3F0] border border-[#E0DDD8] rounded-sm p-6 space-y-4 relative"
+                        className="bg-[#F5F3F0] border border-[#E8E4DF] rounded-sm p-6 space-y-4 relative"
                       >
                         <button
                           onClick={() => handleRemoveResult(result.id)}
-                          className="absolute top-4 right-4 text-[#6B6B6B] hover:text-[#4A4A4A]"
+                          className="absolute top-4 right-4 text-[#6B6B6B] hover:text-[#2B2B2B]"
                         >
                           ×
                         </button>
@@ -1005,7 +1005,7 @@ export default function RankerAdmin() {
                         <div className="flex items-start justify-between pr-8">
                           <div>
                             <div className="flex items-center gap-2 mb-2">
-                              <span className="px-4 py-2 bg-white border border-[#E0DDD8] text-[#4A4A4A] rounded-sm text-base">
+                              <span className="px-4 py-2 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] rounded-sm text-base">
                                 @{result.found ? result.followed_username || result.username : result.username}
                               </span>
                             </div>
@@ -1015,22 +1015,22 @@ export default function RankerAdmin() {
                           </div>
                           <div className="text-right">
                             <div className="text-sm text-[#6B6B6B] mb-1">Score</div>
-                            <div className="text-3xl text-[#4A4A4A] font-normal">{result.importance_score.toFixed(2)}</div>
+                            <div className="text-3xl text-[#2B2B2B] font-normal">{result.importance_score.toFixed(2)}</div>
                           </div>
                         </div>
 
                         {result.found && result.followed_by.length > 0 && (
-                          <div className="mt-4 pt-4 border-t border-[#E0DDD8]">
-                            <div className="text-sm text-[#4A4A4A] mb-3">
+                          <div className="mt-4 pt-4 border-t border-[#E8E4DF]">
+                            <div className="text-sm text-[#2B2B2B] mb-3">
                               Followed by {result.followed_by.length} important {result.followed_by.length === 1 ? 'person' : 'people'}:
                             </div>
                             <div className="flex flex-wrap gap-2">
                               {result.followed_by.map((follower) => (
                                 <div
                                   key={`${result.id}-${follower.user_id}`}
-                                  className="px-3 py-2 bg-white border border-[#E0DDD8] rounded-sm"
+                                  className="px-3 py-2 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm"
                                 >
-                                  <div className="text-[#4A4A4A] text-sm">@{follower.username}</div>
+                                  <div className="text-[#2B2B2B] text-sm">@{follower.username}</div>
                                   {follower.weight !== undefined && follower.weight !== 1 && (
                                     <div className="text-[#6B6B6B] text-xs mt-1">Weight: {follower.weight}</div>
                                   )}
@@ -1048,12 +1048,12 @@ export default function RankerAdmin() {
           </div>
 
           {/* Add Important Person Form */}
-          <div className="bg-white border border-[#E0DDD8] rounded-sm p-8 mb-8">
-            <h2 className="text-xl font-normal text-[#4A4A4A] mb-6">Add Person</h2>
+          <div className="bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm p-8 mb-8">
+            <h2 className="text-xl font-normal text-[#2B2B2B] mb-6">Add Person</h2>
             
             <form onSubmit={handleAddPerson} className="space-y-6">
               <div>
-                <label htmlFor="username" className="block text-sm text-[#4A4A4A] mb-2">
+                <label htmlFor="username" className="block text-sm text-[#2B2B2B] mb-2">
                   Twitter Username
                 </label>
                 <div className="relative">
@@ -1064,7 +1064,7 @@ export default function RankerAdmin() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="username"
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-[#E0DDD8] rounded-sm text-[#4A4A4A] placeholder-[#6B6B6B]/50 focus:border-[#8B8680] focus:outline-none transition-all font-serif"
+                    className="w-full pl-10 pr-4 py-3 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm text-[#2B2B2B] placeholder-[#6B6B6B]/50 focus:border-[#2F6FED] focus:outline-none transition-all font-serif"
                     disabled={isLoading}
                   />
                 </div>
@@ -1073,7 +1073,7 @@ export default function RankerAdmin() {
               <button
                 type="submit"
                 disabled={isLoading || !username.trim()}
-                className="w-full bg-[#4A4A4A] text-white hover:bg-[#4A4A4A]/90 disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
+                className="w-full bg-[#FEFEFE] text-[#2B2B2B] border border-[#E8E4DF] hover:bg-[#F5F3F0] hover:text-[#2F6FED] hover:border-[#2F6FED] disabled:opacity-50 py-3 px-6 rounded-sm transition-all text-base"
               >
                 {isLoading ? 'Adding...' : 'Add Person'}
               </button>
@@ -1083,7 +1083,7 @@ export default function RankerAdmin() {
               <div
                 className={`mt-6 p-4 rounded-sm border text-sm ${
                   message.type === 'success'
-                    ? 'border-[#E0DDD8] text-[#4A4A4A] bg-[#F5F3F0]'
+                    ? 'border-[#E8E4DF] text-[#2B2B2B] bg-[#F5F3F0]'
                     : 'border-red-200 text-red-600 bg-red-50'
                 }`}
               >
@@ -1093,13 +1093,13 @@ export default function RankerAdmin() {
           </div>
 
           {/* Important People Table */}
-          <div className="bg-white border border-[#E0DDD8] rounded-sm p-8">
+          <div className="bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm p-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-8">
-              <h2 className="text-xl font-normal text-[#4A4A4A]">People List</h2>
+              <h2 className="text-xl font-normal text-[#2B2B2B]">People List</h2>
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={openCandidateModal}
-                  className="px-4 py-2 bg-white border border-[#E0DDD8] text-[#4A4A4A] hover:bg-[#F5F3F0] text-sm rounded-sm transition-all"
+                  className="px-4 py-2 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:bg-[#F5F3F0] hover:text-[#2F6FED] hover:border-[#2F6FED] text-sm rounded-sm transition-all"
                 >
                   Extract Accounts
                 </button>
@@ -1110,7 +1110,7 @@ export default function RankerAdmin() {
                     fetchSyncStatus();
                   }}
                   disabled={isFetching}
-                  className="px-4 py-2 bg-white border border-[#E0DDD8] text-[#4A4A4A] hover:bg-[#F5F3F0] text-sm rounded-sm transition-all disabled:opacity-50"
+                  className="px-4 py-2 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:bg-[#F5F3F0] hover:text-[#2F6FED] hover:border-[#2F6FED] text-sm rounded-sm transition-all disabled:opacity-50"
                 >
                   {isFetching ? 'Refreshing...' : 'Refresh'}
                 </button>
@@ -1135,8 +1135,8 @@ export default function RankerAdmin() {
                         onClick={() => setSyncFilter(filterKey)}
                         className={`px-3 py-1.5 rounded-sm border text-xs transition ${
                           isActive
-                            ? 'border-[#4A4A4A] bg-[#4A4A4A] text-white'
-                            : 'border-[#E0DDD8] text-[#6B6B6B] hover:text-[#4A4A4A] hover:border-[#8B8680]'
+                            ? 'border-[#2B2B2B] bg-[#2B2B2B] text-white'
+                            : 'border-[#E8E4DF] text-[#6B6B6B] hover:text-[#2F6FED] hover:border-[#2F6FED]'
                         }`}
                       >
                         {label}
@@ -1151,7 +1151,7 @@ export default function RankerAdmin() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search people..."
-                    className="w-full px-4 py-2 bg-white border border-[#E0DDD8] rounded-sm text-[#4A4A4A] placeholder-[#6B6B6B]/50 focus:border-[#8B8680] focus:outline-none transition-all font-serif text-sm"
+                    className="w-full px-4 py-2 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm text-[#2B2B2B] placeholder-[#6B6B6B]/50 focus:border-[#2F6FED] focus:outline-none transition-all font-serif text-sm"
                     disabled={isSearching}
                   />
                 </div>
@@ -1171,7 +1171,7 @@ export default function RankerAdmin() {
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-[#F5F3F0] text-[#6B6B6B] text-sm border-b border-[#E0DDD8]">
+                <thead className="bg-[#F5F3F0] text-[#6B6B6B] text-sm border-b border-[#E8E4DF]">
                   <tr>
                     <th className="py-4 px-4 font-normal">Username</th>
                     <th className="py-4 px-4 font-normal">Name</th>
@@ -1184,7 +1184,7 @@ export default function RankerAdmin() {
                     <th className="py-4 px-4 font-normal text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#E0DDD8]">
+                <tbody className="divide-y divide-[#E8E4DF]">
                   {filteredPeople.map((person) => {
                     const weightValue = weightEdits[person.username] ?? (person.weight ?? 1).toString();
                     const parsedWeight = Number(weightValue);
@@ -1203,7 +1203,7 @@ export default function RankerAdmin() {
 
                     return (
                       <tr key={person.username} className="hover:bg-[#F5F3F0]/50 transition-colors">
-                        <td className="py-4 px-4 font-medium text-[#4A4A4A]">@{person.username}</td>
+                        <td className="py-4 px-4 font-medium text-[#2B2B2B]">@{person.username}</td>
                         <td className="py-4 px-4 text-[#6B6B6B]">{person.name || '-'}</td>
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2">
@@ -1219,10 +1219,10 @@ export default function RankerAdmin() {
                                   handleWeightSave(person);
                                 }
                               }}
-                              className="w-16 px-2 py-1 bg-white border border-[#E0DDD8] rounded-sm text-[#4A4A4A] text-sm"
+                              className="w-16 px-2 py-1 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm text-[#2B2B2B] text-sm"
                             />
                             {hasWeightChanged && isWeightValid && !isUpdatingThisWeight && (
-                              <button onClick={() => handleWeightSave(person)} className="text-[#4A4A4A] text-xs underline">Save</button>
+                              <button onClick={() => handleWeightSave(person)} className="text-[#2B2B2B] hover:text-[#2F6FED] text-xs underline">Save</button>
                             )}
                           </div>
                         </td>
@@ -1239,10 +1239,10 @@ export default function RankerAdmin() {
                                   handleNetworthSave(person);
                                 }
                               }}
-                              className="w-24 px-2 py-1 bg-white border border-[#E0DDD8] rounded-sm text-[#4A4A4A] text-sm"
+                              className="w-24 px-2 py-1 bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm text-[#2B2B2B] text-sm"
                             />
                             {hasNetworthChanged && isNetworthValid && !isUpdatingThisNetworth && (
-                              <button onClick={() => handleNetworthSave(person)} className="text-[#4A4A4A] text-xs underline">Save</button>
+                              <button onClick={() => handleNetworthSave(person)} className="text-[#2B2B2B] hover:text-[#2F6FED] text-xs underline">Save</button>
                             )}
                           </div>
                         </td>
@@ -1252,15 +1252,15 @@ export default function RankerAdmin() {
                               <span key={tag} className="text-xs text-[#6B6B6B] bg-[#F5F3F0] px-1.5 py-0.5 rounded-sm">#{tag}</span>
                             ))}
                           </div>
-                          <button onClick={() => openTagModal(person)} className="text-xs text-[#4A4A4A] underline">Edit</button>
+                          <button onClick={() => openTagModal(person)} className="text-xs text-[#2B2B2B] hover:text-[#2F6FED] underline">Edit</button>
                         </td>
-                        <td className="py-4 px-4 text-[#4A4A4A]">{person.following_count.toLocaleString()}</td>
+                        <td className="py-4 px-4 text-[#2B2B2B]">{person.following_count.toLocaleString()}</td>
                         <td className="py-4 px-4 text-sm text-[#6B6B6B]">
                           {getTimeSince(person.last_synced)}
                         </td>
                         <td className="py-4 px-4">
                           {person.last_synced ? (
-                            <span className="text-[#4A4A4A] text-sm">Synced</span>
+                            <span className="text-[#2B2B2B] text-sm">Synced</span>
                           ) : (
                             <span className="text-[#6B6B6B] text-sm">Pending</span>
                           )}
@@ -1270,13 +1270,13 @@ export default function RankerAdmin() {
                             <button
                               onClick={() => handleSyncPerson(person.username)}
                               disabled={syncingUsername !== null}
-                              className="text-[#4A4A4A] hover:underline text-sm disabled:opacity-50"
+                              className="text-[#2B2B2B] hover:text-[#2F6FED] hover:underline text-sm disabled:opacity-50"
                             >
                               {syncingUsername === person.username ? 'Syncing...' : 'Sync'}
                             </button>
                             <button
                               onClick={() => handleRemovePerson(person.username)}
-                              className="text-[#6B6B6B] hover:text-[#4A4A4A] text-sm"
+                              className="text-[#6B6B6B] hover:text-[#2B2B2B] hover:underline text-sm"
                             >
                               Remove
                             </button>
@@ -1295,7 +1295,7 @@ export default function RankerAdmin() {
                 <button
                   onClick={() => fetchImportantPeople(currentPage - 1)}
                   disabled={currentPage === 1 || isFetching}
-                  className="px-3 py-1 bg-white border border-[#E0DDD8] text-[#4A4A4A] disabled:opacity-50"
+                  className="px-3 py-1 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:border-[#2F6FED] hover:text-[#2F6FED] disabled:opacity-50"
                 >
                   Prev
                 </button>
@@ -1305,7 +1305,7 @@ export default function RankerAdmin() {
                 <button
                   onClick={() => fetchImportantPeople(currentPage + 1)}
                   disabled={currentPage === totalPages || isFetching}
-                  className="px-3 py-1 bg-white border border-[#E0DDD8] text-[#4A4A4A] disabled:opacity-50"
+                  className="px-3 py-1 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:border-[#2F6FED] hover:text-[#2F6FED] disabled:opacity-50"
                 >
                   Next
                 </button>
@@ -1318,26 +1318,26 @@ export default function RankerAdmin() {
       {/* Candidate Modal */}
       {isCandidateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F5F3F0]/90">
-          <div className="bg-white max-w-4xl w-full mx-4 rounded-sm border border-[#E0DDD8] p-8 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#FEFEFE] max-w-4xl w-full mx-4 rounded-sm border border-[#E8E4DF] p-8 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
-              <h3 className="text-xl text-[#4A4A4A]">Candidate Accounts</h3>
-              <button onClick={closeCandidateModal} className="text-[#6B6B6B] hover:text-[#4A4A4A]">Close</button>
+              <h3 className="text-xl text-[#2B2B2B]">Candidate Accounts</h3>
+              <button onClick={closeCandidateModal} className="text-[#6B6B6B] hover:text-[#2B2B2B]">Close</button>
             </div>
             
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-[#F5F3F0] border border-[#E0DDD8]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 bg-[#F5F3F0] border border-[#E8E4DF]">
                <div>
-                 <label className="block text-sm text-[#4A4A4A] mb-1">Min Followers</label>
+                 <label className="block text-sm text-[#2B2B2B] mb-1">Min Followers</label>
                  <input
                     type="number"
                     min={1}
                     value={candidateMinFollowers}
                     onChange={(e) => setCandidateMinFollowers(Math.max(1, Number(e.target.value)))}
-                    className="w-full px-3 py-2 bg-white border border-[#E0DDD8] text-[#4A4A4A]"
+                    className="w-full px-3 py-2 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B]"
                  />
                </div>
                <div className="flex items-end">
-                 <button onClick={fetchCandidates} className="px-4 py-2 bg-[#4A4A4A] text-white text-sm w-full">Apply Filters</button>
+                 <button onClick={fetchCandidates} className="px-4 py-2 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:text-[#2F6FED] hover:border-[#2F6FED] text-sm w-full">Apply Filters</button>
                </div>
             </div>
 
@@ -1352,7 +1352,7 @@ export default function RankerAdmin() {
                   <button
                     onClick={handleBatchAdd}
                     disabled={selectedCandidates.length === 0 || isBatchAdding}
-                    className="px-4 py-2 bg-white border border-[#E0DDD8] text-[#4A4A4A] text-sm disabled:opacity-50"
+                    className="px-4 py-2 bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:text-[#2F6FED] hover:border-[#2F6FED] text-sm disabled:opacity-50"
                   >
                     Add Selected
                   </button>
@@ -1360,7 +1360,7 @@ export default function RankerAdmin() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead>
-                      <tr className="border-b border-[#E0DDD8]">
+                      <tr className="border-b border-[#E8E4DF]">
                         <th className="py-2 px-2"><input type="checkbox" onChange={toggleSelectAllCandidates} /></th>
                         <th className="py-2 px-2 font-normal text-[#6B6B6B]">Username</th>
                         <th className="py-2 px-2 font-normal text-[#6B6B6B]">Followers</th>
@@ -1368,7 +1368,7 @@ export default function RankerAdmin() {
                         <th className="py-2 px-2 font-normal text-[#6B6B6B]">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E0DDD8]">
+                    <tbody className="divide-y divide-[#E8E4DF]">
                       {candidateList.map((candidate) => (
                         <tr key={candidate.followed_username}>
                           <td className="py-2 px-2">
@@ -1378,13 +1378,13 @@ export default function RankerAdmin() {
                               onChange={() => toggleCandidateSelection(candidate.followed_username)}
                             />
                           </td>
-                          <td className="py-2 px-2 text-[#4A4A4A]">@{candidate.followed_username}</td>
-                          <td className="py-2 px-2 text-[#4A4A4A]">{candidate.follower_count}</td>
-                          <td className="py-2 px-2 text-[#4A4A4A]">{candidate.importance_score.toFixed(1)}</td>
+                          <td className="py-2 px-2 text-[#2B2B2B]">@{candidate.followed_username}</td>
+                          <td className="py-2 px-2 text-[#2B2B2B]">{candidate.follower_count}</td>
+                          <td className="py-2 px-2 text-[#2B2B2B]">{candidate.importance_score.toFixed(1)}</td>
                           <td className="py-2 px-2">
                             <button
                                onClick={() => handleAddCandidate(candidate)}
-                               className="text-[#4A4A4A] underline"
+                               className="text-[#2B2B2B] hover:text-[#2F6FED] underline"
                             >
                               Add
                             </button>
@@ -1403,13 +1403,13 @@ export default function RankerAdmin() {
       {/* Tag Modal */}
       {tagModalPerson && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F5F3F0]/90">
-          <div className="bg-white max-w-lg w-full mx-4 rounded-sm border border-[#E0DDD8] p-8">
-            <h3 className="text-xl text-[#4A4A4A] mb-4">Edit Tags: @{tagModalPerson.username}</h3>
+          <div className="bg-[#FEFEFE] max-w-lg w-full mx-4 rounded-sm border border-[#E8E4DF] p-8">
+            <h3 className="text-xl text-[#2B2B2B] mb-4">Edit Tags: @{tagModalPerson.username}</h3>
             
             <div className="mb-4">
               <div className="flex flex-wrap gap-2 mb-2">
                 {tagDraft.map(tag => (
-                  <span key={tag} className="px-2 py-1 bg-[#F5F3F0] text-[#4A4A4A] text-sm flex items-center gap-1">
+                  <span key={tag} className="px-2 py-1 bg-[#F5F3F0] text-[#2B2B2B] text-sm flex items-center gap-1">
                     #{tag}
                     <button onClick={() => removeTagFromDraft(tag)}>×</button>
                   </span>
@@ -1421,7 +1421,7 @@ export default function RankerAdmin() {
                 onChange={(e) => setTagInputValue(e.target.value)}
                 onKeyDown={handleTagInputKeyDown}
                 placeholder="Type tag and press Enter"
-                className="w-full px-3 py-2 border border-[#E0DDD8] text-[#4A4A4A]"
+                className="w-full px-3 py-2 border border-[#E8E4DF] text-[#2B2B2B]"
               />
             </div>
             
@@ -1432,7 +1432,7 @@ export default function RankerAdmin() {
                   <button
                     key={tag}
                     onClick={() => { addTagToDraft(tag); setTagInputValue(''); }}
-                    className="px-2 py-1 border border-[#E0DDD8] text-xs text-[#6B6B6B] hover:bg-[#F5F3F0]"
+                    className="px-2 py-1 border border-[#E8E4DF] text-xs text-[#6B6B6B] hover:bg-[#F5F3F0]"
                   >
                     #{tag}
                   </button>
@@ -1441,8 +1441,8 @@ export default function RankerAdmin() {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button onClick={closeTagModal} className="text-[#6B6B6B]">Cancel</button>
-              <button onClick={handleSaveTags} className="bg-[#4A4A4A] text-white px-4 py-2 text-sm">Save</button>
+              <button onClick={closeTagModal} className="text-[#6B6B6B] hover:text-[#2B2B2B]">Cancel</button>
+              <button onClick={handleSaveTags} className="bg-[#FEFEFE] border border-[#E8E4DF] text-[#2B2B2B] hover:text-[#2F6FED] hover:border-[#2F6FED] px-4 py-2 text-sm rounded-sm">Save</button>
             </div>
           </div>
         </div>

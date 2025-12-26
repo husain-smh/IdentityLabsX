@@ -74,7 +74,7 @@ export default function TweetsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F3F0] text-[#4A4A4A] font-serif">
+      <div className="min-h-screen bg-[#F5F3F0] text-[#2B2B2B] font-serif">
         <Navbar />
         <div className="pt-32 flex justify-center">
           <p className="text-[#6B6B6B]">Loading...</p>
@@ -85,13 +85,13 @@ export default function TweetsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#F5F3F0] text-[#4A4A4A] font-serif">
+      <div className="min-h-screen bg-[#F5F3F0] text-[#2B2B2B] font-serif">
         <Navbar />
         <div className="pt-32 flex flex-col items-center">
           <p className="text-red-500 mb-4">{error}</p>
           <button
             onClick={() => fetchTweets()}
-            className="text-[#4A4A4A] underline"
+            className="text-[#2B2B2B] underline"
           >
             Retry
           </button>
@@ -101,12 +101,12 @@ export default function TweetsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F3F0] text-[#4A4A4A] font-serif">
+    <div className="min-h-screen bg-[#F5F3F0] text-[#2B2B2B] font-serif">
       <Navbar />
       
       <main className="relative pt-32 pb-20 px-6">
         <div className="max-w-[800px] mx-auto text-center mb-16">
-          <h1 className="text-[2.5rem] leading-[1.3] font-normal mb-6 text-[#4A4A4A]">
+          <h1 className="text-[2.5rem] leading-[1.3] font-normal mb-6 text-[#2B2B2B]">
             Analyzed Tweets
           </h1>
           <p className="text-[1.125rem] leading-[1.75] text-[#6B6B6B] max-w-[65ch] mx-auto">
@@ -120,10 +120,10 @@ export default function TweetsPage() {
               <p>No tweets analyzed yet.</p>
             </div>
           ) : (
-            <div className="bg-white border border-[#E0DDD8] rounded-sm overflow-hidden">
+            <div className="bg-[#FEFEFE] border border-[#E8E4DF] rounded-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-[#F5F3F0] text-[#6B6B6B] text-sm uppercase tracking-wide border-b border-[#E0DDD8]">
+                  <thead className="bg-[#F5F3F0] text-[#6B6B6B] text-sm uppercase tracking-wide border-b border-[#E8E4DF]">
                     <tr>
                       <th className="px-6 py-4 font-normal">Tweet</th>
                       <th className="px-6 py-4 font-normal">Author</th>
@@ -133,20 +133,20 @@ export default function TweetsPage() {
                       <th className="px-6 py-4 font-normal">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E0DDD8]">
+                  <tbody className="divide-y divide-[#E8E4DF]">
                     {tweets.map((tweet) => (
                       <tr key={tweet.tweet_id} className="hover:bg-[#F5F3F0]/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-[#4A4A4A]">
+                        <td className="px-6 py-4 font-medium text-[#2B2B2B]">
                           {tweet.tweet_id}
                         </td>
-                        <td className="px-6 py-4 text-[#4A4A4A]">
+                        <td className="px-6 py-4 text-[#2B2B2B]">
                           {tweet.author_name}
                         </td>
                         <td className="px-6 py-4">
                           {getStatusBadge(tweet.status)}
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-[#4A4A4A]">
+                          <div className="text-[#2B2B2B]">
                             {tweet.total_engagers} total
                           </div>
                           <div className="text-xs text-[#6B6B6B]">
@@ -160,7 +160,7 @@ export default function TweetsPage() {
                           {tweet.status === 'completed' ? (
                             <Link
                               href={`/tweets/${tweet.tweet_id}`}
-                              className="text-[#4A4A4A] hover:underline"
+                              className="text-[#2B2B2B] hover:text-[#2F6FED] hover:underline"
                             >
                               Details
                             </Link>

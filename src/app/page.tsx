@@ -33,13 +33,13 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F5F3F0] text-[#4A4A4A] font-serif">
+    <div className="min-h-screen bg-[#F5F3F0] text-[#2B2B2B] font-serif">
       <Navbar />
 
       <main className="relative pt-32 pb-20 px-6">
         {/* Header Section */}
         <div className="max-w-[800px] mx-auto text-center mb-24">
-          <h1 className="text-[3.5rem] leading-[1.2] font-normal mb-8 text-[#4A4A4A]">
+          <h1 className="text-[3.5rem] leading-[1.2] font-normal mb-8 text-[#2B2B2B]">
             Identity Labs
           </h1>
           
@@ -53,9 +53,9 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {tools.map((tool, index) => (
               <Link key={index} href={tool.href} className="group h-full">
-                <div className="h-full bg-white border border-[#E0DDD8] p-8 transition-all duration-300 hover:border-[#8B8680]">
+                <div className="h-full bg-[#FEFEFE] border border-[#E8E4DF] p-8 transition-all duration-300 hover:border-[#2F6FED]">
                   <div className="flex flex-col h-full">
-                    <h2 className="text-[1.5rem] leading-[1.5] font-normal text-[#4A4A4A] mb-4 group-hover:underline decoration-1 underline-offset-4">
+                    <h2 className="text-[1.5rem] leading-[1.5] font-normal text-[#2B2B2B] mb-4 group-hover:underline decoration-1 underline-offset-4">
                       {tool.name}
                     </h2>
 
@@ -63,7 +63,7 @@ export default function Home() {
                       {tool.description}
                     </p>
 
-                    <div className="mt-8 pt-6 border-t border-[#E0DDD8] flex items-center justify-between text-sm text-[#4A4A4A]">
+                    <div className="mt-8 pt-6 border-t border-[#E8E4DF] flex items-center justify-between text-sm text-[#2B2B2B]">
                       <span>Access Tool</span>
                       <span className="group-hover:translate-x-1 transition-transform">→</span>
                     </div>
@@ -75,7 +75,7 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <div className="mt-32 py-12 border-t border-[#E0DDD8] text-center">
+        <div className="mt-32 py-12 border-t border-[#E8E4DF] text-center">
           <p className="text-[#6B6B6B] text-sm">
             Identity Labs
           </p>

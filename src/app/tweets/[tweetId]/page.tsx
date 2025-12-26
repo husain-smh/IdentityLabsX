@@ -38,14 +38,14 @@ const CATEGORY_CONFIG: {
   label: string;
   color: string;
 }[] = [
-  { key: 'founders', label: 'Founders', color: '#4D4DFF' }, // primary.vibrantBlue
-  { key: 'vcs', label: 'VCs', color: '#C4B5FD' }, // secondary.lightPurple
-  { key: 'ai_creators', label: 'AI Creators', color: '#10B981' }, // semantic.success
-  { key: 'media', label: 'Media', color: '#3B82F6' }, // Blue
-  { key: 'developers', label: 'Developers', color: '#F472B6' }, // Pink
-  { key: 'c_level', label: 'C-Level', color: '#FBBF24' }, // Amber
-  { key: 'yc_alumni', label: 'YC Alumni', color: '#FB923C' }, // Orange
-  { key: 'others', label: 'Others', color: '#9CA3AF' }, // textTertiary
+  { key: 'founders', label: 'Founders', color: '#2F6FED' }, // Blue accent
+  { key: 'vcs', label: 'VCs', color: '#B8D8E8' }, // Sky Blue
+  { key: 'ai_creators', label: 'AI Creators', color: '#B8E6C9' }, // Mint
+  { key: 'media', label: 'Media', color: '#FFB3BA' }, // Pink
+  { key: 'developers', label: 'Developers', color: '#F5D98E' }, // Yellow
+  { key: 'c_level', label: 'C-Level', color: '#FFB89D' }, // Peach
+  { key: 'yc_alumni', label: 'YC Alumni', color: '#1F5ED8' }, // Blue accent alt
+  { key: 'others', label: 'Others', color: '#9B9B9B' }, // Tertiary
 ];
 
 export default function TweetDetailPage() {
@@ -901,7 +901,7 @@ export default function TweetDetailPage() {
                             : null;
 
                           // Design.json-ish colors for firms (cycling)
-                          const COLORS = ['#4D4DFF', '#C4B5FD', '#10B981', '#F472B6', '#FBBF24', '#FB923C', '#3B82F6'];
+                          const COLORS = ['#2F6FED', '#B8D8E8', '#B8E6C9', '#FFB3BA', '#F5D98E', '#FFB89D', '#1F5ED8'];
 
                           return pieData.length > 0 ? (
                             <div

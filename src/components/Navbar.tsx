@@ -17,7 +17,7 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#F5F3F0] border-b border-[#E0DDD8] text-[#4A4A4A]">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#F5F3F0] border-b border-[#E8E4DF] text-[#2B2B2B]">
       <div className="max-w-[1200px] mx-auto px-8">
         <div className="flex items-center justify-between h-20">
           {/* Logo/Brand */}
@@ -29,7 +29,7 @@ export default function Navbar() {
               height={24}
               className="object-contain"
             />
-            <span className="font-serif text-lg text-[#4A4A4A] group-hover:text-[#6B6B6B] transition-colors">
+            <span className="font-serif text-lg text-[#2B2B2B] group-hover:text-[#6B6B6B] transition-colors">
               Identity Labs
             </span>
           </Link>
@@ -44,8 +44,8 @@ export default function Navbar() {
                   href={item.href}
                   className={`text-base font-serif transition-colors whitespace-nowrap border-b-2 py-1 ${
                     isActive
-                      ? 'text-[#4A4A4A] border-[#4A4A4A]'
-                      : 'text-[#6B6B6B] border-transparent hover:text-[#4A4A4A] hover:border-[#E0DDD8]'
+                      ? 'text-[#2B2B2B] border-[#2F6FED]'
+                      : 'text-[#6B6B6B] border-transparent hover:text-[#2B2B2B] hover:border-[#E8E4DF]'
                   }`}
                 >
                   {item.name}

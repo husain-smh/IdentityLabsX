@@ -19,7 +19,7 @@
   --popover: #FFFFFF;
   --popover-foreground: #4A4A4A;
   
-  --primary: #4A4A4A; /* Using charcoal for primary actions instead of blue */
+  --primary: #4A4A4A; /* Keep charcoal for primary actions */
   --primary-foreground: #F5F3F0;
   
   --secondary: #E0DDD8; /* Subtle gray/taupe for secondary backgrounds */
@@ -28,7 +28,8 @@
   --muted: #E0DDD8;
   --muted-foreground: #6B6B6B; /* Secondary text */
   
-  --accent: #8B8680; /* Muted taupe */
+  /* Accent (replacing orange with a refined blue) */
+  --accent: #2F6FED; /* Vibrant blue accent */
   --accent-foreground: #FFFFFF;
   
   --destructive: #EF4444; /* Keep for errors, but use sparingly */
@@ -36,7 +37,11 @@
   
   --border: #E0DDD8; /* Subtle gray divider */
   --input: #E0DDD8;
-  --ring: #8B8680;
+  --ring: var(--accent);
+
+  /* Paper texture */
+  --paper-fiber-opacity: 0.12; /* visible “paper fibers” */
+  --paper-grain-opacity: 0.06; /* fine grain on top */
   
   /* Data Visualization - Muted/Natural tones */
   --chart-1: #4A4A4A; 
@@ -97,6 +102,42 @@ body {
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Paper-like texture */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='700' height='700' viewBox='0 0 700 700'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.028' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='1.4 0 0 0 -0.15  0 1.4 0 0 -0.15  0 0 1.4 0 -0.15  0 0 0 1 0'/></filter><rect width='700' height='700' filter='url(%23p)' opacity='.55'/></svg>");
+  background-repeat: repeat;
+  background-size: 900px 900px;
+  opacity: var(--paper-fiber-opacity);
+  mix-blend-mode: multiply;
+}
+
+/* Fine grain layer (top) */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='220' height='220' filter='url(%23g)' opacity='.22'/></svg>");
+  background-repeat: repeat;
+  background-size: 260px 260px;
+  opacity: var(--paper-grain-opacity);
+  mix-blend-mode: soft-light;
+}
+
+/* Ensure app content stays above the grain overlay */
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Heading styles */

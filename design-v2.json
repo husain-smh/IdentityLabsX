@@ -19,14 +19,14 @@
           "description": "Deep charcoal for primary text, graduated grays for hierarchy"
         },
         "accent": {
-          "orange": "#FF5733",
-          "orangeAlt": "#E84A2F",
+          "blue": "#2F6FED",
+          "blueAlt": "#1F5ED8",
           "peach": "#FFB89D",
           "yellow": "#F5D98E",
           "pink": "#FFB3BA",
           "mint": "#B8E6C9",
           "skyBlue": "#B8D8E8",
-          "description": "Vibrant coral-orange primary accent, with soft pastel supporting colors"
+          "description": "Vibrant blue primary accent, with soft pastel supporting colors"
         },
         "grid": {
           "lines": "#E8E4DF",
@@ -46,7 +46,7 @@
           "description": "Pastel tab colors for categorization - yellow, pink, mint, blue"
         },
         "principles": [
-          "Vibrant coral-orange (#FF5733) as the hero accent color - bold but refined",
+          "Vibrant blue (#2F6FED) as the hero accent color - bold but refined",
           "Soft pastel palette for UI elements and categorization",
           "Extremely subtle grid and structural elements - barely visible",
           "High contrast between background and primary accent",
