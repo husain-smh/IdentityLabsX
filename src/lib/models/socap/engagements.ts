@@ -407,10 +407,10 @@ export async function getPotentialViewersByCampaign(
     return [];
   }
   
-  const potentialViewerUserIds = filteredPotentialViewers.map((entry) => entry.followed_user_id);
-  
-  // Step 6: Try to enrich with profile data from engagements (even from other campaigns)
+  // Step 5: Try to enrich with profile data from engagements (even from other campaigns)
   // This gives us name, bio, followers, verified status if the user has engaged elsewhere
+  const filteredPotentialViewerUserIds = filteredPotentialViewers.map((entry) => entry.followed_user_id);
+  
   const profileDataMap = new Map<string, {
     name: string;
     bio?: string;
@@ -421,7 +421,7 @@ export async function getPotentialViewersByCampaign(
   
   const recentEngagements = await engagementsCollection
     .aggregate([
-      { $match: { user_id: { $in: potentialViewerUserIds } } },
+      { $match: { user_id: { $in: filteredPotentialViewerUserIds } } },
       {
         $sort: { last_seen_at: -1 }, // Get most recent profile data
       },

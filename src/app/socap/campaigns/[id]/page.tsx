@@ -1697,9 +1697,14 @@ export default function CampaignDashboardPage() {
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 mb-1">
                                     <div className="flex items-center gap-1">
-                                      <span className="text-sm font-semibold text-foreground">
+                                      <a
+                                        href={`https://x.com/${viewer.username}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-semibold text-foreground hover:text-primary hover:underline"
+                                      >
                                         {viewer.name || viewer.username}
-                                      </span>
+                                      </a>
                                       {viewer.verified && (
                                         <svg
                                           className="w-4 h-4 text-primary"
@@ -1755,17 +1760,6 @@ export default function CampaignDashboardPage() {
                                       {viewer.importance_score.toFixed(1)}
                                     </span>
                                   </div>
-                                  <div className="text-xs text-muted-foreground bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
-                                    ⚠️ Has not engaged with this campaign
-                                  </div>
-                                  <a
-                                    href={`https://x.com/${viewer.username}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs text-primary hover:text-primary/80 hover:underline"
-                                  >
-                                    View Profile →
-                                  </a>
                                 </div>
                               </div>
                             </div>
